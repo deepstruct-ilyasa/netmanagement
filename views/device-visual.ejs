@@ -1,0 +1,638 @@
+<%- include('partials/header', { pageTitle: `` }) %>
+
+<main class="p-4 sm:p-6 flex-1 w-full space-y-6">
+
+  <!-- Breadcrumb & Info Header Perangkat -->
+  <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-slate-800 border border-slate-700 p-4 sm:p-5 rounded-xl shadow">
+    <div class="space-y-1">
+      <div class="flex items-center gap-2 text-sm font-medium text-slate-400 mb-2">
+        <a href="/devices" class="hover:text-emerald-400 transition">&larr; Kembali</a>
+      </div>
+      <div class="flex flex-wrap items-center gap-2.5 pt-1">
+        <h2 class="text-xl font-bold text-white tracking-wide"><%= device.hostname %></h2>
+        <span class="bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 px-2.5 py-0.5 rounded text-xs font-semibold">
+          <%= device.type_name %>
+        </span>
+        <% if (device.is_switch === 1) { %>
+          <span class="bg-slate-700 text-slate-200 px-2.5 py-0.5 rounded text-xs">
+            <%= device.switch_management %>
+          </span>
+          <% if (device.is_poe === 1) { %>
+            <span class="bg-amber-500/15 text-amber-300 border border-amber-500/30 px-2.5 py-0.5 rounded text-xs font-semibold">
+              &#9889; PoE Supported
+            </span>
+          <% } %>
+        <% } %>
+      </div>
+      <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-400 pt-1 font-mono">
+        <span>Brand/Model: <strong class="text-slate-200 font-sans"><%= device.brand || '-' %> <%= device.model || '' %></strong></span>
+        <span>IP: <strong class="text-emerald-400"><%= device.ip_address || 'No IP' %></strong></span>
+        <span>MAC: <strong class="text-slate-200"><%= device.mac_address || '-' %></strong></span>
+        <span>SN: <strong class="text-slate-200"><%= device.serial_number || '-' %></strong></span>
+        <span>Lokasi: <strong class="text-slate-200 font-sans"><%= device.room_location || '-' %></strong></span>
+      </div>
+    </div>
+
+    <!-- Legenda Warna Kapasitas Link Terpakai -->
+    <div class="flex flex-wrap items-center gap-3 bg-slate-900/70 border border-slate-700 px-3.5 py-2.5 rounded-lg text-xs shrink-0">
+      <div class="flex items-center gap-1.5">
+        <span class="w-3 h-3 rounded-sm bg-amber-500 inline-block"></span>
+        <span class="text-slate-300">100M</span>
+      </div>
+      <div class="flex items-center gap-1.5">
+        <span class="w-3 h-3 rounded-sm bg-emerald-500 inline-block"></span>
+        <span class="text-slate-300">1G</span>
+      </div>
+      <div class="flex items-center gap-1.5">
+        <span class="w-3 h-3 rounded-sm bg-cyan-500 inline-block"></span>
+        <span class="text-slate-300">2.5G / 10G</span>
+      </div>
+      <div class="flex items-center gap-1.5">
+        <span class="w-3 h-3 rounded-sm bg-purple-500 inline-block"></span>
+        <span class="text-slate-300">25G - 100G</span>
+      </div>
+      <div class="flex items-center gap-1.5">
+        <span class="w-3 h-3 rounded-sm bg-slate-700 border border-slate-500 inline-block"></span>
+        <span class="text-slate-400">Kosong</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================
+       VISUAL HARDWARE FACEPLATE (MODULAR PARTIAL)
+       ========================================================= -->
+  <%
+    const validTemplates = [
+      'rackmount', 'non_rackmount', 'modem_ont',
+      'access_point', 'home_router', 'voip', 'dvr_nvr', 'cctv'
+    ];
+    const tpl = validTemplates.includes(device.faceplate_template)
+      ? device.faceplate_template
+      : 'rackmount';
+
+    const isTwoRow = device.port_layout === '2_row';
+
+    const getPortStyle = (port) => {
+      if (!port.connection_id) {
+        return {
+          box: 'bg-slate-800 border-slate-600 text-slate-300 hover:border-emerald-400',
+          led: 'bg-slate-600',
+          speedBadge: null
+        };
+      }
+      const spd = (port.link_speed || '1G').toUpperCase();
+      if (spd === '100M') {
+        return {
+          box: 'bg-amber-950/90 border-amber-400 text-amber-200 shadow-[0_0_10px_rgba(245,158,11,0.3)]',
+          led: 'bg-amber-400',
+          speedBadge: '100M'
+        };
+      }
+      if (spd === '2.5G' || spd === '10G' || spd === '4X10G') {
+        return {
+          box: 'bg-cyan-950/90 border-cyan-400 text-cyan-200 shadow-[0_0_10px_rgba(34,211,238,0.3)]',
+          led: 'bg-cyan-400',
+          speedBadge: spd
+        };
+      }
+      if (spd === '25G' || spd === '40G' || spd === '100G') {
+        return {
+          box: 'bg-purple-950/90 border-purple-400 text-purple-200 shadow-[0_0_10px_rgba(192,132,252,0.3)]',
+          led: 'bg-purple-400',
+          speedBadge: spd
+        };
+      }
+      return {
+        box: 'bg-emerald-950/90 border-emerald-400 text-emerald-200 shadow-[0_0_10px_rgba(16,185,129,0.28)]',
+        led: 'bg-emerald-400',
+        speedBadge: '1G'
+      };
+    };
+
+    const fiberTypes = [
+      { key: 'SFP', widthClass: 'w-14', badgeColor: 'text-sky-300', isQuad: false },
+      { key: 'SFP+', widthClass: 'w-14', badgeColor: 'text-indigo-300', isQuad: false },
+      { key: 'QSFP+', widthClass: 'w-20', badgeColor: 'text-purple-300', isQuad: true },
+      { key: 'QSFP28', widthClass: 'w-20', badgeColor: 'text-amber-300', isQuad: true }
+    ];
+  %>
+
+  <div class="bg-slate-800 border border-slate-700 rounded-xl p-4 sm:p-6 shadow-xl space-y-3">
+    <div class="overflow-x-auto pb-2">
+      <%- include('faceplates/' + tpl, { isTwoRow, getPortStyle, fiberTypes }) %>
+    </div>
+  </div>
+
+  <!-- =========================================================
+       TABEL RINGKASAN KONEKSI PORT AKTIF & FOTO DOKUMENTASI
+       ========================================================= -->
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+    
+    <!-- Tabel Daftar Port yang Sudah Terhubung (7 Kolom) -->
+    <div class="lg:col-span-7 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg overflow-hidden h-fit">
+      <div class="px-5 py-3.5 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
+        <h3 class="text-sm font-semibold text-slate-800 dark:text-white">Daftar Koneksi Port Aktif</h3>
+        <span class="text-xs text-slate-500 dark:text-slate-400">
+          <%= ports.filter(p => p.connection_id).length %> dari <%= ports.length %> port terpakai
+        </span>
+      </div>
+
+      <% const connectedPorts = ports.filter(p => p.connection_id); %>
+      <% if (connectedPorts.length === 0) { %>
+        <div class="p-8 text-center text-xs text-slate-500 dark:text-slate-400">
+          Belum ada port yang terhubung.<% if (can('port.connect')) { %> Klik salah satu lubang port pada gambar di atas untuk mulai mendata koneksi kabel.<% } %>
+        </div>
+      <% } else { %>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse text-xs whitespace-nowrap">
+            <thead>
+              <tr class="bg-slate-50 dark:bg-slate-900/60 border-b border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 uppercase">
+                <th class="py-2.5 px-4">Port</th>
+                <th class="py-2.5 px-4">Target</th>
+                <th class="py-2.5 px-4">Speed</th>
+                <th class="py-2.5 px-4">Media</th>
+                <th class="py-2.5 px-4">VLAN</th>
+                <th class="py-2.5 px-4">Catatan</th>
+                <th class="py-2.5 px-4 text-right">Aksi</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-200 dark:divide-slate-700/60">
+              <% connectedPorts.forEach(cp => { 
+                const spd = (cp.link_speed || '1G').toUpperCase();
+                let speedBadgeClass = 'bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-500/20 dark:text-emerald-300 dark:border-emerald-500/30';
+                if (spd === '100M') {
+                  speedBadgeClass = 'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-500/20 dark:text-amber-300 dark:border-amber-500/30';
+                } else if (spd === '2.5G' || spd === '10G' || spd === '4X10G') {
+                  speedBadgeClass = 'bg-cyan-100 text-cyan-800 border-cyan-200 dark:bg-cyan-500/20 dark:text-cyan-300 dark:border-cyan-500/30';
+                } else if (spd === '25G' || spd === '40G' || spd === '100G') {
+                  speedBadgeClass = 'bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-500/20 dark:text-purple-300 dark:border-purple-500/30';
+                }
+              %>
+                <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition">
+                  <td class="py-2.5 px-4 font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                    <%= cp.port_name %>
+                  </td>
+
+                  <td class="py-2.5 px-4">
+                    <% if (cp.peer_device_hostname) { %>
+                      <a href="/devices/<%= cp.peer_device_id %>/visual" class="font-semibold text-slate-800 dark:text-white hover:text-emerald-600 dark:hover:text-emerald-400 underline">
+                        <%= cp.peer_device_hostname %>
+                      </a>
+                      <span class="ml-1.5 bg-emerald-100 text-emerald-800 border border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-300 dark:border-emerald-500/30 px-1.5 py-0.5 rounded font-mono font-medium">
+                        <%= cp.peer_port_name %>
+                      </span>
+                    <% } else { %>
+                      <span class="text-sky-700 dark:text-sky-300 font-semibold"><%= cp.end_device_info %></span>
+                    <% } %>
+                  </td>
+
+                  <td class="py-2.5 px-4 font-mono">
+                    <span class="px-2 py-0.5 rounded border font-bold <%= speedBadgeClass %>">
+                      <%= cp.link_speed || '1G' %>
+                    </span>
+                  </td>
+
+                  <td class="py-2.5 px-4 font-mono">
+                    <span class="bg-slate-100 text-slate-700 border border-slate-300 dark:bg-slate-700/80 dark:text-slate-200 dark:border-slate-600 px-2 py-0.5 rounded font-medium">
+                      <%= cp.cable_type %>
+                    </span>
+                  </td>
+
+                  <td class="py-2.5 px-4 font-mono">
+                    <% if (cp.vlan_info) { %>
+                      <span class="bg-amber-100 text-amber-800 border border-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/30 px-2 py-0.5 rounded font-semibold">
+                        <%= cp.vlan_info %>
+                      </span>
+                    <% } else { %>
+                      <span class="text-slate-400 dark:text-slate-500">-</span>
+                    <% } %>
+                  </td>
+
+                  <td class="py-2.5 px-4 text-slate-600 dark:text-slate-300 max-w-[180px] truncate" title="<%= cp.notes || '' %>">
+                    <%= cp.notes || '-' %>
+                  </td>
+
+                  <td class="py-2.5 px-4 text-right">
+                    <button type="button"
+                      data-port="<%= JSON.stringify(cp) %>"
+                      onclick="openPortModal(this)"
+                      class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-sky-100 hover:bg-sky-200 text-sky-700 border border-sky-200 dark:bg-sky-500/15 dark:hover:bg-sky-500/25 dark:text-sky-400 dark:border-sky-500/30 font-semibold transition cursor-pointer">
+                      <i data-lucide="sliders-horizontal" class="w-3.5 h-3.5"></i>
+                      <span>Detail</span>
+                    </button>
+                  </td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      <% } %>
+    </div>
+
+    <!-- Dokumentasi Foto Fisik & Stiker SN (5 Kolom) -->
+    <div class="lg:col-span-5 bg-slate-800 border border-slate-700 rounded-xl p-5 shadow-lg space-y-4 h-fit">
+      <h3 class="text-sm font-semibold text-white border-b border-slate-700 pb-2.5">
+        Dokumentasi Foto Fisik & SN
+      </h3>
+
+      <div class="grid grid-cols-2 gap-4">
+        <!-- Foto Fisik -->
+        <div class="space-y-1.5">
+          <span class="block text-xs text-slate-400">Foto Fisik Perangkat</span>
+          <% if (device.physical_photo) { %>
+            <button type="button"
+              onclick="openPhotoModal('<%= device.physical_photo %>', 'Foto Fisik - <%= device.hostname %>', 'physical')"
+              class="w-full block group relative rounded-lg overflow-hidden border border-slate-600 hover:border-emerald-400 aspect-video bg-slate-900 cursor-pointer transition">
+              <img src="<%= device.physical_photo %>" alt="Foto Fisik" class="w-full h-full object-cover group-hover:scale-105 transition">
+              <div class="absolute inset-0 bg-slate-950/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition">
+                <span class="inline-flex items-center gap-1 text-[11px] font-semibold bg-slate-900/90 text-emerald-400 px-2.5 py-1 rounded-md border border-emerald-500/30">
+                  <i data-lucide="maximize-2" class="w-3.5 h-3.5"></i>
+                  <span>Perbesar</span>
+                </span>
+              </div>
+            </button>
+          <% } else { %>
+            <div class="rounded-lg border border-dashed border-slate-600 aspect-video flex items-center justify-center text-[11px] text-slate-500 bg-slate-900/40">
+              Belum ada foto
+            </div>
+          <% } %>
+        </div>
+
+        <!-- Foto Stiker SN -->
+        <div class="space-y-1.5">
+          <span class="block text-xs text-slate-400">Foto Stiker SN / MAC</span>
+          <% if (device.sn_photo) { %>
+            <button type="button"
+              onclick="openPhotoModal('<%= device.sn_photo %>', 'Foto Stiker SN - <%= device.hostname %>', 'sn')"
+              class="w-full block group relative rounded-lg overflow-hidden border border-slate-600 hover:border-emerald-400 aspect-video bg-slate-900 cursor-pointer transition">
+              <img src="<%= device.sn_photo %>" alt="Foto SN" class="w-full h-full object-cover group-hover:scale-105 transition">
+              <div class="absolute inset-0 bg-slate-950/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition">
+                <span class="inline-flex items-center gap-1 text-[11px] font-semibold bg-slate-900/90 text-emerald-400 px-2.5 py-1 rounded-md border border-emerald-500/30">
+                  <i data-lucide="maximize-2" class="w-3.5 h-3.5"></i>
+                  <span>Perbesar</span>
+                </span>
+              </div>
+            </button>
+          <% } else { %>
+            <div class="rounded-lg border border-dashed border-slate-600 aspect-video flex items-center justify-center text-[11px] text-slate-500 bg-slate-900/40">
+              Belum ada foto
+            </div>
+          <% } %>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</main>
+
+<!-- =========================================================
+     MODAL: KONFIGURASI & KONEKSI PORT
+     ========================================================= -->
+<div id="modal-port-detail" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4">
+  <div onclick="closeModal('modal-port-detail')" class="fixed inset-0 bg-slate-950/75 backdrop-blur-sm"></div>
+
+  <div class="relative bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-lg max-h-[90vh] flex flex-col shadow-2xl z-10 overflow-hidden">
+    <div class="px-6 py-4 border-b border-slate-700 flex items-center justify-between">
+      <div>
+        <h3 class="text-base font-semibold text-emerald-400">
+          <%= can('port.connect') ? 'Konfigurasi Port:' : 'Detail Port:' %> <span id="modal-port-title"></span>
+        </h3>
+        <p class="text-[11px] text-slate-400" id="modal-port-subtitle"></p>
+      </div>
+      <button type="button" onclick="closeModal('modal-port-detail')" class="text-slate-400 hover:text-white p-1 cursor-pointer">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+
+    <div class="p-6 overflow-y-auto space-y-4 text-sm">
+      <!-- Info Koneksi Saat Ini -->
+      <div id="current-connection-box" class="hidden bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-3.5 space-y-2">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-semibold text-emerald-400 uppercase">Status: Terhubung</span>
+          <a id="jump-to-peer-btn" href="#" class="hidden text-xs bg-emerald-500 text-slate-950 font-semibold px-2.5 py-1 rounded hover:bg-emerald-400 transition">
+            Lihat Perangkat &rarr;
+          </a>
+        </div>
+        <p id="current-connection-text" class="text-xs text-slate-200"></p>
+      </div>
+
+      <!-- Form Simpan / Update Koneksi -->
+      <form id="port-connect-form" method="POST" class="space-y-4">
+        <input type="hidden" name="device_id" value="<%= device.id %>">
+
+        <div>
+          <label class="block text-slate-300 text-xs mb-1">Label / Nama Port (Bisa di-rename)</label>
+          <input type="text" name="port_name" id="input_port_name" required class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white font-mono text-xs focus:outline-none focus:border-emerald-400 disabled:opacity-70">
+        </div>
+
+        <div>
+          <label class="block text-slate-300 text-xs mb-1.5">Arah Koneksi Kabel</label>
+          <div class="grid grid-cols-2 gap-2.5">
+            <label class="flex items-center gap-2 bg-slate-900 border border-slate-600 rounded-lg p-2.5 cursor-pointer">
+              <input type="radio" name="connection_mode" value="device" checked onchange="toggleConnectionMode()" class="text-emerald-500">
+              <span class="text-xs text-slate-200">Perangkat Terdaftar</span>
+            </label>
+            <label class="flex items-center gap-2 bg-slate-900 border border-slate-600 rounded-lg p-2.5 cursor-pointer">
+              <input type="radio" name="connection_mode" value="end_device" onchange="toggleConnectionMode()" class="text-sky-500">
+              <span class="text-xs text-slate-200">End-Device / Ruangan</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Mode A: Pilih Perangkat & Port Lawan -->
+        <div id="mode-device-fields" class="space-y-3 bg-slate-900/60 border border-slate-700 p-3.5 rounded-lg">
+          <div>
+            <label class="block text-slate-300 text-xs mb-1">Perangkat Tujuan (Cabang <%= device.branch_code %>)</label>
+            <select id="select_peer_device" onchange="loadTargetPorts()" class="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-white text-xs disabled:opacity-70">
+              <option value="">-- Pilih Perangkat Tujuan --</option>
+              <% peerDevices.forEach(pd => { %>
+                <option value="<%= pd.id %>"><%= pd.hostname %> (<%= pd.type_name %><%= pd.room_location ? ' - ' + pd.room_location : '' %>)</option>
+              <% }) %>
+            </select>
+          </div>
+          <div>
+            <label class="block text-slate-300 text-xs mb-1">Port Tujuan (Hanya port kosong)</label>
+            <select name="target_port_id" id="select_target_port" class="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-white text-xs font-mono disabled:opacity-70">
+              <option value="">-- Pilih perangkat tujuan dulu --</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Mode B: Ketik End Device -->
+        <div id="mode-end-device-fields" class="hidden bg-slate-900/60 border border-slate-700 p-3.5 rounded-lg">
+          <label class="block text-slate-300 text-xs mb-1">Nama End-Device / Ruangan</label>
+          <input type="text" name="end_device_info" id="input_end_device_info" placeholder="Contoh: PC Kasir IGD / Printer Radiologi" class="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-white text-xs disabled:opacity-70">
+        </div>
+
+        <!-- Kapasitas Link Terpakai & Media Kabel -->
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-slate-300 text-xs mb-1">Kapasitas Link Terpakai</label>
+            <select name="link_speed" id="input_link_speed" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white text-xs font-semibold disabled:opacity-70">
+              <option value="100M">100 Mbps (Oranye)</option>
+              <option value="1G" selected>1 Gbps (Hijau)</option>
+              <option value="2.5G">2.5 Gbps (Cyan)</option>
+              <option value="10G">10 Gbps (Cyan)</option>
+              <option value="25G">25 Gbps (Ungu)</option>
+              <option value="40G">40 Gbps (Ungu)</option>
+              <option value="100G">100 Gbps (Ungu)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-slate-300 text-xs mb-1">Media Kabel</label>
+            <select name="cable_type" id="input_cable_type" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white text-xs disabled:opacity-70">
+              <option value="UTP Cat6">UTP Cat6</option>
+              <option value="UTP Cat5e">UTP Cat5e</option>
+              <option value="Fiber Optic (SM)">Fiber Optic (Singlemode)</option>
+              <option value="Fiber Optic (MM)">Fiber Optic (Multimode)</option>
+              <option value="DAC / Patch Cord">DAC / Patch Cord</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-slate-300 text-xs mb-1">Info VLAN / Trunk</label>
+            <input type="text" name="vlan_info" id="input_vlan_info" placeholder="Trunk All / VLAN 20" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white text-xs disabled:opacity-70">
+          </div>
+          <div>
+            <label class="block text-slate-300 text-xs mb-1">Catatan Tambahan</label>
+            <input type="text" name="notes" id="input_notes" placeholder="Uplink ke Core Router" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white text-xs disabled:opacity-70">
+          </div>
+        </div>
+
+        <div class="pt-3 border-t border-slate-700 flex items-center justify-between gap-2">
+          <% if (can('port.connect')) { %>
+            <button type="button" id="btn-disconnect-port" onclick="submitDisconnect()" class="hidden px-3.5 py-2 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 border border-rose-500/30 text-xs font-semibold transition cursor-pointer">
+              Putus Kabel
+            </button>
+          <% } %>
+
+          <div class="flex items-center gap-2 ml-auto">
+            <button type="button" onclick="closeModal('modal-port-detail')" class="px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-medium cursor-pointer">
+              Tutup
+            </button>
+            <% if (can('port.connect')) { %>
+              <button type="submit" class="px-5 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-slate-950 text-xs font-semibold transition cursor-pointer">
+                Simpan Port
+              </button>
+            <% } %>
+          </div>
+        </div>
+      </form>
+
+      <% if (can('port.connect')) { %>
+        <form id="port-disconnect-form" method="POST" class="hidden">
+          <input type="hidden" name="device_id" value="<%= device.id %>">
+        </form>
+      <% } %>
+    </div>
+  </div>
+</div>
+
+<!-- =========================================================
+     MODAL: PREVIEW, DOWNLOAD & HAPUS FOTO DOKUMENTASI
+     ========================================================= -->
+<div id="modal-photo-preview" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4">
+  <div onclick="closeModal('modal-photo-preview')" class="fixed inset-0 bg-slate-950/85 backdrop-blur-sm"></div>
+
+  <div class="relative bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-3xl max-h-[90vh] flex flex-col shadow-2xl z-10 overflow-hidden">
+    <div class="px-5 py-3.5 border-b border-slate-700 flex items-center justify-between">
+      <h3 id="photo-modal-title" class="text-sm font-semibold text-white truncate">Preview Foto</h3>
+      <button type="button" onclick="closeModal('modal-photo-preview')" class="text-slate-400 hover:text-white p-1 cursor-pointer">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+    </div>
+
+    <div class="p-4 bg-slate-950 flex-1 overflow-auto flex items-center justify-center">
+      <img id="photo-modal-img" src="" alt="Preview Dokumentasi" class="max-h-[65vh] w-auto object-contain rounded-lg border border-slate-800">
+    </div>
+
+    <% if (can('device.write')) { %>
+      <div id="photo-delete-confirm-bar" class="hidden px-5 py-3 bg-rose-950/60 border-t border-rose-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+        <span class="text-rose-200 font-medium">Yakin ingin menghapus foto ini secara permanen dari server?</span>
+        <form action="/devices/<%= device.id %>/delete-photo" method="POST" class="flex items-center gap-2 shrink-0">
+          <input type="hidden" name="photo_type" id="delete-photo-type-input">
+          <button type="button" onclick="togglePhotoDeleteConfirm(false)" class="px-3 py-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-200 cursor-pointer">
+            Batal
+          </button>
+          <button type="submit" class="px-3.5 py-1.5 rounded-lg bg-rose-500 hover:bg-rose-600 text-white font-semibold cursor-pointer">
+            Ya, Hapus Foto
+          </button>
+        </form>
+      </div>
+    <% } %>
+
+    <div id="photo-modal-footer" class="px-5 py-3.5 border-t border-slate-700 flex items-center justify-between gap-3 bg-slate-800">
+      <% if (can('device.write')) { %>
+        <button type="button" onclick="togglePhotoDeleteConfirm(true)"
+          class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 border border-rose-500/30 text-xs font-semibold transition cursor-pointer">
+          <i data-lucide="trash-2" class="w-4 h-4"></i>
+          <span>Hapus</span>
+        </button>
+      <% } else { %>
+        <div></div>
+      <% } %>
+
+      <div class="flex items-center gap-2">
+        <a id="photo-modal-download" href="#" download
+          class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-slate-950 text-xs font-semibold transition">
+          <i data-lucide="download" class="w-4 h-4"></i>
+          <span>Download</span>
+        </a>
+        <button type="button" onclick="closeModal('modal-photo-preview')"
+          class="px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-medium cursor-pointer">
+          Tutup
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const CAN_CONNECT_PORT = <%= can('port.connect') ? 'true' : 'false' %>;
+
+  function openPortModal(btn) {
+    const port = JSON.parse(btn.getAttribute('data-port'));
+
+    document.getElementById('modal-port-title').textContent = port.port_name;
+    document.getElementById('modal-port-subtitle').textContent = `Antarmuka: ${port.port_type}`;
+    document.getElementById('port-connect-form').action = `/ports/${port.id}/connect`;
+
+    const disconnectForm = document.getElementById('port-disconnect-form');
+    if (disconnectForm) {
+      disconnectForm.action = `/ports/${port.id}/disconnect`;
+    }
+
+    document.getElementById('input_port_name').value = port.port_name;
+    document.getElementById('input_cable_type').value = port.cable_type || 'UTP Cat6';
+    document.getElementById('input_link_speed').value = port.link_speed || port.port_capacity || '1G';
+    document.getElementById('input_vlan_info').value = port.vlan_info || '';
+    document.getElementById('input_notes').value = port.notes || '';
+
+    const connBox = document.getElementById('current-connection-box');
+    const connText = document.getElementById('current-connection-text');
+    const jumpBtn = document.getElementById('jump-to-peer-btn');
+    const disconnectBtn = document.getElementById('btn-disconnect-port');
+
+    document.getElementById('select_peer_device').value = '';
+    document.getElementById('select_target_port').innerHTML = '<option value="">-- Pilih perangkat tujuan dulu --</option>';
+    document.getElementById('input_end_device_info').value = '';
+
+    if (port.connection_id) {
+      connBox.classList.remove('hidden');
+      if (disconnectBtn) disconnectBtn.classList.remove('hidden');
+
+      if (port.peer_device_hostname) {
+        connText.innerHTML = `Terhubung ke <strong>${port.peer_device_hostname}</strong>`;
+        jumpBtn.href = `/devices/${port.peer_device_id}/visual`;
+        jumpBtn.classList.remove('hidden');
+
+        document.querySelector('input[name="connection_mode"][value="device"]').checked = true;
+        document.getElementById('select_peer_device').value = port.peer_device_id;
+        loadTargetPorts(port.peer_port_id, port.peer_port_name);
+      } else {
+        connText.innerHTML = `Terhubung ke End-Device: <strong>${port.end_device_info}</strong>`;
+        jumpBtn.classList.add('hidden');
+
+        document.querySelector('input[name="connection_mode"][value="end_device"]').checked = true;
+        document.getElementById('input_end_device_info').value = port.end_device_info;
+      }
+    } else {
+      connBox.classList.add('hidden');
+      jumpBtn.classList.add('hidden');
+      if (disconnectBtn) disconnectBtn.classList.add('hidden');
+      document.querySelector('input[name="connection_mode"][value="device"]').checked = true;
+    }
+
+    toggleConnectionMode();
+
+    document.querySelectorAll('#port-connect-form input, #port-connect-form select').forEach(el => {
+      if (el.type !== 'hidden') el.disabled = !CAN_CONNECT_PORT;
+    });
+    if (!CAN_CONNECT_PORT && disconnectBtn) {
+      disconnectBtn.classList.add('hidden');
+    }
+
+    openModal('modal-port-detail');
+  }
+
+  function toggleConnectionMode() {
+    const mode = document.querySelector('input[name="connection_mode"]:checked').value;
+    const deviceFields = document.getElementById('mode-device-fields');
+    const endDeviceFields = document.getElementById('mode-end-device-fields');
+
+    if (mode === 'device') {
+      deviceFields.classList.remove('hidden');
+      endDeviceFields.classList.add('hidden');
+    } else {
+      deviceFields.classList.add('hidden');
+      endDeviceFields.classList.remove('hidden');
+    }
+  }
+
+  function openPhotoModal(photoUrl, title, photoType) {
+    document.getElementById('photo-modal-title').textContent = title;
+    document.getElementById('photo-modal-img').src = photoUrl;
+    document.getElementById('photo-modal-download').href = photoUrl;
+
+    const typeInput = document.getElementById('delete-photo-type-input');
+    if (typeInput) typeInput.value = photoType;
+
+    togglePhotoDeleteConfirm(false);
+    openModal('modal-photo-preview');
+  }
+
+  function togglePhotoDeleteConfirm(showConfirm) {
+    const confirmBar = document.getElementById('photo-delete-confirm-bar');
+    const footerBar = document.getElementById('photo-modal-footer');
+    if (!confirmBar) return;
+
+    if (showConfirm) {
+      confirmBar.classList.remove('hidden');
+      footerBar.classList.add('hidden');
+    } else {
+      confirmBar.classList.add('hidden');
+      footerBar.classList.remove('hidden');
+    }
+  }
+
+  async function loadTargetPorts(preselectPortId = null, preselectPortName = null) {
+    const targetDeviceId = document.getElementById('select_peer_device').value;
+    const portSelect = document.getElementById('select_target_port');
+
+    if (!targetDeviceId) {
+      portSelect.innerHTML = '<option value="">-- Pilih perangkat tujuan dulu --</option>';
+      return;
+    }
+
+    portSelect.innerHTML = '<option value="">Memuat daftar port...</option>';
+    const res = await fetch(`/api/devices/${targetDeviceId}/available-ports`);
+    const ports = await res.json();
+
+    portSelect.innerHTML = '<option value="">-- Pilih Port Tujuan --</option>';
+
+    if (preselectPortId && preselectPortName) {
+      const opt = document.createElement('option');
+      opt.value = preselectPortId;
+      opt.textContent = `${preselectPortName} (Terhubung saat ini)`;
+      opt.selected = true;
+      portSelect.appendChild(opt);
+    }
+
+    ports.forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p.id;
+      opt.textContent = `${p.port_name} [${p.port_type} - Max ${p.port_capacity || '1G'}]`;
+      portSelect.appendChild(opt);
+    });
+  }
+
+  function submitDisconnect() {
+    const disconnectForm = document.getElementById('port-disconnect-form');
+    if (disconnectForm) disconnectForm.submit();
+  }
+</script>
+
+<%- include('partials/footer') %>

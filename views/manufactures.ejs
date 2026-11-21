@@ -1,0 +1,346 @@
+<%- include('partials/header', { pageTitle: 'Master Manufactures (Brand & Model)' }) %>
+
+<main class="p-4 sm:p-6 flex-1 w-full space-y-5">
+
+  <% if (errorMsg) { %>
+    <div id="alert-error" class="bg-rose-500/15 border border-rose-500/40 text-rose-400 px-4 py-3 rounded-xl flex items-center justify-between text-sm">
+      <div class="flex items-center gap-2.5">
+        <i data-lucide="alert-circle" class="w-5 h-5 shrink-0"></i>
+        <span><%= errorMsg %></span>
+      </div>
+      <button onclick="document.getElementById('alert-error').remove()" class="p-1 hover:text-white cursor-pointer">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+    </div>
+  <% } %>
+
+  <% if (successMsg) { %>
+    <div id="alert-success" class="bg-emerald-500/15 border border-emerald-500/40 text-emerald-400 px-4 py-3 rounded-xl flex items-center justify-between text-sm">
+      <div class="flex items-center gap-2.5">
+        <i data-lucide="check-circle-2" class="w-5 h-5 shrink-0"></i>
+        <span><%= successMsg %></span>
+      </div>
+      <button onclick="document.getElementById('alert-success').remove()" class="p-1 hover:text-white cursor-pointer">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+    </div>
+  <% } %>
+
+  <!-- Header Bar -->
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-800 border border-slate-700 p-4 rounded-xl">
+    <div>
+      <h2 class="text-base font-semibold text-white">Master Brand & Model Perangkat</h2>
+      <p class="text-xs text-slate-400">Kelola standar merk (Brand) dan seri perangkat (Model) agar seragam saat input Master Devices.</p>
+    </div>
+    <div class="flex flex-wrap items-center gap-2">
+      <a href="/devices" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-medium transition">
+        <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i>
+        <span>Kembali ke Master Devices</span>
+      </a>
+      <% if (can('manufacture.write')) { %>
+        <button onclick="openModal('modal-add-brand')" class="inline-flex items-center gap-1.5 bg-sky-500 hover:bg-sky-600 text-slate-950 font-semibold text-xs px-3.5 py-2 rounded-lg transition cursor-pointer">
+          <i data-lucide="plus" class="w-4 h-4"></i>
+          <span>Tambah Brand</span>
+        </button>
+        <button onclick="openModal('modal-add-model')" class="inline-flex items-center gap-1.5 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-semibold text-xs px-3.5 py-2 rounded-lg transition cursor-pointer">
+          <i data-lucide="plus" class="w-4 h-4"></i>
+          <span>Tambah Model</span>
+        </button>
+      <% } %>
+    </div>
+  </div>
+
+  <!-- Grid 2 Kolom: Kiri = Master Brand (5 Kolom), Kanan = Master Model (7 Kolom) -->
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+
+    <!-- PANEL KIRI: MASTER BRAND -->
+    <div class="lg:col-span-5 bg-slate-800 border border-slate-700 rounded-xl shadow-lg overflow-hidden">
+      <div class="px-4 py-3.5 border-b border-slate-700 flex items-center justify-between bg-slate-900/40">
+        <h3 class="text-sm font-semibold text-sky-400 flex items-center gap-2">
+          <i data-lucide="award" class="w-4 h-4"></i>
+          <span>Daftar Brand / Merk (<%= brands.length %>)</span>
+        </h3>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse text-sm whitespace-nowrap">
+          <thead>
+            <tr class="bg-slate-900/60 border-b border-slate-700 text-slate-400 text-xs uppercase">
+              <th class="py-2.5 px-4">Nama Brand</th>
+              <th class="py-2.5 px-4 text-center">Model</th>
+              <th class="py-2.5 px-4 text-center">Perangkat</th>
+              <% if (can('manufacture.write')) { %>
+                <th class="py-2.5 px-4 text-right">Aksi</th>
+              <% } %>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-700/60">
+            <% if (brands.length === 0) { %>
+              <tr>
+                <td colspan="4" class="py-8 text-center text-xs text-slate-400">Belum ada data Brand.</td>
+              </tr>
+            <% } %>
+            <% brands.forEach(b => { %>
+              <tr class="hover:bg-slate-700/30 transition">
+                <td class="py-3 px-4 font-semibold text-white"><%= b.brand_name %></td>
+                <td class="py-3 px-4 text-center text-xs text-slate-300"><%= b.total_models %></td>
+                <td class="py-3 px-4 text-center text-xs text-slate-300"><%= b.total_devices %></td>
+                <% if (can('manufacture.write')) { %>
+                  <td class="py-3 px-4 text-right space-x-1">
+                    <button type="button" title="Edit Brand"
+                      onclick="openEditBrandModal('<%= b.id %>', '<%= b.brand_name %>')"
+                      class="p-1.5 rounded-lg bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 border border-sky-500/30 transition cursor-pointer">
+                      <i data-lucide="square-pen" class="w-3.5 h-3.5"></i>
+                    </button>
+                    <button type="button" title="Hapus Brand"
+                      onclick="openDeleteBrandModal('<%= b.id %>', '<%= b.brand_name %>')"
+                      class="p-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 transition cursor-pointer">
+                      <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                    </button>
+                  </td>
+                <% } %>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- PANEL KANAN: MASTER MODEL -->
+    <div class="lg:col-span-7 bg-slate-800 border border-slate-700 rounded-xl shadow-lg overflow-hidden">
+      <div class="px-4 py-3 border-b border-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-slate-900/40">
+        <h3 class="text-sm font-semibold text-emerald-400 flex items-center gap-2">
+          <i data-lucide="cpu" class="w-4 h-4"></i>
+          <span>Daftar Type / Model (<%= models.length %>)</span>
+        </h3>
+        <input type="text" id="model-search" oninput="filterModelsTable()" placeholder="Cari brand / model..."
+          class="bg-slate-900 border border-slate-600 rounded-lg px-3 py-1.5 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-emerald-400 sm:w-52">
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse text-sm whitespace-nowrap">
+          <thead>
+            <tr class="bg-slate-900/60 border-b border-slate-700 text-slate-400 text-xs uppercase">
+              <th class="py-2.5 px-4">Brand</th>
+              <th class="py-2.5 px-4">Type / Model</th>
+              <th class="py-2.5 px-4">Jenis Perangkat</th>
+              <th class="py-2.5 px-4 text-center">Dipakai</th>
+              <% if (can('manufacture.write')) { %>
+                <th class="py-2.5 px-4 text-right">Aksi</th>
+              <% } %>
+            </tr>
+          </thead>
+          <tbody id="models-tbody" class="divide-y divide-slate-700/60">
+            <% if (models.length === 0) { %>
+              <tr>
+                <td colspan="5" class="py-8 text-center text-xs text-slate-400">Belum ada data Model. Klik "+ Tambah Model" untuk menambahkan.</td>
+              </tr>
+            <% } %>
+            <% models.forEach(m => { %>
+              <tr class="model-row hover:bg-slate-700/30 transition">
+                <td class="py-3 px-4 font-semibold text-sky-300"><%= m.brand_name %></td>
+                <td class="py-3 px-4 font-mono text-white"><%= m.model_name %></td>
+                <td class="py-3 px-4 text-xs text-slate-300">
+                  <% if (m.type_name) { %>
+                    <span class="px-2 py-0.5 rounded bg-slate-700/80 border border-slate-600 text-slate-200"><%= m.type_name %></span>
+                  <% } else { %>
+                    <span class="text-slate-500">Semua Jenis</span>
+                  <% } %>
+                </td>
+                <td class="py-3 px-4 text-center text-xs text-slate-300"><%= m.total_devices %></td>
+                <% if (can('manufacture.write')) { %>
+                  <td class="py-3 px-4 text-right space-x-1">
+                    <button type="button" title="Edit Model"
+                      data-model="<%= JSON.stringify(m) %>"
+                      onclick="openEditModelModal(this)"
+                      class="p-1.5 rounded-lg bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 border border-sky-500/30 transition cursor-pointer">
+                      <i data-lucide="square-pen" class="w-3.5 h-3.5"></i>
+                    </button>
+                    <button type="button" title="Hapus Model"
+                      onclick="openDeleteModelModal('<%= m.id %>', '<%= m.brand_name %> <%= m.model_name %>')"
+                      class="p-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 transition cursor-pointer">
+                      <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                    </button>
+                  </td>
+                <% } %>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<% if (can('manufacture.write')) { %>
+<!-- MODAL TAMBAH BRAND -->
+<div id="modal-add-brand" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4">
+  <div onclick="closeModal('modal-add-brand')" class="fixed inset-0 bg-slate-950/75 backdrop-blur-sm"></div>
+  <div class="relative bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-md p-6 shadow-2xl z-10 space-y-4">
+    <h3 class="text-base font-semibold text-sky-400">+ Tambah Brand / Merk</h3>
+    <form action="/manufactures/brands" method="POST" class="space-y-4 text-sm">
+      <div>
+        <label class="block text-slate-300 mb-1">Nama Brand / Merk *</label>
+        <input type="text" name="brand_name" required placeholder="Contoh: MikroTik, Ruijie, UniFi" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white">
+      </div>
+      <div class="pt-2 flex justify-end gap-2">
+        <button type="button" onclick="closeModal('modal-add-brand')" class="px-4 py-2 rounded-lg bg-slate-700 text-slate-200 cursor-pointer">Batal</button>
+        <button type="submit" class="px-4 py-2 rounded-lg bg-sky-500 hover:bg-sky-600 text-slate-950 font-semibold cursor-pointer">Simpan Brand</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- MODAL EDIT BRAND -->
+<div id="modal-edit-brand" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4">
+  <div onclick="closeModal('modal-edit-brand')" class="fixed inset-0 bg-slate-950/75 backdrop-blur-sm"></div>
+  <div class="relative bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-md p-6 shadow-2xl z-10 space-y-4">
+    <h3 class="text-base font-semibold text-sky-400">Edit Nama Brand</h3>
+    <form id="edit-brand-form" method="POST" class="space-y-4 text-sm">
+      <div>
+        <label class="block text-slate-300 mb-1">Nama Brand / Merk *</label>
+        <input type="text" name="brand_name" id="edit_brand_name" required class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white">
+      </div>
+      <div class="pt-2 flex justify-end gap-2">
+        <button type="button" onclick="closeModal('modal-edit-brand')" class="px-4 py-2 rounded-lg bg-slate-700 text-slate-200 cursor-pointer">Batal</button>
+        <button type="submit" class="px-4 py-2 rounded-lg bg-sky-500 hover:bg-sky-600 text-slate-950 font-semibold cursor-pointer">Update Brand</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- MODAL HAPUS BRAND -->
+<div id="modal-delete-brand" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4">
+  <div onclick="closeModal('modal-delete-brand')" class="fixed inset-0 bg-slate-950/75 backdrop-blur-sm"></div>
+  <div class="relative bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-md p-6 shadow-2xl z-10 space-y-4">
+    <h3 class="text-base font-semibold text-white">Hapus Brand?</h3>
+    <p class="text-sm text-slate-300">Yakin ingin menghapus brand <span id="delete-brand-name" class="font-bold text-rose-400"></span>? Seluruh model di bawah brand ini juga akan ikut terhapus.</p>
+    <form id="delete-brand-form" method="POST" class="pt-2 flex justify-end gap-2 text-sm">
+      <button type="button" onclick="closeModal('modal-delete-brand')" class="px-4 py-2 rounded-lg bg-slate-700 text-slate-200 cursor-pointer">Batal</button>
+      <button type="submit" class="px-4 py-2 rounded-lg bg-rose-500 hover:bg-rose-600 text-white font-semibold cursor-pointer">Ya, Hapus</button>
+    </form>
+  </div>
+</div>
+
+<!-- MODAL TAMBAH MODEL -->
+<div id="modal-add-model" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4">
+  <div onclick="closeModal('modal-add-model')" class="fixed inset-0 bg-slate-950/75 backdrop-blur-sm"></div>
+  <div class="relative bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-md p-6 shadow-2xl z-10 space-y-4">
+    <h3 class="text-base font-semibold text-emerald-400">+ Tambah Type / Model Perangkat</h3>
+    <form action="/manufactures/models" method="POST" class="space-y-4 text-sm">
+      <div>
+        <label class="block text-slate-300 mb-1">Brand / Merk *</label>
+        <select name="brand_id" required class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white">
+          <% brands.forEach(b => { %>
+            <option value="<%= b.id %>"><%= b.brand_name %></option>
+          <% }) %>
+        </select>
+      </div>
+      <div>
+        <label class="block text-slate-300 mb-1">Jenis Perangkat <span class="text-xs text-slate-400">(Opsional untuk filter otomatis)</span></label>
+        <select name="device_type_id" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white">
+          <option value="">-- Semua Jenis Perangkat --</option>
+          <% deviceTypes.forEach(dt => { %>
+            <option value="<%= dt.id %>"><%= dt.type_name %></option>
+          <% }) %>
+        </select>
+      </div>
+      <div>
+        <label class="block text-slate-300 mb-1">Nama Type / Model *</label>
+        <input type="text" name="model_name" required placeholder="Contoh: CRS326-24G-2S+RM" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white">
+      </div>
+      <div class="pt-2 flex justify-end gap-2">
+        <button type="button" onclick="closeModal('modal-add-model')" class="px-4 py-2 rounded-lg bg-slate-700 text-slate-200 cursor-pointer">Batal</button>
+        <button type="submit" class="px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-semibold cursor-pointer">Simpan Model</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- MODAL EDIT MODEL -->
+<div id="modal-edit-model" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4">
+  <div onclick="closeModal('modal-edit-model')" class="fixed inset-0 bg-slate-950/75 backdrop-blur-sm"></div>
+  <div class="relative bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-md p-6 shadow-2xl z-10 space-y-4">
+    <h3 class="text-base font-semibold text-sky-400">Edit Type / Model Perangkat</h3>
+    <form id="edit-model-form" method="POST" class="space-y-4 text-sm">
+      <div>
+        <label class="block text-slate-300 mb-1">Brand / Merk *</label>
+        <select name="brand_id" id="edit_model_brand_id" required class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white">
+          <% brands.forEach(b => { %>
+            <option value="<%= b.id %>"><%= b.brand_name %></option>
+          <% }) %>
+        </select>
+      </div>
+      <div>
+        <label class="block text-slate-300 mb-1">Jenis Perangkat</label>
+        <select name="device_type_id" id="edit_model_type_id" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white">
+          <option value="">-- Semua Jenis Perangkat --</option>
+          <% deviceTypes.forEach(dt => { %>
+            <option value="<%= dt.id %>"><%= dt.type_name %></option>
+          <% }) %>
+        </select>
+      </div>
+      <div>
+        <label class="block text-slate-300 mb-1">Nama Type / Model *</label>
+        <input type="text" name="model_name" id="edit_model_name" required class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white">
+      </div>
+      <div class="pt-2 flex justify-end gap-2">
+        <button type="button" onclick="closeModal('modal-edit-model')" class="px-4 py-2 rounded-lg bg-slate-700 text-slate-200 cursor-pointer">Batal</button>
+        <button type="submit" class="px-4 py-2 rounded-lg bg-sky-500 hover:bg-sky-600 text-slate-950 font-semibold cursor-pointer">Update Model</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- MODAL HAPUS MODEL -->
+<div id="modal-delete-model" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4">
+  <div onclick="closeModal('modal-delete-model')" class="fixed inset-0 bg-slate-950/75 backdrop-blur-sm"></div>
+  <div class="relative bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-md p-6 shadow-2xl z-10 space-y-4">
+    <h3 class="text-base font-semibold text-white">Hapus Model?</h3>
+    <p class="text-sm text-slate-300">Apakah Anda yakin ingin menghapus model <span id="delete-model-name" class="font-bold text-rose-400"></span>?</p>
+    <form id="delete-model-form" method="POST" class="pt-2 flex justify-end gap-2 text-sm">
+      <button type="button" onclick="closeModal('modal-delete-model')" class="px-4 py-2 rounded-lg bg-slate-700 text-slate-200 cursor-pointer">Batal</button>
+      <button type="submit" class="px-4 py-2 rounded-lg bg-rose-500 hover:bg-rose-600 text-white font-semibold cursor-pointer">Ya, Hapus</button>
+    </form>
+  </div>
+</div>
+<% } %>
+
+<script>
+  function filterModelsTable() {
+    const q = document.getElementById('model-search').value.toLowerCase();
+    document.querySelectorAll('#models-tbody .model-row').forEach(row => {
+      row.classList.toggle('hidden', !row.textContent.toLowerCase().includes(q));
+    });
+  }
+
+  function openEditBrandModal(id, name) {
+    document.getElementById('edit-brand-form').action = `/manufactures/brands/${id}/update`;
+    document.getElementById('edit_brand_name').value = name;
+    openModal('modal-edit-brand');
+  }
+
+  function openDeleteBrandModal(id, name) {
+    document.getElementById('delete-brand-name').textContent = name;
+    document.getElementById('delete-brand-form').action = `/manufactures/brands/${id}/delete`;
+    openModal('modal-delete-brand');
+  }
+
+  function openEditModelModal(btn) {
+    const m = JSON.parse(btn.getAttribute('data-model'));
+    document.getElementById('edit-model-form').action = `/manufactures/models/${m.id}/update`;
+    document.getElementById('edit_model_brand_id').value = m.brand_id;
+    document.getElementById('edit_model_type_id').value = m.device_type_id || '';
+    document.getElementById('edit_model_name').value = m.model_name;
+    openModal('modal-edit-model');
+  }
+
+  function openDeleteModelModal(id, name) {
+    document.getElementById('delete-model-name').textContent = name;
+    document.getElementById('delete-model-form').action = `/manufactures/models/${id}/delete`;
+    openModal('modal-delete-model');
+  }
+</script>
+
+<%- include('partials/footer') %>

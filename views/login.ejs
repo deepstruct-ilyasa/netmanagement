@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="id" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= title %></title>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = { darkMode: 'class' };
+    if (localStorage.getItem('theme') === 'light') {
+      document.documentElement.classList.remove('dark');
+    } else {
+      document.documentElement.classList.add('dark');
+    }
+  </script>
+</head>
+<body class="bg-slate-100 dark:bg-slate-950 text-slate-800 dark:text-slate-100 min-h-screen flex items-center justify-center p-4 font-sans transition-colors duration-200">
+
+  <div class="w-full max-w-md space-y-6">
+    <!-- Logo & Judul -->
+    <div class="text-center space-y-2">
+      <div class="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-500 mb-1">
+        <i data-lucide="network" class="w-6 h-6"></i>
+      </div>
+      <h1 class="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+        NetAsset <span class="text-emerald-500">Hospital</span>
+      </h1>
+      <p class="text-xs text-slate-500 dark:text-slate-400">
+        IT Infrastructure & Multi-Branch Network Asset Management
+      </p>
+    </div>
+
+    <!-- Card Form Login -->
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 sm:p-8 shadow-xl space-y-5">
+      <div>
+        <h2 class="text-base font-semibold text-slate-900 dark:text-white">Masuk ke Sistem</h2>
+        <p class="text-xs text-slate-500 dark:text-slate-400">Silakan masukkan kredensial akun IT Anda.</p>
+      </div>
+
+      <% if (errorMsg) { %>
+        <div class="bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-300 px-3.5 py-2.5 rounded-xl text-xs flex items-center gap-2">
+          <i data-lucide="alert-circle" class="w-4 h-4 shrink-0 text-rose-500"></i>
+          <span><%= errorMsg %></span>
+        </div>
+      <% } %>
+
+      <form action="/login" method="POST" class="space-y-4 text-sm">
+        <div>
+          <label for="username" class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">Username</label>
+          <div class="relative">
+            <i data-lucide="user" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
+            <input type="text" id="username" name="username" required autofocus autocomplete="username"
+              placeholder="admin"
+              class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl pl-10 pr-3.5 py-2.5 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-emerald-500 transition">
+          </div>
+        </div>
+
+        <div>
+          <label for="password" class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">Password</label>
+          <div class="relative">
+            <i data-lucide="lock" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
+            <input type="password" id="password" name="password" required autocomplete="current-password"
+              placeholder="••••••••"
+              class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl pl-10 pr-10 py-2.5 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-emerald-500 transition">
+            <button type="button" onclick="togglePasswordVisibility()" title="Tampilkan / Sembunyikan Password"
+              class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer">
+              <i id="eye-icon" data-lucide="eye" class="w-4 h-4"></i>
+            </button>
+          </div>
+        </div>
+
+        <button type="submit"
+          class="w-full py-2.5 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white dark:text-slate-950 font-semibold text-sm transition shadow-sm flex items-center justify-center gap-2 cursor-pointer mt-2">
+          <i data-lucide="log-in" class="w-4 h-4"></i>
+          <span>Login</span>
+        </button>
+      </form>
+    </div>
+
+    <p class="text-center text-[11px] text-slate-400 dark:text-slate-500">
+      Network Management & Network Infrastructure
+    </p>
+  </div>
+
+  <script>
+    lucide.createIcons();
+    function togglePasswordVisibility() {
+      const pwdInput = document.getElementById('password');
+      pwdInput.type = pwdInput.type === 'password' ? 'text' : 'password';
+    }
+  </script>
+</body>
+</html>

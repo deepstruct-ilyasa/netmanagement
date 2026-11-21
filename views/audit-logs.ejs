@@ -1,0 +1,255 @@
+<%- include('partials/header', { pageTitle: 'Audit Logs Aktivitas Sistem' }) %>
+
+<main class="p-4 sm:p-6 flex-1 w-full space-y-5">
+  <div class="bg-slate-800 border border-slate-700 p-4 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+    <div>
+      <h2 class="text-base font-semibold text-white">Riwayat Aktivitas</h2>
+      <p class="text-xs text-slate-400">Menampilkan aktivitas pada setiap perubahan pada sistem ini.</p>
+    </div>
+  </div>
+
+  <div class="bg-slate-800 border border-slate-700 rounded-xl shadow-lg overflow-hidden">
+    <!-- Filter Per Page & Search -->
+    <div class="p-4 border-b border-slate-700/80 flex flex-row items-center justify-end gap-3 bg-slate-900/30">
+      <div class="relative flex-1 sm:flex-initial sm:w-80">
+        <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"></i>
+        <input type="text" id="log-search-input" oninput="onLogSearch(this.value)"
+          placeholder="Cari waktu, pengguna, cabang, aksi, deskripsi, IP..."
+          class="w-full bg-slate-900 border border-slate-600 rounded-lg pl-9 pr-3 py-2 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-emerald-400">
+      </div>
+      <div class="flex items-center gap-2 text-xs shrink-0">
+        <select id="log-per-page" onchange="changeLogPerPage(this.value)" class="bg-slate-900 border border-slate-600 rounded-lg px-2 py-1.5 text-white focus:outline-none focus:border-emerald-400">
+          <option value="8">8</option>
+          <option value="25">25</option>
+          <option value="50">50</option>
+          <option value="100">100</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="overflow-x-auto">
+      <table class="w-full text-left border-collapse text-sm">
+        <thead>
+          <tr class="bg-slate-900/60 border-b border-slate-700 text-slate-400 text-xs uppercase whitespace-nowrap">
+            <th class="py-3 px-4">Waktu</th>
+            <th class="py-3 px-4">Pengguna</th>
+            <th class="py-3 px-4">Cabang</th>
+            <th class="py-3 px-4">Aksi</th>
+            <th class="py-3 px-4">Deskripsi Aktivitas</th>
+            <th class="py-3 px-4">IP Client</th>
+          </tr>
+        </thead>
+        <tbody id="logs-table-body" class="divide-y divide-slate-700/60">
+          <% if (logs.length === 0) { %>
+            <tr>
+              <td colspan="6" class="py-10 text-center text-slate-400">Belum ada catatan aktivitas pada scope cabang ini.</td>
+            </tr>
+          <% } else { %>
+            <% logs.forEach(log => { %>
+              <tr class="log-row hover:bg-slate-700/30 transition">
+                <td class="py-3 px-4 text-xs font-mono text-slate-400 whitespace-nowrap"><%= log.created_at %></td>
+                <td class="py-3 px-4 whitespace-nowrap">
+                  <div class="font-semibold text-white text-xs"><%= log.user_fullname %></div>
+                  <div class="text-[11px] font-mono text-slate-400">@<%= log.username %></div>
+                </td>
+                <td class="py-3 px-4 whitespace-nowrap text-xs">
+                  <% if (log.branch_code) { %>
+                    <span class="px-2 py-0.5 rounded bg-slate-900 border border-slate-700 text-emerald-400 font-semibold">
+                      <%= log.branch_code %>
+                    </span>
+                  <% } else { %>
+                    <span class="text-slate-500">Global / System</span>
+                  <% } %>
+                </td>
+                <td class="py-3 px-4 whitespace-nowrap">
+                  <%
+                    let badgeCls = 'bg-slate-700 text-slate-200 border-slate-600';
+                    if (log.action === 'CREATE' || log.action === 'CONNECT') badgeCls = 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30';
+                    else if (log.action === 'UPDATE') badgeCls = 'bg-sky-500/15 text-sky-400 border-sky-500/30';
+                    else if (log.action === 'DELETE' || log.action === 'DISCONNECT') badgeCls = 'bg-rose-500/15 text-rose-400 border-rose-500/30';
+                  %>
+                  <span class="px-2 py-0.5 rounded text-[11px] font-bold border <%= badgeCls %>">
+                    <%= log.action %>
+                  </span>
+                </td>
+                <td class="py-3 px-4 text-slate-200 text-xs"><%= log.description %></td>
+                <td class="py-3 px-4 text-xs font-mono text-slate-400 whitespace-nowrap"><%= log.ip_address || '-' %></td>
+              </tr>
+            <% }) %>
+
+            <tr id="logs-no-result" class="hidden">
+              <td colspan="6" class="py-10 text-center text-xs text-slate-400">Tidak ada riwayat aktivitas yang cocok dengan pencarian.</td>
+            </tr>
+          <% } %>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Footer Pagination -->
+    <div id="logs-pagination-footer" class="px-4 py-3 border-t border-slate-700/80 bg-slate-900/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-slate-400">
+      <div id="logs-page-info">Menampilkan 0 - 0 dari 0 data</div>
+      <div id="logs-page-buttons" class="flex flex-wrap items-center gap-1"></div>
+    </div>
+  </div>
+</main>
+
+<script>
+  const LOG_STATE_KEY = 'netmgmt_audit_logs_state';
+  let logState = { page: 1, perPage: 8, search: '' };
+
+  function loadLogState() {
+    const selectEl = document.getElementById('log-per-page');
+    const searchEl = document.getElementById('log-search-input');
+
+    const validOptions = selectEl
+      ? Array.from(selectEl.options).map(opt => parseInt(opt.value, 10))
+      : [8, 25, 50, 100];
+    const defaultPerPage = validOptions[0] || 8;
+
+    try {
+      const saved = JSON.parse(sessionStorage.getItem(LOG_STATE_KEY));
+      if (saved) logState = { ...logState, ...saved };
+    } catch (e) {}
+
+    if (!validOptions.includes(Number(logState.perPage))) {
+      logState.perPage = defaultPerPage;
+      saveLogState();
+    }
+
+    if (selectEl) selectEl.value = String(logState.perPage);
+    if (searchEl) searchEl.value = logState.search || '';
+  }
+
+  function saveLogState() {
+    sessionStorage.setItem(LOG_STATE_KEY, JSON.stringify(logState));
+  }
+
+  function onLogSearch(val) {
+    logState.search = val;
+    logState.page = 1;
+    saveLogState();
+    renderLogsTable();
+  }
+
+  function changeLogPerPage(val) {
+    logState.perPage = parseInt(val, 10) || 8;
+    logState.page = 1;
+    saveLogState();
+    renderLogsTable();
+  }
+
+  function goToLogPage(page) {
+    logState.page = page;
+    saveLogState();
+    renderLogsTable();
+  }
+
+  function renderLogsTable() {
+    const rows = Array.from(document.querySelectorAll('#logs-table-body .log-row'));
+    const noResultRow = document.getElementById('logs-no-result');
+    const footer = document.getElementById('logs-pagination-footer');
+
+    if (rows.length === 0) {
+      if (footer) footer.classList.add('hidden');
+      return;
+    }
+
+    const query = (logState.search || '').trim().toLowerCase();
+    const matchedRows = [];
+
+    rows.forEach(row => {
+      const matchSearch = !query || row.textContent.toLowerCase().includes(query);
+      if (matchSearch) {
+        matchedRows.push(row);
+      } else {
+        row.classList.add('hidden');
+      }
+    });
+
+    const totalItems = matchedRows.length;
+    const totalPages = Math.max(1, Math.ceil(totalItems / logState.perPage));
+    if (logState.page > totalPages) {
+      logState.page = totalPages;
+      saveLogState();
+    }
+
+    const startIdx = (logState.page - 1) * logState.perPage;
+    const endIdx = startIdx + logState.perPage;
+
+    matchedRows.forEach((row, idx) => {
+      const isVisible = idx >= startIdx && idx < endIdx;
+      row.classList.toggle('hidden', !isVisible);
+    });
+
+    if (noResultRow) {
+      noResultRow.classList.toggle('hidden', totalItems > 0);
+    }
+
+    renderPaginationControls({
+      infoEl: document.getElementById('logs-page-info'),
+      buttonsEl: document.getElementById('logs-page-buttons'),
+      totalItems,
+      page: logState.page,
+      perPage: logState.perPage,
+      onPageClick: goToLogPage
+    });
+  }
+
+  function renderPaginationControls({ infoEl, buttonsEl, totalItems, page, perPage, onPageClick }) {
+    if (!infoEl || !buttonsEl) return;
+    const totalPages = Math.max(1, Math.ceil(totalItems / perPage));
+    const from = totalItems === 0 ? 0 : (page - 1) * perPage + 1;
+    const to = Math.min(page * perPage, totalItems);
+    infoEl.textContent = `Menampilkan ${from} - ${to} dari ${totalItems} data`;
+
+    buttonsEl.innerHTML = '';
+    if (totalItems === 0) return;
+
+    const createBtn = (label, targetPage, disabled, active) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.textContent = label;
+      btn.disabled = disabled;
+      btn.className = active
+        ? 'px-2.5 py-1 rounded-md bg-emerald-500 text-slate-950 font-bold cursor-pointer'
+        : disabled
+          ? 'px-2.5 py-1 rounded-md bg-slate-800/50 text-slate-600 border border-slate-700/50 cursor-not-allowed'
+          : 'px-2.5 py-1 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition cursor-pointer';
+      if (!disabled && !active) {
+        btn.addEventListener('click', () => onPageClick(targetPage));
+      }
+      return btn;
+    };
+
+    buttonsEl.appendChild(createBtn('‹ Prev', page - 1, page <= 1, false));
+
+    const pages = [];
+    for (let p = 1; p <= totalPages; p++) {
+      if (p === 1 || p === totalPages || (p >= page - 1 && p <= page + 1)) {
+        pages.push(p);
+      } else if (pages[pages.length - 1] !== '...') {
+        pages.push('...');
+      }
+    }
+
+    pages.forEach(p => {
+      if (p === '...') {
+        const span = document.createElement('span');
+        span.textContent = '...';
+        span.className = 'px-1.5 text-slate-500';
+        buttonsEl.appendChild(span);
+      } else {
+        buttonsEl.appendChild(createBtn(String(p), p, false, p === page));
+      }
+    });
+
+    buttonsEl.appendChild(createBtn('Next ›', page + 1, page >= totalPages, false));
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    loadLogState();
+    renderLogsTable();
+  });
+</script>
+
+<%- include('partials/footer') %>

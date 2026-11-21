@@ -1,0 +1,143 @@
+<div class="w-fit mx-auto flex flex-col items-center">
+    <!-- Indikator LED Atas Modem -->
+    <div class="w-[90%] bg-gradient-to-b from-stone-100 to-stone-200 border-t-2 border-x-2 border-stone-400 rounded-t-2xl px-5 py-2 flex items-center justify-between gap-6 text-[10px] font-mono text-stone-700 shadow-sm">
+        <div class="flex items-center gap-2 font-sans font-bold text-stone-800">
+            <span><%= device.brand || 'Modem ONT' %></span>
+            <span class="text-stone-500 font-medium"><%= device.model || device.hostname %></span>
+        </div>
+        <div class="flex items-center gap-3.5">
+            <span class="flex items-center gap-1"><i class="w-2 h-2 rounded-full bg-emerald-500 inline-block"></i> POWER</span>
+            <span class="flex items-center gap-1"><i class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse inline-block"></i> PON</span>
+            <span class="flex items-center gap-1"><i class="w-2 h-2 rounded-full bg-stone-400 inline-block"></i> LOS</span>
+            <span class="flex items-center gap-1"><i class="w-2 h-2 rounded-full bg-emerald-500 inline-block"></i> WLAN</span>
+        </div>
+    </div>
+    
+    <!-- Bodi Belakang Modem ONT -->
+    <div class="bg-gradient-to-b from-stone-200 via-stone-100 to-stone-300 border-2 border-stone-400 rounded-2xl px-6 py-5 shadow-lg flex items-center gap-6 relative">
+        <!-- Antena Kiri -->
+        <div class="flex flex-col items-center -ml-2 pr-2 border-r border-stone-300">
+            <div class="w-2.5 h-16 bg-gradient-to-r from-stone-300 to-stone-100 border border-stone-400 rounded-full"></div>
+            <span class="text-[8px] font-mono text-stone-500 mt-1">ANT1</span>
+        </div>
+        
+        <!-- Bagian Power & ON/OFF -->
+        <div class="flex items-center gap-3 bg-stone-300/70 border border-stone-400/80 rounded-xl px-3.5 py-2.5">
+            <!-- Rocker Switch ON/OFF -->
+            <div class="flex flex-col items-center gap-1">
+                <div class="w-7 h-10 bg-slate-900 border-2 border-slate-600 rounded flex flex-col items-center justify-between py-1 text-[8px] font-bold text-white shadow-inner">
+                    <span class="text-emerald-400">I</span>
+                    <div class="w-4 h-0.5 bg-slate-600"></div>
+                    <span class="text-slate-400">O</span>
+                </div>
+                <span class="text-[9px] font-mono font-bold text-stone-700">ON/OFF</span>
+            </div>
+            <!-- DC 12V Jack -->
+            <div class="flex flex-col items-center gap-1">
+                <div class="w-10 h-10 rounded-lg bg-slate-900 border-2 border-slate-600 flex items-center justify-center shadow-inner">
+                    <div class="w-5 h-5 rounded-full bg-slate-950 border-2 border-amber-400/70 flex items-center justify-center">
+                        <div class="w-1.5 h-1.5 rounded-full bg-amber-300"></div>
+                    </div>
+                </div>
+                <span class="text-[9px] font-mono font-bold text-stone-700">12V DC</span>
+            </div>
+        </div>
+        
+        <!-- Port Fiber PON & TEL (POTS) -->
+        <div class="flex items-center gap-3 bg-stone-300/70 border border-stone-400/80 rounded-xl px-3.5 py-2.5">
+            <!-- Konektor SC/UPC PON Biru -->
+            <div class="flex flex-col items-center gap-1">
+                <div class="w-11 h-11 rounded-md bg-sky-600 border-2 border-sky-800 flex items-center justify-center shadow-inner">
+                    <div class="w-5 h-5 bg-slate-950 border border-sky-300 rounded-xs flex items-center justify-center">
+                        <div class="w-2 h-2 rounded-full bg-sky-400"></div>
+                    </div>
+                </div>
+                <span class="text-[9px] font-mono font-bold text-sky-900">PON</span>
+            </div>
+            <!-- Konektor RJ11 TEL/POTS -->
+            <div class="flex flex-col items-center gap-1">
+                <div class="w-10 h-11 rounded-md bg-slate-800 border-2 border-slate-600 flex items-center justify-center shadow-inner">
+                    <div class="w-5 h-5 bg-slate-950 border border-slate-500 rounded-xs"></div>
+                </div>
+                <span class="text-[9px] font-mono font-bold text-stone-700">TEL</span>
+            </div>
+        </div>
+        
+        <!-- DERETAN PORT INTERAKTIF PERANGKAT (LAN / SFP) -->
+        <div class="bg-amber-400/20 border-2 border-amber-500/50 rounded-xl p-3 space-y-1.5">
+            <div class="flex items-center gap-2">
+                <% portGroups.RJ45.forEach(port => {
+                    const st = getPortStyle(port);
+                    let targetLabel = `Kosong (Max ${port.port_capacity || '1G'})`;
+                    if (port.peer_device_hostname) {
+                        targetLabel = `[${port.link_speed || '1G'}] Ke: ${port.peer_device_hostname} (${port.peer_port_name})`;
+                    } else if (port.end_device_info) {
+                        targetLabel = `[${port.link_speed || '1G'}] Ke: ${port.end_device_info}`;
+                    }
+                    %>
+                    <button type="button"
+                    data-port="<%= JSON.stringify(port) %>"
+                    onclick="openPortModal(this)"
+                    title="<%= port.port_name %> - <%= targetLabel %>"
+                    class="group relative w-13 h-14 rounded-md border-2 <%= port.connection_id ? st.box : 'bg-amber-500/90 border-amber-700 text-slate-950 hover:border-emerald-500' %> flex flex-col items-center justify-between p-1 transition transform hover:scale-105 cursor-pointer shadow-sm">
+                    <div class="w-full flex items-center justify-between px-0.5">
+                        <span class="w-1.5 h-1.5 rounded-full <%= st.led %>"></span>
+                        <span class="text-[7px] font-mono font-bold px-1 rounded bg-black/25 leading-tight">
+                            <%= st.speedBadge || port.port_capacity || '1G' %>
+                        </span>
+                    </div>
+                    <svg class="w-8 h-5 <%= port.connection_id ? 'text-slate-300' : 'text-slate-900' %>" viewBox="0 0 32 22" fill="none">
+                        <path d="M3 6H10V3H22V6H29V19H3V6Z" fill="#090d16" stroke="currentColor" stroke-width="1.5"/>
+                        <line x1="8" y1="15" x2="8" y2="18.5" stroke="#f59e0b" stroke-width="1.3"/>
+                        <line x1="12" y1="15" x2="12" y2="18.5" stroke="#f59e0b" stroke-width="1.3"/>
+                        <line x1="16" y1="15" x2="16" y2="18.5" stroke="#f59e0b" stroke-width="1.3"/>
+                        <line x1="20" y1="15" x2="20" y2="18.5" stroke="#f59e0b" stroke-width="1.3"/>
+                        <line x1="24" y1="15" x2="24" y2="18.5" stroke="#f59e0b" stroke-width="1.3"/>
+                    </svg>
+                    <span class="text-[9px] font-mono font-bold truncate max-w-full leading-none">
+                        <%= port.port_name.replace('Port ', 'LAN') %>
+                    </span>
+                </button>
+                <% }) %>
+                
+                <% fiberTypes.forEach(ft => { (portGroups[ft.key] || []).forEach(port => {
+                    const st = getPortStyle(port);
+                    %>
+                    <button type="button"
+                    data-port="<%= JSON.stringify(port) %>"
+                    onclick="openPortModal(this)"
+                    class="relative <%= ft.widthClass %> h-14 rounded-md border-2 <%= st.box %> flex flex-col items-center justify-between p-1 transition transform hover:scale-105 cursor-pointer">
+                    <div class="w-full flex items-center justify-between px-0.5">
+                        <span class="w-1.5 h-1.5 rounded-full <%= st.led %>"></span>
+                        <span class="text-[7px] font-mono font-bold"><%= st.speedBadge || port.port_capacity %></span>
+                    </div>
+                    <span class="text-[9px] font-mono font-bold"><%= port.port_name %></span>
+                </button>
+                <% }) }) %>
+            </div>
+            <div class="text-[10px] font-mono font-bold uppercase tracking-wider text-stone-700 text-center">
+                LAN ETHERNET PORTS
+            </div>
+        </div>
+        
+        <!-- Lubang Reset & Antena Kanan -->
+        <div class="flex items-center gap-3 pl-2 border-l border-stone-300">
+            <div class="flex flex-col items-center gap-1">
+                <div class="w-4 h-4 rounded-full bg-stone-400 border border-stone-600 flex items-center justify-center">
+                    <div class="w-1.5 h-1.5 rounded-full bg-slate-950"></div>
+                </div>
+                <span class="text-[8px] font-mono font-bold text-stone-600">RESET</span>
+            </div>
+            <div class="flex flex-col items-center -mr-2">
+                <div class="w-2.5 h-16 bg-gradient-to-l from-stone-300 to-stone-100 border border-stone-400 rounded-full"></div>
+                <span class="text-[8px] font-mono text-stone-500 mt-1">ANT2</span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Kaki Karet Modem (Nempel Persis ke Bodi) -->
+    <div class="w-[85%] flex justify-between px-4">
+        <div class="w-11 h-2 bg-stone-500 border-x border-b border-stone-600 rounded-b-md shadow"></div>
+        <div class="w-11 h-2 bg-stone-500 border-x border-b border-stone-600 rounded-b-md shadow"></div>
+    </div>
+</div>

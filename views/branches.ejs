@@ -1,0 +1,201 @@
+<%- include('partials/header', { pageTitle: 'Master Cabang' }) %>
+
+<main class="p-4 sm:p-6 flex-1 w-full space-y-5">
+
+  <!-- Notifikasi Error Banner -->
+  <% if (errorMsg) { %>
+    <div id="error-banner" class="bg-rose-500/15 border border-rose-500/40 text-rose-300 px-4 py-3 rounded-xl flex items-center justify-between text-sm">
+      <div class="flex items-center gap-2.5">
+        <svg class="w-5 h-5 text-rose-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        <span><%= errorMsg %></span>
+      </div>
+      <button onclick="document.getElementById('error-banner').remove()" class="text-rose-400 hover:text-white p-1">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+  <% } %>
+
+  <!-- Header Section -->
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-800 border border-slate-700 p-4 rounded-xl">
+    <div>
+      <h2 class="text-base font-semibold text-white">Daftar Cabang</h2>
+      <p class="text-xs text-slate-400">Kelola lokasi cabang dan pantau perangkat jaringan yang terpasang di tiap cabang.</p>
+    </div>
+    <% if (can('branch.write')) { %>
+      <button onclick="openModal('modal-add-branch')" class="inline-flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-semibold text-sm px-4 py-2.5 rounded-lg transition cursor-pointer">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+        <span>Tambah Cabang</span>
+      </button>
+    <% } %>
+  </div>
+
+  <!-- Tabel Daftar Cabang -->
+  <div class="bg-slate-800 border border-slate-700 rounded-xl shadow-lg overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full text-left border-collapse text-sm whitespace-nowrap">
+        <thead>
+          <tr class="bg-slate-900/60 border-b border-slate-700 text-slate-400 text-xs uppercase">
+            <th class="py-3 px-4">Kode Cabang</th>
+            <th class="py-3 px-4">Nama Cabang</th>
+            <th class="py-3 px-4">Alamat</th>
+            <th class="py-3 px-4 text-center">Jumlah Perangkat</th>
+            <% if (can('branch.write')) { %>
+              <th class="py-3 px-4 text-center">Aksi</th>
+            <% } %>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-700/60">
+          <% branches.forEach(b => { %>
+            <tr class="hover:bg-slate-700/30 transition">
+              <td class="py-3.5 px-4">
+                <span class="bg-slate-700 text-emerald-400 font-mono font-bold px-2.5 py-1 rounded text-sm">
+                  <%= b.branch_code %>
+                </span>
+              </td>
+              <td class="py-3.5 px-4 font-semibold text-white">
+                <%= b.branch_name %>
+              </td>
+              <td class="py-3.5 px-4 text-xs text-slate-400 max-w-xs truncate">
+                <%= b.address || '-' %>
+              </td>
+              <td class="py-3.5 px-4 text-center">
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold <%= b.device_count > 0 ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' : 'bg-slate-700/50 text-slate-400' %>">
+                  <%= b.device_count %> Unit
+                </span>
+              </td>
+              <% if (can('branch.write')) { %>
+                <td class="py-3.5 px-4 text-center space-x-2">
+                  <button type="button" title="Edit"
+                    onclick="openEditBranchModal('<%= b.id %>', '<%= b.branch_code %>', '<%= b.branch_name %>', `<%= (b.address || '').replace(/`/g, '\\`') %>`)"
+                    class="p-2 rounded-lg bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 border border-sky-500/30 transition cursor-pointer">
+                    <i data-lucide="square-pen" class="w-4 h-4"></i>
+                  </button>
+                  <button type="button" title="Hapus"
+                    onclick="openDeleteBranchModal('<%= b.id %>', '<%= b.branch_name %>', '<%= b.device_count %>')"
+                    class="p-2 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 transition cursor-pointer">
+                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                  </button>
+                </td>
+              <% } %>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</main>
+
+<% if (can('branch.write')) { %>
+  <!-- MODAL 1: TAMBAH CABANG -->
+  <div id="modal-add-branch" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4">
+    <div onclick="closeModal('modal-add-branch')" class="fixed inset-0 bg-slate-950/75 backdrop-blur-sm"></div>
+    <div class="relative bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-md shadow-2xl z-10 overflow-hidden">
+      <div class="px-6 py-4 border-b border-slate-700 flex items-center justify-between">
+        <h3 class="text-base font-semibold text-emerald-400">+ Tambah Cabang Rumah Sakit</h3>
+        <button type="button" onclick="closeModal('modal-add-branch')" class="text-slate-400 hover:text-white">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <form action="/branches" method="POST" class="p-6 space-y-4 text-sm">
+        <div>
+          <label class="block text-slate-300 mb-1">Kode Cabang *</label>
+          <input type="text" name="branch_code" placeholder="Contoh: RS-KLT / CAB-02" required class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white uppercase focus:outline-none focus:border-emerald-400">
+          <p class="text-[11px] text-slate-400 mt-1">Digunakan sebagai prefix penamaan perangkat & label.</p>
+        </div>
+        <div>
+          <label class="block text-slate-300 mb-1">Nama Cabang *</label>
+          <input type="text" name="branch_name" placeholder="Contoh: RSU Cabang Klaten" required class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-400">
+        </div>
+        <div>
+          <label class="block text-slate-300 mb-1">Alamat Lengkap</label>
+          <textarea name="address" rows="2" placeholder="Jl. Raya..." class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-400"></textarea>
+        </div>
+        <div class="pt-2 flex justify-end gap-3">
+          <button type="button" onclick="closeModal('modal-add-branch')" class="px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-200">Batal</button>
+          <button type="submit" class="px-5 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-semibold">Simpan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL 2: EDIT CABANG -->
+  <div id="modal-edit-branch" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4">
+    <div onclick="closeModal('modal-edit-branch')" class="fixed inset-0 bg-slate-950/75 backdrop-blur-sm"></div>
+    <div class="relative bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-md shadow-2xl z-10 overflow-hidden">
+      <div class="px-6 py-4 border-b border-slate-700 flex items-center justify-between">
+        <h3 class="text-base font-semibold text-sky-400">Edit Data Cabang</h3>
+        <button type="button" onclick="closeModal('modal-edit-branch')" class="text-slate-400 hover:text-white">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <form id="edit-branch-form" method="POST" class="p-6 space-y-4 text-sm">
+        <div>
+          <label class="block text-slate-300 mb-1">Kode Cabang *</label>
+          <input type="text" name="branch_code" id="edit-branch-code" required class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white uppercase focus:outline-none focus:border-sky-400">
+        </div>
+        <div>
+          <label class="block text-slate-300 mb-1">Nama Cabang *</label>
+          <input type="text" name="branch_name" id="edit-branch-name" required class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-sky-400">
+        </div>
+        <div>
+          <label class="block text-slate-300 mb-1">Alamat Lengkap</label>
+          <textarea name="address" id="edit-branch-address" rows="2" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-sky-400"></textarea>
+        </div>
+        <div class="pt-2 flex justify-end gap-3">
+          <button type="button" onclick="closeModal('modal-edit-branch')" class="px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-200">Batal</button>
+          <button type="submit" class="px-5 py-2 rounded-lg bg-sky-500 hover:bg-sky-600 text-slate-950 font-semibold">Update</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL 3: KONFIRMASI HAPUS CABANG -->
+  <div id="modal-delete-branch" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4">
+    <div onclick="closeModal('modal-delete-branch')" class="fixed inset-0 bg-slate-950/75 backdrop-blur-sm"></div>
+    <div class="relative bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-md p-6 shadow-2xl z-10 space-y-4">
+      <div class="flex items-center gap-3 text-rose-400">
+        <div class="p-2.5 rounded-full bg-rose-500/15 border border-rose-500/30">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+        </div>
+        <h3 class="text-lg font-semibold text-white">Hapus Cabang?</h3>
+      </div>
+
+      <p id="delete-branch-message" class="text-sm text-slate-300 leading-relaxed"></p>
+
+      <form id="delete-branch-form" method="POST" class="pt-2 flex justify-end gap-3 text-sm">
+        <button type="button" onclick="closeModal('modal-delete-branch')" class="px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-200">Batal</button>
+        <button type="submit" id="delete-branch-submit" class="px-4 py-2 rounded-lg bg-rose-500 hover:bg-rose-600 text-white font-semibold">Ya, Hapus</button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    function openEditBranchModal(id, code, name, address) {
+      document.getElementById('edit-branch-form').action = `/branches/${id}/update`;
+      document.getElementById('edit-branch-code').value = code;
+      document.getElementById('edit-branch-name').value = name;
+      document.getElementById('edit-branch-address').value = address;
+      openModal('modal-edit-branch');
+    }
+
+    function openDeleteBranchModal(id, name, count) {
+      const msgEl = document.getElementById('delete-branch-message');
+      const submitBtn = document.getElementById('delete-branch-submit');
+      document.getElementById('delete-branch-form').action = `/branches/${id}/delete`;
+
+      if (parseInt(count) > 0) {
+        msgEl.innerHTML = `Cabang <span class="font-bold text-amber-400">${name}</span> masih memiliki <span class="font-bold text-white">${count} perangkat</span> terdaftar. Pindahkan atau hapus perangkat tersebut terlebih dahulu sebelum menghapus cabang ini.`;
+        submitBtn.classList.add('hidden');
+      } else {
+        msgEl.innerHTML = `Apakah Anda yakin ingin menghapus cabang <span class="font-bold text-rose-400">${name}</span>?`;
+        submitBtn.classList.remove('hidden');
+      }
+      openModal('modal-delete-branch');
+    }
+  </script>
+<% } %>
+
+<%- include('partials/footer') %>

@@ -1,0 +1,11 @@
+node_modules/
+.env
+
+# Database SQLite & file WAL sementara
+database/*.db
+database/*.db-shm
+database/*.db-wal
+
+# File upload user (opsional, sisakan folder kosongnya saja)
+public/uploads/*
+!public/uploads/.gitkeep

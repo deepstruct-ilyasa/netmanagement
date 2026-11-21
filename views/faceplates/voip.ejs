@@ -1,0 +1,84 @@
+<div class="w-fit mx-auto flex flex-col items-center">
+  <!-- Bodi Utama IP Phone (Tampilan Rear / Side Port Bay) -->
+  <div class="bg-gradient-to-b from-slate-700 via-slate-800 to-slate-900 border-2 border-slate-500 rounded-2xl p-5 shadow-2xl flex items-center gap-6 relative">
+
+    <!-- Ilustrasi Gagang Telepon (Handset) & LCD Status -->
+    <div class="flex items-center gap-4 border-r border-slate-600/80 pr-5">
+      <!-- Gagang Handset -->
+      <div class="flex flex-col items-center">
+        <div class="w-9 h-7 bg-slate-900 border-2 border-slate-500 rounded-t-xl"></div>
+        <div class="w-4 h-12 bg-slate-800 border-x-2 border-slate-500"></div>
+        <div class="w-9 h-7 bg-slate-900 border-2 border-slate-500 rounded-b-xl"></div>
+      </div>
+
+      <!-- Info Ekstensi / Perangkat VoIP -->
+      <div class="w-36 space-y-1.5">
+        <div class="text-xs font-bold text-white truncate" title="<%= device.hostname %>">
+          <%= device.hostname %>
+        </div>
+        <div class="text-[11px] font-semibold text-sky-400"><%= device.brand || '' %></div>
+        <div class="text-[11px] text-slate-400 truncate"><%= device.model || '' %></div>
+      </div>
+    </div>
+
+    <!-- Port RJ45 Interaktif VoIP (INTERNET/PoE & PC Pass-through) -->
+    <div class="bg-slate-950/90 border border-slate-600 rounded-xl p-3 space-y-1.5">
+      <div class="flex items-center gap-3">
+        <% portGroups.RJ45.forEach((port, idx) => {
+          const st = getPortStyle(port);
+          let targetLabel = `Kosong (Max ${port.port_capacity || '100M'})`;
+          if (port.peer_device_hostname) {
+            targetLabel = `[${port.link_speed || '100M'}] Ke: ${port.peer_device_hostname} (${port.peer_port_name})`;
+          } else if (port.end_device_info) {
+            targetLabel = `[${port.link_speed || '100M'}] Ke: ${port.end_device_info}`;
+          }
+        %>
+          <div class="flex flex-col items-center gap-1">
+            <button type="button"
+              data-port="<%= JSON.stringify(port) %>"
+              onclick="openPortModal(this)"
+              title="<%= port.port_name %> - <%= targetLabel %>"
+              class="group relative w-14 h-14 rounded-md border-2 <%= st.box %> flex flex-col items-center justify-between p-1 transition transform hover:scale-105 cursor-pointer shadow">
+              <div class="w-full flex items-center justify-between px-0.5">
+                <span class="w-1.5 h-1.5 rounded-full <%= st.led %>"></span>
+                <span class="text-[7px] font-mono font-bold px-1 rounded bg-black/40 leading-tight">
+                  <%= st.speedBadge || port.port_capacity || '100M' %>
+                </span>
+              </div>
+              <svg class="w-8 h-5 text-slate-400" viewBox="0 0 32 22" fill="none">
+                <path d="M3 6H10V3H22V6H29V19H3V6Z" fill="#090d16" stroke="currentColor" stroke-width="1.5"/>
+                <line x1="8" y1="15" x2="8" y2="18.5" stroke="#f59e0b" stroke-width="1.2"/>
+                <line x1="12" y1="15" x2="12" y2="18.5" stroke="#f59e0b" stroke-width="1.2"/>
+                <line x1="16" y1="15" x2="16" y2="18.5" stroke="#f59e0b" stroke-width="1.2"/>
+                <line x1="20" y1="15" x2="20" y2="18.5" stroke="#f59e0b" stroke-width="1.2"/>
+                <line x1="24" y1="15" x2="24" y2="18.5" stroke="#f59e0b" stroke-width="1.2"/>
+              </svg>
+              <span class="text-[9px] font-mono font-bold truncate max-w-full leading-none">
+                <%= port.port_name.replace('Port ', '') %>
+              </span>
+            </button>
+            <span class="text-[8px] font-mono font-bold <%= idx === 0 ? 'text-emerald-400' : 'text-sky-400' %>">
+              <%= idx === 0 ? 'Internet' : (idx === 1 ? 'PC' : 'LAN') %>
+            </span>
+          </div>
+        <% }) %>
+      </div>
+    </div>
+
+    <!-- Jack DC 5V -->
+    <div class="flex flex-col items-center gap-1 pl-3 border-l border-slate-600/80">
+      <div class="w-9 h-9 rounded-full bg-slate-950 border-2 border-slate-500 flex items-center justify-center">
+        <div class="w-4 h-4 rounded-full bg-black border border-amber-400 flex items-center justify-center">
+          <div class="w-1 h-1 rounded-full bg-amber-300"></div>
+        </div>
+      </div>
+      <span class="text-[8px] font-mono text-slate-300">DC 5V</span>
+    </div>
+  </div>
+
+  <!-- Dudukan Stand Kaki IP Phone -->
+  <div class="w-[78%] flex justify-between px-6">
+    <div class="w-14 h-2.5 bg-slate-600 border-x border-b border-slate-500 rounded-b-lg shadow"></div>
+    <div class="w-14 h-2.5 bg-slate-600 border-x border-b border-slate-500 rounded-b-lg shadow"></div>
+  </div>
+</div>

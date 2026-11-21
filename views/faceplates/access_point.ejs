@@ -1,0 +1,94 @@
+<div class="w-fit mx-auto flex flex-col items-center">
+    <div class="bg-gradient-to-b from-slate-100 via-white to-slate-200 border-2 border-slate-300 rounded-[2rem] px-8 py-5 shadow-xl flex flex-col items-center gap-4 min-w-[420px]">
+        <!-- Header Brand AP & Ring LED -->
+        <div class="w-full flex items-center justify-between border-b border-slate-200 pb-2.5">
+            <div class="flex items-center gap-2">
+                <span class="w-3 h-3 rounded-full bg-sky-500 ring-4 ring-sky-500/25 animate-pulse"></span>
+                <span class="text-xs font-bold text-slate-800 tracking-wide"><%= device.brand || 'Access Point' %></span>
+                <span class="text-xs text-slate-500 font-mono"><%= device.model || '' %></span>
+            </div>
+            <span class="text-[10px] font-mono font-semibold text-slate-500 bg-slate-100 border border-slate-300 px-2 py-0.5 rounded-full">
+                <%= device.hostname %>
+            </span>
+        </div>
+        
+        <!-- Ceruk Bay Port Belakang / Bawah AP -->
+        <div class="bg-slate-200/90 border-2 border-slate-300/90 rounded-2xl px-6 py-4 shadow-inner flex items-center gap-5">
+            <!-- Port Interaktif AP (ETH0 / PoE IN / LAN) -->
+            <div class="flex items-center gap-3">
+                <% portGroups.RJ45.forEach((port, idx) => {
+                    const st = getPortStyle(port);
+                    let targetLabel = `Kosong (Max ${port.port_capacity || '1G'})`;
+                    if (port.peer_device_hostname) {
+                        targetLabel = `[${port.link_speed || '1G'}] Ke: ${port.peer_device_hostname} (${port.peer_port_name})`;
+                    } else if (port.end_device_info) {
+                        targetLabel = `[${port.link_speed || '1G'}] Ke: ${port.end_device_info}`;
+                    }
+                    %>
+                    <div class="flex flex-col items-center gap-1">
+                        <button type="button"
+                        data-port="<%= JSON.stringify(port) %>"
+                        onclick="openPortModal(this)"
+                        title="<%= port.port_name %> - <%= targetLabel %>"
+                        class="group relative w-14 h-14 rounded-lg border-2 <%= st.box %> flex flex-col items-center justify-between p-1 transition transform hover:scale-105 cursor-pointer shadow">
+                        <div class="w-full flex items-center justify-between px-0.5">
+                            <span class="w-1.5 h-1.5 rounded-full <%= st.led %>"></span>
+                            <span class="text-[7px] font-mono font-bold px-1 rounded bg-black/40 leading-tight">
+                                <%= st.speedBadge || port.port_capacity || '1G' %>
+                            </span>
+                        </div>
+                        <svg class="w-8 h-5 text-slate-400" viewBox="0 0 32 22" fill="none">
+                            <path d="M3 6H10V3H22V6H29V19H3V6Z" fill="#090d16" stroke="currentColor" stroke-width="1.5"/>
+                            <line x1="8" y1="15" x2="8" y2="18.5" stroke="#f59e0b" stroke-width="1.2"/>
+                            <line x1="12" y1="15" x2="12" y2="18.5" stroke="#f59e0b" stroke-width="1.2"/>
+                            <line x1="16" y1="15" x2="16" y2="18.5" stroke="#f59e0b" stroke-width="1.2"/>
+                            <line x1="20" y1="15" x2="20" y2="18.5" stroke="#f59e0b" stroke-width="1.2"/>
+                            <line x1="24" y1="15" x2="24" y2="18.5" stroke="#f59e0b" stroke-width="1.2"/>
+                        </svg>
+                        <span class="text-[9px] font-mono font-bold truncate max-w-full leading-none">
+                            <%= port.port_name.replace('Port ', 'ETH') %>
+                        </span>
+                    </button>
+                    <span class="text-[9px] font-mono font-bold text-slate-600">
+                        <%= idx === 0 ? 'ETH0 / PoE' : 'LAN' %>
+                    </span>
+                </div>
+                <% }) %>
+                
+                <% fiberTypes.forEach(ft => { (portGroups[ft.key] || []).forEach(port => {
+                    const st = getPortStyle(port);
+                    %>
+                    <div class="flex flex-col items-center gap-1">
+                        <button type="button"
+                        data-port="<%= JSON.stringify(port) %>"
+                        onclick="openPortModal(this)"
+                        class="relative <%= ft.widthClass %> h-14 rounded-lg border-2 <%= st.box %> flex flex-col items-center justify-between p-1 transition transform hover:scale-105 cursor-pointer">
+                        <div class="w-full flex items-center justify-between px-0.5">
+                            <span class="w-1.5 h-1.5 rounded-full <%= st.led %>"></span>
+                            <span class="text-[7px] font-mono font-bold"><%= st.speedBadge || port.port_capacity %></span>
+                        </div>
+                        <span class="text-[9px] font-mono font-bold"><%= port.port_name %></span>
+                    </button>
+                    <span class="text-[9px] font-mono font-bold text-slate-600"><%= ft.key %></span>
+                </div>
+                <% }) }) %>
+            </div>
+            
+            <!-- DC 12V & Reset Pinhole -->
+            <div class="flex items-center gap-3 pl-4 border-l border-slate-300">
+                <div class="flex flex-col items-center gap-1">
+                    <div class="w-8 h-8 rounded-full bg-slate-800 border-2 border-slate-500 flex items-center justify-center">
+                        <div class="w-3 h-3 rounded-full bg-slate-950 border border-amber-400"></div>
+                    </div>
+                    <span class="text-[8px] font-mono font-bold text-slate-600">12V DC</span>
+                </div>
+                <div class="flex flex-col items-center gap-1">
+                    <div class="w-5 h-5 rounded-full bg-slate-300 border border-slate-400 flex items-center justify-center">
+                        <div class="w-2 h-2 rounded-full bg-slate-800"></div>
+                    </div>
+                    <span class="text-[8px] font-mono font-bold text-slate-600">RESET</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

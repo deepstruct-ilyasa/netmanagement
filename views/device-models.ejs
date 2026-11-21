@@ -1,0 +1,403 @@
+<%- include('partials/header', { pageTitle: 'Master Model / Type Perangkat' }) %>
+
+<main class="p-4 sm:p-6 flex-1 w-full space-y-5">
+
+  <% if (typeof errorMsg !== 'undefined' && errorMsg) { %>
+    <div id="alert-error" class="bg-rose-500/15 border border-rose-500/40 text-rose-400 px-4 py-3 rounded-xl flex items-center justify-between text-sm">
+      <div class="flex items-center gap-2.5">
+        <i data-lucide="alert-circle" class="w-5 h-5 shrink-0"></i>
+        <span><%= errorMsg %></span>
+      </div>
+      <button onclick="document.getElementById('alert-error').remove()" class="p-1 hover:text-white cursor-pointer">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+    </div>
+  <% } %>
+
+  <% if (typeof successMsg !== 'undefined' && successMsg) { %>
+    <div id="alert-success" class="bg-emerald-500/15 border border-emerald-500/40 text-emerald-400 px-4 py-3 rounded-xl flex items-center justify-between text-sm">
+      <div class="flex items-center gap-2.5">
+        <i data-lucide="check-circle-2" class="w-5 h-5 shrink-0"></i>
+        <span><%= successMsg %></span>
+      </div>
+      <button onclick="document.getElementById('alert-success').remove()" class="p-1 hover:text-white cursor-pointer">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+    </div>
+  <% } %>
+
+  <!-- Header Bar -->
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-800 border border-slate-700 p-4 rounded-xl">
+    <div>
+      <h2 class="text-base font-semibold text-white">Daftar Model / Type Perangkat</h2>
+      <p class="text-xs text-slate-400">Kelola seri atau tipe perangkat untuk masing-masing brand.</p>
+    </div>
+    <% if (can('model.write')) { %>
+      <button onclick="openModal('modal-add-model')" class="inline-flex items-center justify-center gap-2 bg-sky-500 hover:bg-sky-600 text-slate-950 font-semibold text-sm px-4 py-2.5 rounded-lg transition shadow-sm cursor-pointer">
+        <i data-lucide="plus" class="w-4 h-4"></i>
+        <span>Tambah Model / Type</span>
+      </button>
+    <% } %>
+  </div>
+
+  <!-- Tabel Model / Type + Per Page & Search -->
+  <div class="bg-slate-800 border border-slate-700 rounded-xl shadow-lg overflow-hidden">
+    <div class="p-4 border-b border-slate-700/80 flex flex-row items-center justify-end gap-3 bg-slate-900/30">
+      <div class="relative flex-1 sm:flex-initial sm:w-72">
+        <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"></i>
+        <input type="text" id="model-search-input" oninput="onModelSearch(this.value)"
+          placeholder="Cari nama model, brand, atau jenis..."
+          class="w-full bg-slate-900 border border-slate-600 rounded-lg pl-9 pr-3 py-2 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-sky-400">
+      </div>
+      <div class="flex items-center gap-2 text-xs shrink-0">
+        <select id="model-per-page" onchange="changeModelPerPage(this.value)" class="bg-slate-900 border border-slate-600 rounded-lg px-2 py-1.5 text-white focus:outline-none focus:border-sky-400">
+          <option value="8">8</option>
+          <option value="25">25</option>
+          <option value="50">50</option>
+          <option value="100">100</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="overflow-x-auto">
+      <table class="w-full text-left border-collapse text-sm whitespace-nowrap">
+        <thead>
+          <tr class="bg-slate-900/60 border-b border-slate-700 text-slate-400 text-xs uppercase">
+            <th class="py-3 px-4 w-16 text-center">No</th>
+            <th class="py-3 px-4">Brand / Merk</th>
+            <th class="py-3 px-4">Model / Type</th>
+            <th class="py-3 px-4">Jenis Perangkat</th>
+            <th class="py-3 px-4 text-center">Perangkat Terpasang</th>
+            <% if (can('model.write')) { %>
+              <th class="py-3 px-4 text-right">Aksi</th>
+            <% } %>
+          </tr>
+        </thead>
+        <tbody id="models-table-body" class="divide-y divide-slate-700/60">
+          <% if (models.length === 0) { %>
+            <tr>
+              <td colspan="6" class="py-10 text-center text-xs text-slate-400">Belum ada data model perangkat.</td>
+            </tr>
+          <% } %>
+          <% models.forEach((m, index) => { %>
+            <tr class="model-row hover:bg-slate-700/30 transition" data-brand-id="<%= m.brand_id %>">
+              <td class="model-no-cell py-3.5 px-4 text-center text-slate-400 font-mono"><%= index + 1 %></td>
+              <td class="py-3.5 px-4 font-semibold text-emerald-400"><%= m.brand_name %></td>
+              <td class="py-3.5 px-4 font-mono text-white"><%= m.model_name %></td>
+              <td class="py-3.5 px-4 text-slate-300 text-xs"><%= m.type_name || 'Semua Jenis' %></td>
+              <td class="py-3.5 px-4 text-center">
+                <span class="px-2.5 py-0.5 rounded text-xs font-medium bg-slate-700/80 text-slate-200 border border-slate-600">
+                  <%= m.device_count %> Unit
+                </span>
+              </td>
+              <% if (can('model.write')) { %>
+                <td class="py-3.5 px-4 text-right space-x-1.5">
+                  <button type="button" title="Edit Model"
+                    onclick="openEditModelModal('<%= m.id %>', '<%= m.brand_id %>', '<%= m.device_type_id || '' %>', '<%= m.model_name %>')"
+                    class="p-2 rounded-lg bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 border border-sky-500/30 transition cursor-pointer">
+                    <i data-lucide="square-pen" class="w-4 h-4"></i>
+                  </button>
+                  <button type="button" title="Hapus Model"
+                    onclick="openDeleteModelModal('<%= m.id %>', '<%= m.brand_name %> - <%= m.model_name %>')"
+                    class="p-2 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 transition cursor-pointer">
+                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                  </button>
+                </td>
+              <% } %>
+            </tr>
+          <% }) %>
+
+          <tr id="models-no-result" class="hidden">
+            <td colspan="6" class="py-10 text-center text-xs text-slate-400">Tidak ada model perangkat yang cocok dengan pencarian.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Footer Pagination -->
+    <div id="models-pagination-footer" class="px-4 py-3 border-t border-slate-200 dark:border-slate-700/80 bg-slate-50/80 dark:bg-slate-900/30 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-600 dark:text-slate-400">
+      <div id="models-page-info">
+        Menampilkan <span class="text-slate-900 dark:text-white font-semibold">0</span> perangkat
+      </div>
+      <div id="models-page-buttons" class="inline-flex items-center gap-1.5"></div>
+    </div>
+  </div>
+
+</main>
+
+<% if (can('model.write')) { %>
+<!-- MODAL TAMBAH MODEL -->
+<div id="modal-add-model" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4">
+  <div onclick="closeModal('modal-add-model')" class="fixed inset-0 bg-slate-950/75 backdrop-blur-sm"></div>
+  <div class="relative bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-md p-6 shadow-2xl z-10 space-y-4">
+    <div class="flex items-center justify-between border-b border-slate-700 pb-3">
+      <h3 class="text-base font-semibold text-sky-400">+ Tambah Model / Type</h3>
+      <button type="button" onclick="closeModal('modal-add-model')" class="text-slate-400 hover:text-white cursor-pointer">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+    </div>
+    <form action="/device-models" method="POST" class="space-y-4 text-sm">
+      <div>
+        <label class="block text-slate-300 mb-1">Brand / Merk *</label>
+        <select name="brand_id" required class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-sky-400">
+          <option value="">-- Pilih Brand --</option>
+          <% brands.forEach(b => { %>
+            <option value="<%= b.id %>"><%= b.brand_name %></option>
+          <% }) %>
+        </select>
+      </div>
+      <div>
+        <label class="block text-slate-300 mb-1">Jenis Perangkat (Opsional)</label>
+        <select name="device_type_id" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-sky-400">
+          <option value="">-- Berlaku untuk Semua Jenis --</option>
+          <% deviceTypes.forEach(dt => { %>
+            <option value="<%= dt.id %>"><%= dt.type_name %></option>
+          <% }) %>
+        </select>
+      </div>
+      <div>
+        <label class="block text-slate-300 mb-1">Nama Model / Type *</label>
+        <input type="text" name="model_name" required placeholder="Contoh: CCR2004-16G-2S+, RG-ES226GC-P" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-sky-400">
+      </div>
+      <div class="pt-2 flex justify-end gap-2">
+        <button type="button" onclick="closeModal('modal-add-model')" class="px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-200 cursor-pointer">Batal</button>
+        <button type="submit" class="px-4 py-2 rounded-lg bg-sky-500 hover:bg-sky-600 text-slate-950 font-semibold cursor-pointer">Simpan</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- MODAL EDIT MODEL -->
+<div id="modal-edit-model" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4">
+  <div onclick="closeModal('modal-edit-model')" class="fixed inset-0 bg-slate-950/75 backdrop-blur-sm"></div>
+  <div class="relative bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-md p-6 shadow-2xl z-10 space-y-4">
+    <div class="flex items-center justify-between border-b border-slate-700 pb-3">
+      <h3 class="text-base font-semibold text-sky-400">Edit Model / Type</h3>
+      <button type="button" onclick="closeModal('modal-edit-model')" class="text-slate-400 hover:text-white cursor-pointer">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+    </div>
+    <form id="edit-model-form" method="POST" class="space-y-4 text-sm">
+      <div>
+        <label class="block text-slate-300 mb-1">Brand / Merk *</label>
+        <select name="brand_id" id="edit_model_brand_id" required class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-sky-400">
+          <% brands.forEach(b => { %>
+            <option value="<%= b.id %>"><%= b.brand_name %></option>
+          <% }) %>
+        </select>
+      </div>
+      <div>
+        <label class="block text-slate-300 mb-1">Jenis Perangkat (Opsional)</label>
+        <select name="device_type_id" id="edit_model_type_id" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-sky-400">
+          <option value="">-- Berlaku untuk Semua Jenis --</option>
+          <% deviceTypes.forEach(dt => { %>
+            <option value="<%= dt.id %>"><%= dt.type_name %></option>
+          <% }) %>
+        </select>
+      </div>
+      <div>
+        <label class="block text-slate-300 mb-1">Nama Model / Type *</label>
+        <input type="text" name="model_name" id="edit_model_name" required class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-sky-400">
+      </div>
+      <div class="pt-2 flex justify-end gap-2">
+        <button type="button" onclick="closeModal('modal-edit-model')" class="px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-200 cursor-pointer">Batal</button>
+        <button type="submit" class="px-4 py-2 rounded-lg bg-sky-500 hover:bg-sky-600 text-slate-950 font-semibold cursor-pointer">Update</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- MODAL HAPUS MODEL -->
+<div id="modal-delete-model" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4">
+  <div onclick="closeModal('modal-delete-model')" class="fixed inset-0 bg-slate-950/75 backdrop-blur-sm"></div>
+  <div class="relative bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-md p-6 shadow-2xl z-10 space-y-4">
+    <h3 class="text-lg font-semibold text-white">Hapus Model / Type?</h3>
+    <p class="text-sm text-slate-300">
+      Apakah Anda yakin ingin menghapus model <span id="delete-model-name" class="font-bold text-rose-400"></span>?
+    </p>
+    <form id="delete-model-form" method="POST" class="pt-2 flex justify-end gap-2 text-sm">
+      <button type="button" onclick="closeModal('modal-delete-model')" class="px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-200 cursor-pointer">Batal</button>
+      <button type="submit" class="px-4 py-2 rounded-lg bg-rose-500 hover:bg-rose-600 text-white font-semibold cursor-pointer">Ya, Hapus</button>
+    </form>
+  </div>
+</div>
+<% } %>
+
+<script>
+  const MODEL_STATE_KEY = 'netmgmt_model_table_state';
+  let modelState = { page: 1, perPage: 8, search: '' };
+
+  function loadModelState() {
+    const selectEl = document.getElementById('model-per-page');
+    const searchEl = document.getElementById('model-search-input');
+
+    const validOptions = selectEl
+      ? Array.from(selectEl.options).map(opt => parseInt(opt.value, 10))
+      : [8, 25, 50, 100];
+    const defaultPerPage = validOptions[0] || 8;
+
+    try {
+      const saved = JSON.parse(sessionStorage.getItem(MODEL_STATE_KEY));
+      if (saved) modelState = { ...modelState, ...saved };
+    } catch (e) {}
+
+    if (!validOptions.includes(Number(modelState.perPage))) {
+      modelState.perPage = defaultPerPage;
+      saveModelState();
+    }
+
+    if (selectEl) selectEl.value = String(modelState.perPage);
+    if (searchEl) searchEl.value = modelState.search || '';
+  }
+
+  function saveModelState() {
+    sessionStorage.setItem(MODEL_STATE_KEY, JSON.stringify(modelState));
+  }
+
+  function onModelSearch(val) {
+    modelState.search = val;
+    modelState.page = 1;
+    saveModelState();
+    filterModelsTable();
+  }
+
+  function changeModelPerPage(val) {
+    modelState.perPage = parseInt(val, 10) || 8;
+    modelState.page = 1;
+    saveModelState();
+    filterModelsTable();
+  }
+
+  function goToModelPage(page) {
+    modelState.page = page;
+    saveModelState();
+    filterModelsTable();
+  }
+
+  function filterModelsTable() {
+    const rows = Array.from(document.querySelectorAll('#models-table-body .model-row'));
+    const noResultRow = document.getElementById('models-no-result');
+    const footer = document.getElementById('models-pagination-footer');
+
+    if (rows.length === 0) {
+      if (footer) footer.classList.add('hidden');
+      return;
+    }
+
+    const query = (modelState.search || '').trim().toLowerCase();
+    const matchedRows = [];
+
+    rows.forEach(row => {
+      const matchSearch = !query || row.textContent.toLowerCase().includes(query);
+      if (matchSearch) {
+        matchedRows.push(row);
+      } else {
+        row.classList.add('hidden');
+      }
+    });
+
+    const totalItems = matchedRows.length;
+    const totalPages = Math.max(1, Math.ceil(totalItems / modelState.perPage));
+    if (modelState.page > totalPages) {
+      modelState.page = totalPages;
+      saveModelState();
+    }
+
+    const startIdx = (modelState.page - 1) * modelState.perPage;
+    const endIdx = startIdx + modelState.perPage;
+
+    matchedRows.forEach((row, idx) => {
+      const isVisible = idx >= startIdx && idx < endIdx;
+      row.classList.toggle('hidden', !isVisible);
+      if (isVisible) {
+        const noCell = row.querySelector('.model-no-cell');
+        if (noCell) noCell.textContent = idx + 1;
+      }
+    });
+
+    if (noResultRow) {
+      noResultRow.classList.toggle('hidden', totalItems > 0);
+    }
+
+    renderPaginationControls({
+      infoEl: document.getElementById('models-page-info'),
+      buttonsEl: document.getElementById('models-page-buttons'),
+      totalItems,
+      page: modelState.page,
+      perPage: modelState.perPage,
+      onPageClick: goToModelPage
+    });
+  }
+
+  function renderPaginationControls({ infoEl, buttonsEl, totalItems, page, perPage, onPageClick }) {
+    if (!infoEl || !buttonsEl) return;
+    const totalPages = Math.max(1, Math.ceil(totalItems / perPage));
+    const from = totalItems === 0 ? 0 : (page - 1) * perPage + 1;
+    const to = Math.min(page * perPage, totalItems);
+    infoEl.textContent = `Menampilkan ${from} - ${to} dari ${totalItems} data`;
+
+    buttonsEl.innerHTML = '';
+    if (totalItems === 0) return;
+
+    const createBtn = (label, targetPage, disabled, active) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.textContent = label;
+      btn.disabled = disabled;
+      btn.className = active
+        ? 'px-2.5 py-1 rounded-md bg-sky-500 text-slate-950 font-bold cursor-pointer'
+        : disabled
+          ? 'px-2.5 py-1 rounded-md bg-slate-800/50 text-slate-600 border border-slate-700/50 cursor-not-allowed'
+          : 'px-2.5 py-1 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition cursor-pointer';
+      if (!disabled && !active) {
+        btn.addEventListener('click', () => onPageClick(targetPage));
+      }
+      return btn;
+    };
+
+    buttonsEl.appendChild(createBtn('‹ Prev', page - 1, page <= 1, false));
+
+    const pages = [];
+    for (let p = 1; p <= totalPages; p++) {
+      if (p === 1 || p === totalPages || (p >= page - 1 && p <= page + 1)) {
+        pages.push(p);
+      } else if (pages[pages.length - 1] !== '...') {
+        pages.push('...');
+      }
+    }
+
+    pages.forEach(p => {
+      if (p === '...') {
+        const span = document.createElement('span');
+        span.textContent = '...';
+        span.className = 'px-1.5 text-slate-500';
+        buttonsEl.appendChild(span);
+      } else {
+        buttonsEl.appendChild(createBtn(String(p), p, false, p === page));
+      }
+    });
+
+    buttonsEl.appendChild(createBtn('Next ›', page + 1, page >= totalPages, false));
+  }
+
+  function openEditModelModal(id, brandId, typeId, name) {
+    document.getElementById('edit-model-form').action = `/device-models/${id}/update`;
+    document.getElementById('edit_model_brand_id').value = brandId;
+    document.getElementById('edit_model_type_id').value = typeId || '';
+    document.getElementById('edit_model_name').value = name;
+    openModal('modal-edit-model');
+  }
+
+  function openDeleteModelModal(id, label) {
+    document.getElementById('delete-model-name').textContent = label;
+    document.getElementById('delete-model-form').action = `/device-models/${id}/delete`;
+    openModal('modal-delete-model');
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    loadModelState();
+    filterModelsTable();
+  });
+</script>
+
+<%- include('partials/footer') %>

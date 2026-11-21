@@ -1,0 +1,461 @@
+<%- include('partials/header', { pageTitle: 'Manajemen Pengguna & Hak Akses' }) %>
+
+<main class="p-4 sm:p-6 flex-1 w-full space-y-5">
+
+  <% if (errorMsg) { %>
+    <div id="alert-error" class="bg-rose-500/15 border border-rose-500/40 text-rose-400 px-4 py-3 rounded-xl flex items-center justify-between text-sm">
+      <div class="flex items-center gap-2.5">
+        <i data-lucide="alert-circle" class="w-5 h-5 shrink-0"></i>
+        <span><%= errorMsg %></span>
+      </div>
+      <button onclick="document.getElementById('alert-error').remove()" class="p-1 hover:text-white cursor-pointer">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+    </div>
+  <% } %>
+
+  <% if (successMsg) { %>
+    <div id="alert-success" class="bg-emerald-500/15 border border-emerald-500/40 text-emerald-400 px-4 py-3 rounded-xl flex items-center justify-between text-sm">
+      <div class="flex items-center gap-2.5">
+        <i data-lucide="check-circle-2" class="w-5 h-5 shrink-0"></i>
+        <span><%= successMsg %></span>
+      </div>
+      <button onclick="document.getElementById('alert-success').remove()" class="p-1 hover:text-white cursor-pointer">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+    </div>
+  <% } %>
+
+  <!-- Header Bar -->
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-800 border border-slate-700 p-4 rounded-xl">
+    <div>
+      <h2 class="text-base font-semibold text-white">Daftar Pengguna</h2>
+      <p class="text-xs text-slate-400">Kelola role Administrator, User Cabang, dan Viewer beserta cakupan cabang & menunya.</p>
+    </div>
+    <% if (can('user.write')) { %>
+      <button onclick="openAddUserModal()" class="inline-flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-semibold text-sm px-4 py-2.5 rounded-lg transition cursor-pointer">
+        <i data-lucide="user-plus" class="w-4 h-4"></i>
+        <span>Tambah User</span>
+      </button>
+    <% } %>
+  </div>
+
+  <!-- Tabel Users -->
+  <div class="bg-slate-800 border border-slate-700 rounded-xl shadow-lg overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full text-left border-collapse text-sm whitespace-nowrap">
+        <thead>
+          <tr class="bg-slate-900/60 border-b border-slate-700 text-slate-400 text-xs uppercase">
+            <th class="py-3 px-4">Nama Lengkap</th>
+            <th class="py-3 px-4">Username</th>
+            <th class="py-3 px-4">Role</th>
+            <th class="py-3 px-4">Akses Cabang</th>
+            <th class="py-3 px-4">Menu Diizinkan</th>
+            <th class="py-3 px-4 text-center">Status</th>
+            <% if (can('user.write')) { %>
+              <th class="py-3 px-4 text-center">Aksi</th>
+            <% } %>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-700/60">
+          <% users.forEach(u => { %>
+            <tr class="hover:bg-slate-700/30 transition">
+              <td class="py-3.5 px-4 font-semibold text-white">
+                <%= u.full_name %>
+                <% if (String(u.id) === String(currentUser.id)) { %>
+                  <span class="ml-1.5 px-1.5 py-0.5 rounded text-[10px] bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">Anda</span>
+                <% } %>
+              </td>
+              <td class="py-3.5 px-4 font-mono text-slate-300"><%= u.username %></td>
+              <td class="py-3.5 px-4">
+                <% if (u.role === 'administrator') { %>
+                  <span class="px-2 py-0.5 rounded text-xs font-semibold bg-purple-100 text-purple-800 border border-purple-200 dark:bg-purple-500/15 dark:text-purple-300 dark:border-purple-500/30">
+                    Administrator
+                  </span>
+                <% } else if (u.role === 'branch_user') { %>
+                  <span class="px-2 py-0.5 rounded text-xs font-semibold bg-sky-100 text-sky-800 border border-sky-200 dark:bg-sky-500/15 dark:text-sky-300 dark:border-sky-500/30">
+                    User Cabang
+                  </span>
+                <% } else { %>
+                  <span class="px-2 py-0.5 rounded text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/30">
+                    Viewer (Read-Only)
+                  </span>
+                <% } %>
+              </td>
+              <td class="py-3.5 px-4">
+                <% if (u.role === 'administrator' || u.all_branches === 1) { %>
+                  <span class="text-xs font-medium text-emerald-400">Semua Cabang</span>
+                <% } else if (u.branches.length === 0) { %>
+                  <span class="text-xs text-rose-400 italic">Belum ada cabang</span>
+                <% } else { %>
+                  <div class="flex flex-wrap gap-1">
+                    <% u.branches.forEach(b => { %>
+                      <span class="px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 text-slate-700 border border-slate-300 dark:bg-slate-700/80 dark:text-slate-200 dark:border-slate-600">
+                        <%= b.branch_code %>
+                      </span>
+                    <% }) %>
+                  </div>
+                <% } %>
+              </td>
+              <td class="py-3.5 px-4">
+                <% if (u.role === 'administrator') { %>
+                  <span class="text-sm text-slate-400">Full Access</span>
+                <% } else { %>
+                  <div class="flex flex-wrap gap-1">
+                    <% u.menus.forEach(m => { %>
+                      <span class="px-1.5 py-0.5 rounded text-xs bg-slate-900/70 text-slate-300 border border-slate-700">
+                        <%= m %>
+                      </span>
+                    <% }) %>
+                  </div>
+                <% } %>
+              </td>
+              <td class="py-3.5 px-4 text-center">
+                <% if (u.is_active === 1) { %>
+                  <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-400 dark:border-emerald-500/30">Aktif</span>
+                <% } else { %>
+                  <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-100 text-rose-800 border border-rose-200 dark:bg-rose-500/15 dark:text-rose-400 dark:border-rose-500/30">Nonaktif</span>
+                <% } %>
+              </td>
+              <% if (can('user.write')) { %>
+                <td class="py-3.5 px-4 text-center space-x-1.5">
+                  <button type="button" title="Edit User"
+                    data-user="<%= JSON.stringify(u) %>"
+                    onclick="openEditUserModal(this)"
+                    class="p-2 rounded-lg bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 border border-sky-500/30 transition cursor-pointer">
+                    <i data-lucide="square-pen" class="w-4 h-4"></i>
+                  </button>
+                  <% if (String(u.id) !== String(currentUser.id)) { %>
+                    <button type="button" title="Hapus User"
+                      onclick="openDeleteUserModal('<%= u.id %>', '<%= u.full_name %>')"
+                      class="p-2 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 transition cursor-pointer">
+                      <i data-lucide="trash-2" class="w-4 h-4"></i>
+                    </button>
+                  <% } %>
+                </td>
+              <% } %>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+<% if (can('user.write')) { %>
+<!-- MODAL TAMBAH USER -->
+<div id="modal-add-user" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4">
+  <div onclick="closeModal('modal-add-user')" class="fixed inset-0 bg-slate-950/75 backdrop-blur-sm"></div>
+  <div class="relative bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-xl max-h-[90vh] flex flex-col shadow-2xl z-10 overflow-hidden">
+    <div class="px-6 py-4 border-b border-slate-700 flex items-center justify-between">
+      <h3 class="text-base font-semibold text-emerald-400">+ Tambah User Baru</h3>
+      <button type="button" onclick="closeModal('modal-add-user')" class="text-slate-400 hover:text-white cursor-pointer">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+    </div>
+
+    <form action="/users" method="POST" class="p-6 overflow-y-auto space-y-4 text-sm">
+      <div>
+        <label class="block text-slate-300 mb-1">Nama Lengkap *</label>
+        <input type="text" name="full_name" required placeholder="Contoh: Rif'an Wafi Ilyasa'" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white">
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-slate-300 mb-1">Username *</label>
+          <input type="text" name="username" required placeholder="ilyasa.it" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white">
+        </div>
+        <div>
+          <label class="block text-slate-300 mb-1">Password *</label>
+          <input type="password" name="password" required placeholder="Minimal 6 karakter" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white">
+        </div>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-slate-300 mb-1">Role Hak Akses</label>
+          <select name="role" id="add_user_role" onchange="applyRolePreset('add')" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white">
+            <option value="branch_user" selected>User Cabang</option>
+            <option value="viewer">Viewer (Read-Only)</option>
+            <option value="administrator">Administrator</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-slate-300 mb-1">Status Akun</label>
+          <select name="is_active" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white">
+            <option value="1" selected>Aktif</option>
+            <option value="0">Nonaktif</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Konfigurasi Cabang & Menu (Otomatis sembunyi jika Administrator) -->
+      <div id="add_granular_box" class="space-y-4">
+        <!-- Scope Cabang -->
+        <div class="bg-slate-900/70 border border-slate-700 rounded-xl p-3.5 space-y-2.5">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold text-emerald-400">Hak Akses Cabang:</span>
+            <select name="branch_scope" id="add_branch_scope" onchange="toggleBranchList('add')" class="bg-slate-800 border border-slate-600 rounded px-2 py-1 text-xs text-white">
+              <option value="selected" selected>Pilih Cabang</option>
+              <option value="all">Semua Cabang</option>
+            </select>
+          </div>
+          <div id="add_branch_list" class="grid grid-cols-1 sm:grid-cols-2 gap-1.5 max-h-36 overflow-y-auto pt-1">
+            <% branches.forEach(b => { %>
+              <label class="flex items-center gap-2 text-xs text-slate-200 cursor-pointer p-1.5 rounded hover:bg-slate-800">
+                <input type="checkbox" name="branch_ids" value="<%= b.id %>" class="rounded border-slate-600 text-emerald-500">
+                <span>[<%= b.branch_code %>] <%= b.branch_name %></span>
+              </label>
+            <% }) %>
+          </div>
+        </div>
+
+        <!-- Hak Akses Menu -->
+        <div class="bg-slate-900/70 border border-slate-700 rounded-xl p-3.5 space-y-2">
+          <span class="block text-xs font-semibold text-emerald-400">Menu yang Dapat Diakses:</span>
+          <div class="grid grid-cols-2 gap-2 pt-1 text-xs text-slate-200">
+            <label class="flex items-center gap-2 cursor-pointer p-1.5 rounded hover:bg-slate-800">
+              <input type="checkbox" name="allowed_menus" value="topology" class="add-menu-cb rounded border-slate-600 text-emerald-500">
+              <span>Auto-Topology</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer p-1.5 rounded hover:bg-slate-800">
+              <input type="checkbox" name="allowed_menus" value="devices" class="add-menu-cb rounded border-slate-600 text-emerald-500">
+              <span>Master Devices</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer p-1.5 rounded hover:bg-slate-800">
+              <input type="checkbox" name="allowed_menus" value="branches" class="add-menu-cb rounded border-slate-600 text-emerald-500">
+              <span>Branches</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer p-1.5 rounded hover:bg-slate-800">
+              <input type="checkbox" name="allowed_menus" value="device-types" class="add-menu-cb rounded border-slate-600 text-emerald-500">
+              <span>Device Types</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer p-1.5 rounded hover:bg-slate-800">
+              <input type="checkbox" name="allowed_menus" value="brands" class="add-menu-cb rounded border-slate-600 text-emerald-500">
+              <span>Brand / Merk</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer p-1.5 rounded hover:bg-slate-800">
+              <input type="checkbox" name="allowed_menus" value="device-models" class="add-menu-cb rounded border-slate-600 text-emerald-500">
+              <span>Model / Type</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer p-1.5 rounded hover:bg-slate-800">
+              <input type="checkbox" name="allowed_menus" value="audit-logs" class="add-menu-cb rounded border-slate-600 text-emerald-500">
+              <span>Audit Logs</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer p-1.5 rounded hover:bg-slate-800">
+              <input type="checkbox" name="allowed_menus" value="users" class="add-menu-cb rounded border-slate-600 text-emerald-500">
+              <span>Users & Access</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div class="pt-3 border-t border-slate-700 flex justify-end gap-3">
+        <button type="button" onclick="closeModal('modal-add-user')" class="px-4 py-2 rounded-lg bg-slate-700 text-slate-200 cursor-pointer">Batal</button>
+        <button type="submit" class="px-5 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-semibold cursor-pointer">Simpan User</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- MODAL EDIT USER -->
+<div id="modal-edit-user" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4">
+  <div onclick="closeModal('modal-edit-user')" class="fixed inset-0 bg-slate-950/75 backdrop-blur-sm"></div>
+  <div class="relative bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-xl max-h-[90vh] flex flex-col shadow-2xl z-10 overflow-hidden">
+    <div class="px-6 py-4 border-b border-slate-700 flex items-center justify-between">
+      <h3 class="text-base font-semibold text-sky-400">Edit Data & Hak Akses User</h3>
+      <button type="button" onclick="closeModal('modal-edit-user')" class="text-slate-400 hover:text-white cursor-pointer">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+    </div>
+
+    <form id="edit-user-form" method="POST" class="p-6 overflow-y-auto space-y-4 text-sm">
+      <div>
+        <label class="block text-slate-300 mb-1">Nama Lengkap *</label>
+        <input type="text" name="full_name" id="edit_user_fullname" required class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white">
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-slate-300 mb-1">Username *</label>
+          <input type="text" name="username" id="edit_user_username" required class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white">
+        </div>
+        <div>
+          <label class="block text-slate-300 mb-1">Password Baru <span class="text-[11px] text-slate-400">(Opsional)</span></label>
+          <input type="password" name="password" placeholder="Kosongkan jika tidak ganti" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white">
+        </div>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-slate-300 mb-1">Role Hak Akses</label>
+          <select name="role" id="edit_user_role" onchange="applyRolePreset('edit', false)" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white">
+            <option value="branch_user">User Cabang</option>
+            <option value="viewer">Viewer (Read-Only)</option>
+            <option value="administrator">Administrator</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-slate-300 mb-1">Status Akun</label>
+          <select name="is_active" id="edit_user_active" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white">
+            <option value="1">Aktif</option>
+            <option value="0">Nonaktif</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Konfigurasi Cabang & Menu -->
+      <div id="edit_granular_box" class="space-y-4">
+        <div class="bg-slate-900/70 border border-slate-700 rounded-xl p-3.5 space-y-2.5">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold text-sky-400">Hak Akses Cabang:</span>
+            <select name="branch_scope" id="edit_branch_scope" onchange="toggleBranchList('edit')" class="bg-slate-800 border border-slate-600 rounded px-2 py-1 text-xs text-white">
+              <option value="selected">Pilih Cabang</option>
+              <option value="all">Semua Cabang</option>
+            </select>
+          </div>
+          <div id="edit_branch_list" class="grid grid-cols-1 sm:grid-cols-2 gap-1.5 max-h-36 overflow-y-auto pt-1">
+            <% branches.forEach(b => { %>
+              <label class="flex items-center gap-2 text-xs text-slate-200 cursor-pointer p-1.5 rounded hover:bg-slate-800">
+                <input type="checkbox" name="branch_ids" value="<%= b.id %>" class="edit-branch-cb rounded border-slate-600 text-sky-500">
+                <span>[<%= b.branch_code %>] <%= b.branch_name %></span>
+              </label>
+            <% }) %>
+          </div>
+        </div>
+
+        <div class="bg-slate-900/70 border border-slate-700 rounded-xl p-3.5 space-y-2">
+          <span class="block text-xs font-semibold text-sky-400">Menu yang Dapat Diakses:</span>
+          <div class="grid grid-cols-2 gap-2 pt-1 text-xs text-slate-200">
+            <label class="flex items-center gap-2 cursor-pointer p-1.5 rounded hover:bg-slate-800">
+              <input type="checkbox" name="allowed_menus" value="topology" class="edit-menu-cb rounded border-slate-600 text-sky-500">
+              <span>Auto-Topology</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer p-1.5 rounded hover:bg-slate-800">
+              <input type="checkbox" name="allowed_menus" value="devices" class="edit-menu-cb rounded border-slate-600 text-sky-500">
+              <span>Master Devices</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer p-1.5 rounded hover:bg-slate-800">
+              <input type="checkbox" name="allowed_menus" value="branches" class="edit-menu-cb rounded border-slate-600 text-sky-500">
+              <span>Branches</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer p-1.5 rounded hover:bg-slate-800">
+              <input type="checkbox" name="allowed_menus" value="device-types" class="edit-menu-cb rounded border-slate-600 text-sky-500">
+              <span>Device Types</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer p-1.5 rounded hover:bg-slate-800">
+              <input type="checkbox" name="allowed_menus" value="brands" class="edit-menu-cb rounded border-slate-600 text-sky-500">
+              <span>Brand / Merk</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer p-1.5 rounded hover:bg-slate-800">
+              <input type="checkbox" name="allowed_menus" value="device-models" class="edit-menu-cb rounded border-slate-600 text-sky-500">
+              <span>Model / Type</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer p-1.5 rounded hover:bg-slate-800">
+              <input type="checkbox" name="allowed_menus" value="audit-logs" class="edit-menu-cb rounded border-slate-600 text-sky-500">
+              <span>Audit Logs</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer p-1.5 rounded hover:bg-slate-800">
+              <input type="checkbox" name="allowed_menus" value="users" class="edit-menu-cb rounded border-slate-600 text-sky-500">
+              <span>Users & Access</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div class="pt-3 border-t border-slate-700 flex justify-end gap-3">
+        <button type="button" onclick="closeModal('modal-edit-user')" class="px-4 py-2 rounded-lg bg-slate-700 text-slate-200 cursor-pointer">Batal</button>
+        <button type="submit" class="px-5 py-2 rounded-lg bg-sky-500 hover:bg-sky-600 text-slate-950 font-semibold cursor-pointer">Update User</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- MODAL HAPUS USER -->
+<div id="modal-delete-user" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4">
+  <div onclick="closeModal('modal-delete-user')" class="fixed inset-0 bg-slate-950/75 backdrop-blur-sm"></div>
+  <div class="relative bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-md p-6 shadow-2xl z-10 space-y-4">
+    <h3 class="text-lg font-semibold text-white">Hapus Akun User?</h3>
+    <p class="text-sm text-slate-300">
+      Apakah Anda yakin ingin menghapus user <span id="delete-user-name" class="font-bold text-rose-400"></span>?
+    </p>
+    <form id="delete-user-form" method="POST" class="pt-2 flex justify-end gap-3 text-sm">
+      <button type="button" onclick="closeModal('modal-delete-user')" class="px-4 py-2 rounded-lg bg-slate-700 text-slate-200 cursor-pointer">Batal</button>
+      <button type="submit" class="px-4 py-2 rounded-lg bg-rose-500 hover:bg-rose-600 text-white font-semibold cursor-pointer">Ya, Hapus</button>
+    </form>
+  </div>
+</div>
+
+<script>
+  function toggleBranchList(prefix) {
+    const scope = document.getElementById(`${prefix}_branch_scope`).value;
+    const list = document.getElementById(`${prefix}_branch_list`);
+    if (scope === 'all') {
+      list.classList.add('hidden');
+    } else {
+      list.classList.remove('hidden');
+    }
+  }
+
+  function applyRolePreset(prefix, autoCheck = true) {
+    const role = document.getElementById(`${prefix}_user_role`).value;
+    const box = document.getElementById(`${prefix}_granular_box`);
+
+    if (role === 'administrator') {
+      box.classList.add('hidden');
+      return;
+    }
+
+    box.classList.remove('hidden');
+    if (autoCheck) {
+      const defaults = role === 'branch_user'
+        ? ['topology', 'devices', 'audit-logs', 'device-types', 'users', 'branches', 'brands', 'device-models']
+        : ['topology', 'devices'];
+      document.querySelectorAll(`.${prefix}-menu-cb`).forEach(cb => {
+        cb.checked = defaults.includes(cb.value);
+      });
+    }
+    toggleBranchList(prefix);
+  }
+
+  function openAddUserModal() {
+    applyRolePreset('add', true);
+    openModal('modal-add-user');
+  }
+
+  function openEditUserModal(btn) {
+    const u = JSON.parse(btn.getAttribute('data-user'));
+    document.getElementById('edit-user-form').action = `/users/${u.id}/update`;
+    document.getElementById('edit_user_fullname').value = u.full_name;
+    document.getElementById('edit_user_username').value = u.username;
+    document.getElementById('edit_user_role').value = u.role;
+    document.getElementById('edit_user_active').value = String(u.is_active);
+    document.getElementById('edit_branch_scope').value = u.all_branches === 1 ? 'all' : 'selected';
+
+    const allowedIds = (u.branch_ids || []).map(String);
+    document.querySelectorAll('.edit-branch-cb').forEach(cb => {
+      cb.checked = allowedIds.includes(String(cb.value));
+    });
+
+    const allowedMenus = u.menus || [];
+    const hasLegacyManufacture = allowedMenus.includes('manufactures');
+
+    document.querySelectorAll('.edit-menu-cb').forEach(cb => {
+      if (allowedMenus.includes(cb.value)) {
+        cb.checked = true;
+      } else if (hasLegacyManufacture && (cb.value === 'brands' || cb.value === 'device-models')) {
+        cb.checked = true;
+      } else {
+        cb.checked = false;
+      }
+    });
+
+    applyRolePreset('edit', false);
+    openModal('modal-edit-user');
+  }
+
+  function openDeleteUserModal(id, name) {
+    document.getElementById('delete-user-name').textContent = name;
+    document.getElementById('delete-user-form').action = `/users/${id}/delete`;
+    openModal('modal-delete-user');
+  }
+</script>
+<% } %>
+
+<%- include('partials/footer') %>

@@ -1,0 +1,174 @@
+<!-- Mobile Backdrop Overlay -->
+<div id="sidebar-backdrop" onclick="toggleSidebar()" class="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-30 hidden lg:hidden"></div>
+
+<!-- Sidebar Navigation (Sticky di Desktop) -->
+<aside id="sidebar" class="fixed lg:sticky top-0 left-0 z-40 h-screen w-80 bg-slate-800 border-r border-slate-700 flex flex-col transition-all duration-300 -translate-x-full lg:translate-x-0 shrink-0">
+  
+  <!-- Brand Header -->
+  <div class="h-16 px-5 border-b border-slate-700 flex items-center justify-between shrink-0">
+    <a href="/" class="flex items-center gap-2.5 overflow-hidden">
+      <div class="w-3 h-3 rounded-full bg-emerald-400 shrink-0"></div>
+      <span class="text-lg font-bold tracking-wide text-white whitespace-nowrap">
+        NetAsset <span class="text-emerald-400">Hospital</span>
+      </span>
+    </a>
+    <button onclick="toggleSidebar()" class="lg:hidden text-slate-400 hover:text-white p-1">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+    </button>
+  </div>
+
+  <!-- Branch Switcher / Filter Cabang Aktif -->
+  <div class="px-5 py-3 border-b border-slate-700/80 shrink-0">
+    <form id="sidebar-branch-form" action="/set-branch" method="POST">
+      <input type="hidden" name="redirect_to" id="sidebar-redirect-to" value="/">
+      <div class="relative flex items-center group">
+        <select id="sidebar-branch-select" name="branch_id"
+          aria-label="Pilih Cabang"
+          onchange="document.getElementById('sidebar-redirect-to').value = window.location.pathname; this.form.submit();"
+          class="w-full appearance-none bg-transparent border-0 p-0 pr-6 text-xs font-semibold text-slate-200 group-hover:text-emerald-400 focus:outline-none focus:ring-0 transition cursor-pointer truncate">
+          <% if (typeof navBranches !== 'undefined' && navBranches.length > 1) { %>
+            <option value="all" class="bg-slate-800 text-white" <%= selectedBranchId === 'all' ? 'selected' : '' %>>
+              Semua Cabang
+            </option>
+          <% } %>
+          <% if (typeof navBranches !== 'undefined' && navBranches.length > 0) { %>
+            <% navBranches.forEach(b => { %>
+              <option value="<%= b.id %>" class="bg-slate-800 text-white" <%= String(selectedBranchId) === String(b.id) ? 'selected' : '' %>>
+                <%= b.branch_code %> - <%= b.branch_name %>
+              </option>
+            <% }) %>
+          <% } else { %>
+            <option value="none" class="bg-slate-800 text-white">Tidak ada akses cabang</option>
+          <% } %>
+        </select>
+        <i data-lucide="chevron-down" class="w-4 h-4 text-slate-400 group-hover:text-emerald-400 absolute right-0 pointer-events-none transition"></i>
+      </div>
+    </form>
+  </div>
+
+  <!-- Navigation Links -->
+  <nav class="flex-1 px-3 py-4 space-y-1.5 overflow-y-auto text-sm">
+    <div class="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+      Main Menu
+    </div>
+
+    <% if (can('menu.topology')) { %>
+      <a href="/topology" class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition <%= activeMenu === 'topology' ? 'bg-emerald-500/15 text-emerald-400 font-semibold border border-emerald-500/30' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' %>">
+        <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+        <span>Network Topology</span>
+      </a>
+    <% } %>
+
+    <% if (can('menu.devices')) { %>
+      <a href="/devices" class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition <%= activeMenu === 'devices' ? 'bg-emerald-500/15 text-emerald-400 font-semibold border border-emerald-500/30' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' %>">
+        <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"/></svg>
+        <span>Master Devices</span>
+      </a>
+    <% } %>
+
+    <% if (can('menu.branches')) { %>
+      <a href="/branches" class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition <%= activeMenu === 'branches' ? 'bg-emerald-500/15 text-emerald-400 font-semibold border border-emerald-500/30' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' %>">
+        <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+        <span>Branches</span>
+      </a>
+    <% } %>
+
+    <!-- PARENT DROPDOWN: MASTER -->
+    <%
+      const isMasterActive = ['device-types', 'brands', 'device-models'].includes(activeMenu);
+      const canViewMaster = can('menu.device-types') || can('menu.brands') || can('menu.device-models');
+    %>
+    <% if (canViewMaster) { %>
+      <div class="space-y-1">
+        <button type="button" onclick="toggleMasterDropdown()"
+          class="w-full flex items-center justify-between px-3 py-2.5 rounded-lg transition cursor-pointer <%= isMasterActive ? 'bg-slate-700/70 text-emerald-400 font-semibold border border-slate-600/80' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' %>">
+          <div class="flex items-center gap-3">
+            <i data-lucide="database" class="w-5 h-5 shrink-0 <%= isMasterActive ? 'text-emerald-400' : 'text-slate-400' %>"></i>
+            <span>Manufactures</span>
+          </div>
+          <i id="master-dropdown-icon" data-lucide="chevron-down"
+            class="w-4 h-4 text-slate-400 transition-transform duration-200 <%= isMasterActive ? 'rotate-180 text-emerald-400' : '' %>"></i>
+        </button>
+
+        <div id="master-dropdown-menu" class="<%= isMasterActive ? '' : 'hidden' %> pl-4 ml-4 border-l border-slate-700 space-y-1">
+          <% if (can('menu.device-types')) { %>
+            <a href="/device-types"
+              class="flex items-center gap-2.5 px-3 py-2 rounded-lg transition <%= activeMenu === 'device-types' ? 'bg-emerald-500/15 text-emerald-400 font-semibold border border-emerald-500/30' : 'text-slate-400 hover:bg-slate-700/50 hover:text-white' %>">
+              <i data-lucide="layers" class="w-4 h-4 shrink-0"></i>
+              <span>Device Types</span>
+            </a>
+          <% } %>
+
+          <% if (can('menu.brands')) { %>
+            <a href="/brands"
+              class="flex items-center gap-2.5 px-3 py-2 rounded-lg transition <%= activeMenu === 'brands' ? 'bg-emerald-500/15 text-emerald-400 font-semibold border border-emerald-500/30' : 'text-slate-400 hover:bg-slate-700/50 hover:text-white' %>">
+              <i data-lucide="award" class="w-4 h-4 shrink-0"></i>
+              <span>Brand / Merk</span>
+            </a>
+          <% } %>
+
+          <% if (can('menu.device-models')) { %>
+            <a href="/device-models"
+              class="flex items-center gap-2.5 px-3 py-2 rounded-lg transition <%= activeMenu === 'device-models' ? 'bg-emerald-500/15 text-emerald-400 font-semibold border border-emerald-500/30' : 'text-slate-400 hover:bg-slate-700/50 hover:text-white' %>">
+              <i data-lucide="cpu" class="w-4 h-4 shrink-0"></i>
+              <span>Model / Type</span>
+            </a>
+          <% } %>
+        </div>
+      </div>
+    <% } %>
+
+    <% if (can('menu.audit-logs') || can('menu.users')) { %>
+      <div class="px-3 pt-4 pb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+        Governance & System
+      </div>
+    <% } %>
+
+    <% if (can('menu.audit-logs')) { %>
+      <a href="/audit-logs" class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition <%= activeMenu === 'audit-logs' ? 'bg-emerald-500/15 text-emerald-400 font-semibold border border-emerald-500/30' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' %>">
+        <i data-lucide="history" class="w-5 h-5 shrink-0"></i>
+        <span>Audit Logs</span>
+      </a>
+    <% } %>
+
+    <% if (can('menu.users')) { %>
+      <a href="/users" class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition <%= activeMenu === 'users' ? 'bg-emerald-500/15 text-emerald-400 font-semibold border border-emerald-500/30' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' %>">
+        <i data-lucide="users" class="w-5 h-5 shrink-0"></i>
+        <span>Users & Access</span>
+      </a>
+    <% } %>
+  </nav>
+
+  <!-- Sidebar Footer: Profil User Login & Tombol Logout -->
+  <div class="p-4 border-t border-slate-700 shrink-0 flex items-center justify-between gap-2">
+    <div class="min-w-0">
+      <div class="text-xs font-semibold text-white truncate">
+        <%= currentUser ? currentUser.full_name : 'IT Infrastructure' %>
+      </div>
+      <div class="text-[11px] text-slate-400 truncate">
+        <% if (currentUser && currentUser.role === 'administrator') { %>
+          Administrator
+        <% } else if (currentUser && currentUser.role === 'branch_user') { %>
+          User Cabang
+        <% } else { %>
+          Viewer (Read-Only)
+        <% } %>
+      </div>
+    </div>
+
+    <a href="/logout" title="Logout / Keluar"
+      class="p-2 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 transition shrink-0">
+      <i data-lucide="log-out" class="w-4 h-4"></i>
+    </a>
+  </div>
+</aside>
+
+<script>
+  function toggleMasterDropdown() {
+    const menu = document.getElementById('master-dropdown-menu');
+    const icon = document.getElementById('master-dropdown-icon');
+    if (!menu) return;
+    menu.classList.toggle('hidden');
+    if (icon) icon.classList.toggle('rotate-180');
+  }
+</script>

@@ -1,0 +1,119 @@
+<div class="w-fit mx-auto flex flex-col items-center">
+  <!-- 4 Antena Wi-Fi Eksternal di Atas Bodi -->
+  <div class="w-[82%] flex justify-between items-end px-4 -mb-1 z-0">
+    <div class="w-2.5 h-16 bg-gradient-to-t from-slate-800 via-slate-700 to-slate-600 border border-slate-500 rounded-t-full shadow"></div>
+    <div class="w-2.5 h-20 bg-gradient-to-t from-slate-800 via-slate-700 to-slate-600 border border-slate-500 rounded-t-full shadow"></div>
+    <div class="w-2.5 h-20 bg-gradient-to-t from-slate-800 via-slate-700 to-slate-600 border border-slate-500 rounded-t-full shadow"></div>
+    <div class="w-2.5 h-16 bg-gradient-to-t from-slate-800 via-slate-700 to-slate-600 border border-slate-500 rounded-t-full shadow"></div>
+  </div>
+  
+  <!-- Bodi Belakang Home Router -->
+  <div class="bg-gradient-to-b from-slate-800 via-slate-900 to-slate-950 border-2 border-slate-600 rounded-2xl px-6 py-4 shadow-2xl flex items-center gap-5 relative z-10">
+    <!-- Identitas Router -->
+    <div class="w-32 flex flex-col justify-between border-r border-slate-700/80 pr-4 py-1 shrink-0">
+      <div>
+        <div class="text-xs font-bold text-white truncate" title="<%= device.hostname %>">
+          <%= device.hostname %>
+        </div>
+        <div class="text-[11px] font-semibold text-emerald-400"><%= device.brand || '' %></div>
+        <div class="text-[11px] text-slate-400 truncate"><%= device.model || '' %></div>
+      </div>
+      <div class="flex items-center gap-2 text-[9px] font-mono text-slate-300 pt-2">
+        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        <span>2.4G / 5G WLAN</span>
+      </div>
+    </div>
+    
+    <!-- Power DC & Tombol WPS / Reset -->
+    <div class="flex items-center gap-3 bg-slate-950/80 border border-slate-700 rounded-xl px-3.5 py-2.5">
+      <div class="flex flex-col items-center gap-1">
+        <div class="w-9 h-9 rounded-lg bg-slate-900 border-2 border-slate-600 flex items-center justify-center">
+          <div class="w-4 h-4 rounded-full bg-black border-2 border-amber-400/80 flex items-center justify-center">
+            <div class="w-1.5 h-1.5 rounded-full bg-amber-300"></div>
+          </div>
+        </div>
+        <span class="text-[8px] font-mono text-slate-400">DC 12V</span>
+      </div>
+      
+      <div class="flex flex-col items-center gap-1">
+        <div class="w-7 h-7 rounded-md bg-slate-800 border border-slate-500 flex items-center justify-center text-[7px] font-mono font-bold text-slate-300">
+          WPS
+        </div>
+        <span class="text-[8px] font-mono text-slate-400">RESET</span>
+      </div>
+    </div>
+    
+    <!-- Deretan Port Interaktif (Port Pertama = WAN Biru, Sisanya = LAN Kuning) -->
+    <div class="bg-slate-950/90 border border-slate-700 rounded-xl p-3 space-y-1.5">
+      <div class="flex items-center gap-2.5">
+        <% portGroups.RJ45.forEach((port, idx) => {
+          const st = getPortStyle(port);
+          const isWan = idx === 0;
+          const idleClass = isWan
+          ? 'bg-sky-600/90 border-sky-400 text-white hover:border-emerald-300'
+          : 'bg-amber-500/90 border-amber-400 text-slate-950 hover:border-emerald-300';
+          
+          let targetLabel = `Kosong (Max ${port.port_capacity || '1G'})`;
+          if (port.peer_device_hostname) {
+            targetLabel = `[${port.link_speed || '1G'}] Ke: ${port.peer_device_hostname} (${port.peer_port_name})`;
+          } else if (port.end_device_info) {
+            targetLabel = `[${port.link_speed || '1G'}] Ke: ${port.end_device_info}`;
+          }
+          %>
+          <div class="flex flex-col items-center gap-1">
+            <button type="button"
+            data-port="<%= JSON.stringify(port) %>"
+            onclick="openPortModal(this)"
+            title="<%= port.port_name %> - <%= targetLabel %>"
+            class="group relative w-13 h-14 rounded-md border-2 <%= port.connection_id ? st.box : idleClass %> flex flex-col items-center justify-between p-1 transition transform hover:scale-105 cursor-pointer shadow">
+            <div class="w-full flex items-center justify-between px-0.5">
+              <span class="w-1.5 h-1.5 rounded-full <%= st.led %>"></span>
+              <span class="text-[7px] font-mono font-bold px-1 rounded bg-black/30 leading-tight">
+                <%= st.speedBadge || port.port_capacity || '1G' %>
+              </span>
+            </div>
+            <svg class="w-8 h-5 <%= port.connection_id ? 'text-slate-300' : (isWan ? 'text-sky-100' : 'text-slate-900') %>" viewBox="0 0 32 22" fill="none">
+              <path d="M3 6H10V3H22V6H29V19H3V6Z" fill="#090d16" stroke="currentColor" stroke-width="1.5"/>
+              <line x1="8" y1="15" x2="8" y2="18.5" stroke="#f59e0b" stroke-width="1.3"/>
+              <line x1="12" y1="15" x2="12" y2="18.5" stroke="#f59e0b" stroke-width="1.3"/>
+              <line x1="16" y1="15" x2="16" y2="18.5" stroke="#f59e0b" stroke-width="1.3"/>
+              <line x1="20" y1="15" x2="20" y2="18.5" stroke="#f59e0b" stroke-width="1.3"/>
+              <line x1="24" y1="15" x2="24" y2="18.5" stroke="#f59e0b" stroke-width="1.3"/>
+            </svg>
+            <span class="text-[9px] font-mono font-bold truncate max-w-full leading-none">
+              <%= port.port_name.replace('Port ', '') %>
+            </span>
+          </button>
+          <span class="text-[8px] font-mono font-bold <%= isWan ? 'text-sky-400' : 'text-amber-400' %>">
+            <%= isWan ? 'WAN' : `LAN${idx}` %>
+          </span>
+        </div>
+        <% }) %>
+        
+        <% fiberTypes.forEach(ft => { (portGroups[ft.key] || []).forEach(port => {
+          const st = getPortStyle(port);
+          %>
+          <div class="flex flex-col items-center gap-1">
+            <button type="button"
+            data-port="<%= JSON.stringify(port) %>"
+            onclick="openPortModal(this)"
+            class="relative <%= ft.widthClass %> h-14 rounded-md border-2 <%= st.box %> flex flex-col items-center justify-between p-1 transition transform hover:scale-105 cursor-pointer">
+            <div class="w-full flex items-center justify-between px-0.5">
+              <span class="w-1.5 h-1.5 rounded-full <%= st.led %>"></span>
+              <span class="text-[7px] font-mono font-bold"><%= st.speedBadge || port.port_capacity %></span>
+            </div>
+            <span class="text-[9px] font-mono font-bold"><%= port.port_name %></span>
+          </button>
+          <span class="text-[8px] font-mono font-bold text-indigo-300"><%= ft.key %></span>
+        </div>
+        <% }) }) %>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Kaki Karet Router -->
+  <div class="w-[84%] flex justify-between px-4">
+    <div class="w-11 h-2 bg-slate-700 border-x border-b border-slate-600 rounded-b-md shadow"></div>
+    <div class="w-11 h-2 bg-slate-700 border-x border-b border-slate-600 rounded-b-md shadow"></div>
+  </div>
+</div>
