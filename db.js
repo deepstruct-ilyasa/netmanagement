@@ -8,7 +8,7 @@ if (!fs.existsSync(dbDir)) {
   fs.mkdirSync(dbDir, { recursive: true });
 }
 
-const db = new Database(path.join(__dirname, 'database', 'netmanagement.db'));
+const db = new Database(path.join(dbDir, 'netmanagement.db'));
 
 db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
@@ -20,7 +20,15 @@ function hashPassword(password) {
 }
 
 db.exec(`
-  -- 1. Hospital Branches Table
+  -- 0. Global Application Settings (Zero-Hardcode Configuration)
+  CREATE TABLE IF NOT EXISTS app_settings (
+    setting_key TEXT PRIMARY KEY,
+    setting_value TEXT NOT NULL,
+    description TEXT,
+    updated_at DATETIME DEFAULT (datetime('now', '+7 hours'))
+  );
+
+  -- 1. Branches Table
   CREATE TABLE IF NOT EXISTS branches (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     branch_code TEXT NOT NULL UNIQUE,
@@ -56,9 +64,36 @@ db.exec(`
     FOREIGN KEY (device_type_id) REFERENCES device_types(id) ON DELETE SET NULL
   );
 
-  -- 5. Master Devices Table
+  -- 5. Master Assets Table (Single Source of Truth)
+  CREATE TABLE IF NOT EXISTS assets (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    asset_code TEXT NOT NULL UNIQUE,
+    branch_id INTEGER NOT NULL,
+    device_type_id INTEGER NOT NULL,
+    brand_id INTEGER,
+    model_id INTEGER,
+    serial_number TEXT UNIQUE,
+    mac_address TEXT,
+    status TEXT NOT NULL DEFAULT 'spare',       -- 'spare' | 'active' | 'maintenance' | 'broken' | 'disposed'
+    condition TEXT NOT NULL DEFAULT 'good',     -- 'good' | 'fair' | 'damaged'
+    purchase_date DATE,
+    warranty_end DATE,
+    vendor_name TEXT,
+    purchase_price INTEGER DEFAULT 0,
+    physical_photo TEXT,
+    sn_photo TEXT,
+    notes TEXT,
+    created_at DATETIME DEFAULT (datetime('now', '+7 hours')),
+    FOREIGN KEY (branch_id) REFERENCES branches(id) ON DELETE RESTRICT,
+    FOREIGN KEY (device_type_id) REFERENCES device_types(id) ON DELETE RESTRICT,
+    FOREIGN KEY (brand_id) REFERENCES brands(id) ON DELETE SET NULL,
+    FOREIGN KEY (model_id) REFERENCES device_models(id) ON DELETE SET NULL
+  );
+
+  -- 6. Network Devices Table (Operational Layer linked to Assets)
   CREATE TABLE IF NOT EXISTS devices (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
+    asset_id INTEGER UNIQUE,
     branch_id INTEGER NOT NULL,
     device_type_id INTEGER NOT NULL,
     brand_id INTEGER,
@@ -77,13 +112,14 @@ db.exec(`
     physical_photo TEXT,
     sn_photo TEXT,
     created_at DATETIME DEFAULT (datetime('now', '+7 hours')),
+    FOREIGN KEY (asset_id) REFERENCES assets(id) ON DELETE RESTRICT,
     FOREIGN KEY (branch_id) REFERENCES branches(id) ON DELETE CASCADE,
     FOREIGN KEY (device_type_id) REFERENCES device_types(id) ON DELETE RESTRICT,
     FOREIGN KEY (brand_id) REFERENCES brands(id) ON DELETE SET NULL,
     FOREIGN KEY (model_id) REFERENCES device_models(id) ON DELETE SET NULL
   );
 
-  -- 6. Auto-Generated Device Ports Table
+  -- 7. Auto-Generated Device Ports Table
   CREATE TABLE IF NOT EXISTS device_ports (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     device_id INTEGER NOT NULL,
@@ -94,7 +130,7 @@ db.exec(`
     FOREIGN KEY (device_id) REFERENCES devices(id) ON DELETE CASCADE
   );
 
-  -- 7. Port-to-Port Connections Table
+  -- 8. Port-to-Port Connections Table
   CREATE TABLE IF NOT EXISTS connections (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     source_port_id INTEGER NOT NULL UNIQUE,
@@ -109,7 +145,40 @@ db.exec(`
     FOREIGN KEY (target_port_id) REFERENCES device_ports(id) ON DELETE SET NULL
   );
 
-  -- 8. Users Table (Role: 'administrator' | 'branch_user' | 'viewer')
+  -- 9. Asset Movements / Mutation History Table
+  CREATE TABLE IF NOT EXISTS asset_movements (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    asset_id INTEGER NOT NULL,
+    movement_type TEXT NOT NULL,                -- 'DEPLOY' | 'DISMANTLE' | 'MUTASI_CABANG' | 'PINDAH_RUANG' | 'DISPOSAL'
+    from_branch_id INTEGER,
+    to_branch_id INTEGER,
+    from_location TEXT,
+    to_location TEXT,
+    moved_by TEXT NOT NULL,
+    movement_date DATETIME DEFAULT (datetime('now', '+7 hours')),
+    notes TEXT,
+    FOREIGN KEY (asset_id) REFERENCES assets(id) ON DELETE CASCADE,
+    FOREIGN KEY (from_branch_id) REFERENCES branches(id) ON DELETE SET NULL,
+    FOREIGN KEY (to_branch_id) REFERENCES branches(id) ON DELETE SET NULL
+  );
+
+  -- 10. Asset Maintenances / Repair History Table
+  CREATE TABLE IF NOT EXISTS asset_maintenances (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    asset_id INTEGER NOT NULL,
+    issue_date DATE NOT NULL,
+    resolved_date DATE,
+    problem_description TEXT NOT NULL,
+    action_taken TEXT,
+    service_vendor TEXT DEFAULT 'Internal IT',
+    cost INTEGER DEFAULT 0,
+    status TEXT NOT NULL DEFAULT 'open',        -- 'open' | 'resolved' | 'unrepairable'
+    created_by TEXT,
+    created_at DATETIME DEFAULT (datetime('now', '+7 hours')),
+    FOREIGN KEY (asset_id) REFERENCES assets(id) ON DELETE CASCADE
+  );
+
+  -- 11. Users Table
   CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     full_name TEXT NOT NULL,
@@ -117,12 +186,12 @@ db.exec(`
     password_hash TEXT NOT NULL,
     role TEXT NOT NULL DEFAULT 'branch_user',
     all_branches INTEGER NOT NULL DEFAULT 0,
-    allowed_menus TEXT NOT NULL DEFAULT '["topology","devices"]',
+    allowed_menus TEXT NOT NULL DEFAULT '["topology","assets","devices"]',
     is_active INTEGER NOT NULL DEFAULT 1,
     created_at DATETIME DEFAULT (datetime('now', '+7 hours'))
   );
 
-  -- 9. User Branch Access (Pivot Table Hak Akses Cabang per User)
+  -- 12. User Branch Access
   CREATE TABLE IF NOT EXISTS user_branches (
     user_id INTEGER NOT NULL,
     branch_id INTEGER NOT NULL,
@@ -131,7 +200,7 @@ db.exec(`
     FOREIGN KEY (branch_id) REFERENCES branches(id) ON DELETE CASCADE
   );
 
-  -- 10. Audit Logs Table
+  -- 13. Audit Logs Table
   CREATE TABLE IF NOT EXISTS audit_logs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER,
@@ -148,6 +217,22 @@ db.exec(`
     FOREIGN KEY (branch_id) REFERENCES branches(id) ON DELETE SET NULL
   );
 `);
+
+// Seed Default Settings (Zero-Hardcode Asset Code Format)
+const insertSetting = db.prepare(`
+  INSERT OR IGNORE INTO app_settings (setting_key, setting_value, description)
+  VALUES (?, ?, ?)
+`);
+insertSetting.run(
+  'asset_code_format',
+  'INV/{BRANCH}/{YYMMDD}/{SEQ:6}',
+  'Pola format kode aset otomatis. Variabel: {BRANCH}, {YYYY}, {YY}, {MM}, {DD}, {YYMMDD}, {SEQ:6}'
+);
+insertSetting.run(
+  'organization_name',
+  'IT Infrastructure',
+  'Nama instansi/perusahaan yang dicetak pada label QR aset'
+);
 
 // Seed 1 default branch if empty
 const countBranch = db.prepare('SELECT COUNT(*) as total FROM branches').get();
@@ -194,6 +279,7 @@ if (countUsers.total === 0) {
     hashPassword('admin123'),
     JSON.stringify([
       'topology',
+      'assets',
       'devices',
       'branches',
       'device-types',

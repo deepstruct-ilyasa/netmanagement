@@ -1,0 +1,301 @@
+<%- include('partials/header', { pageTitle: 'Detail & Riwayat Aset' }) %>
+
+<main class="p-4 sm:p-6 flex-1 w-full space-y-5">
+
+  <% if (typeof errorMsg !== 'undefined' && errorMsg) { %>
+    <div id="alert-error" class="bg-rose-500/15 border border-rose-500/40 text-rose-400 px-4 py-3 rounded-xl flex items-center justify-between text-sm">
+      <div class="flex items-center gap-2.5">
+        <i data-lucide="alert-circle" class="w-5 h-5 shrink-0"></i>
+        <span><%= errorMsg %></span>
+      </div>
+      <button onclick="document.getElementById('alert-error').remove()" class="p-1 hover:text-white cursor-pointer">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+    </div>
+  <% } %>
+
+  <% if (typeof successMsg !== 'undefined' && successMsg) { %>
+    <div id="alert-success" class="bg-emerald-500/15 border border-emerald-500/40 text-emerald-400 px-4 py-3 rounded-xl flex items-center justify-between text-sm">
+      <div class="flex items-center gap-2.5">
+        <i data-lucide="check-circle-2" class="w-5 h-5 shrink-0"></i>
+        <span><%= successMsg %></span>
+      </div>
+      <button onclick="document.getElementById('alert-success').remove()" class="p-1 hover:text-white cursor-pointer">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+    </div>
+  <% } %>
+
+  <!-- Header & Tombol Aksi -->
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-800 border border-slate-700 p-4 rounded-xl">
+    <div class="flex items-center gap-3">
+      <a href="/assets" class="p-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-200 transition">
+        <i data-lucide="arrow-left" class="w-4 h-4"></i>
+      </a>
+      <div>
+        <div class="flex items-center gap-2">
+          <h2 class="text-base font-bold font-mono text-emerald-400"><%= asset.asset_code %></h2>
+          <span class="px-2 py-0.5 rounded text-[11px] font-bold uppercase bg-slate-900 border border-slate-600 text-slate-200">
+            <%= asset.status %>
+          </span>
+        </div>
+        <p class="text-xs text-slate-400"><%= asset.type_name %> — <%= asset.brand_name || '-' %> <%= asset.model_name || '' %></p>
+      </div>
+    </div>
+
+    <% if (can('asset.write')) { %>
+      <div class="flex flex-wrap items-center gap-2 text-xs">
+        <button type="button" onclick="openModal('modal-move-asset')"
+          class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-sky-500/15 hover:bg-sky-500/25 text-sky-400 border border-sky-500/30 font-semibold transition cursor-pointer">
+          <i data-lucide="arrow-left-right" class="w-4 h-4"></i>
+          <span>Mutasi / Pindah Lokasi</span>
+        </button>
+        <button type="button" onclick="openModal('modal-maintenance-asset')"
+          class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 text-amber-400 border border-amber-500/30 font-semibold transition cursor-pointer">
+          <i data-lucide="wrench" class="w-4 h-4"></i>
+          <span>Catat Service / Perbaikan</span>
+        </button>
+      </div>
+    <% } %>
+  </div>
+
+  <!-- Grid Profil & Dokumentasi Foto -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+    <!-- Informasi Spesifikasi & Administrasi -->
+    <div class="lg:col-span-2 bg-slate-800 border border-slate-700 rounded-xl p-5 space-y-4 text-xs">
+      <h3 class="text-sm font-semibold text-white border-b border-slate-700 pb-2.5">Spesifikasi & Administrasi Aset</h3>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <span class="text-slate-400 block">Cabang Lokasi Saat Ini</span>
+          <span class="text-white font-semibold">[<%= asset.branch_code %>] <%= asset.branch_name %></span>
+        </div>
+        <div>
+          <span class="text-slate-400 block">Status Operasional Jaringan</span>
+          <% if (asset.linked_hostname) { %>
+            <span class="text-emerald-400 font-semibold">Terpasang: <%= asset.linked_hostname %> (<%= asset.linked_ip || 'No IP' %>)</span>
+          <% } else { %>
+            <span class="text-amber-400">Belum terpasang di topologi / Gudang IT</span>
+          <% } %>
+        </div>
+        <div>
+          <span class="text-slate-400 block">Serial Number (SN)</span>
+          <span class="text-white font-mono"><%= asset.serial_number || '-' %></span>
+        </div>
+        <div>
+          <span class="text-slate-400 block">MAC Address</span>
+          <span class="text-white font-mono"><%= asset.mac_address || '-' %></span>
+        </div>
+        <div>
+          <span class="text-slate-400 block">Tanggal Beli & Vendor</span>
+          <span class="text-white"><%= asset.purchase_date || '-' %> (<%= asset.vendor_name || '-' %>)</span>
+        </div>
+        <div>
+          <span class="text-slate-400 block">Masa Garansi & Nilai Perolehan</span>
+          <span class="text-white"><%= asset.warranty_end || '-' %> — Rp <%= (Number(asset.purchase_price) || 0).toLocaleString('id-ID') %></span>
+        </div>
+      </div>
+      <div>
+        <span class="text-slate-400 block">Catatan Kelengkapan</span>
+        <p class="text-slate-200 bg-slate-900/70 border border-slate-700 rounded-lg p-3 mt-1"><%= asset.notes || 'Tidak ada catatan tambahan.' %></p>
+      </div>
+    </div>
+
+    <!-- Foto Fisik & Foto SN -->
+    <div class="bg-slate-800 border border-slate-700 rounded-xl p-5 space-y-4 text-xs">
+      <h3 class="text-sm font-semibold text-white border-b border-slate-700 pb-2.5">Dokumentasi Fisik</h3>
+      <div class="space-y-3">
+        <div>
+          <span class="text-slate-400 block mb-1">Foto Fisik Perangkat</span>
+          <% if (asset.physical_photo) { %>
+            <img src="<%= asset.physical_photo %>" alt="Foto Fisik" class="w-full h-36 object-cover rounded-lg border border-slate-600">
+          <% } else { %>
+            <div class="w-full h-24 rounded-lg bg-slate-900 border border-slate-700 flex items-center justify-center text-slate-500">Belum ada foto fisik</div>
+          <% } %>
+        </div>
+        <div>
+          <span class="text-slate-400 block mb-1">Foto Stiker Serial Number</span>
+          <% if (asset.sn_photo) { %>
+            <img src="<%= asset.sn_photo %>" alt="Foto SN" class="w-full h-36 object-cover rounded-lg border border-slate-600">
+          <% } else { %>
+            <div class="w-full h-24 rounded-lg bg-slate-900 border border-slate-700 flex items-center justify-center text-slate-500">Belum ada foto SN</div>
+          <% } %>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Riwayat Mutasi & Riwayat Service -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+    <!-- Timeline Mutasi -->
+    <div class="bg-slate-800 border border-slate-700 rounded-xl p-5 space-y-3">
+      <h3 class="text-sm font-semibold text-sky-400 border-b border-slate-700 pb-2.5">Riwayat Mutasi & Penempatan</h3>
+      <div class="space-y-3 text-xs max-h-80 overflow-y-auto pr-1">
+        <% if (movements.length === 0) { %>
+          <p class="text-slate-500 py-4 text-center">Belum ada catatan mutasi.</p>
+        <% } %>
+        <% movements.forEach(m => { %>
+          <div class="bg-slate-900/70 border border-slate-700/80 rounded-lg p-3 space-y-1">
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-sky-400"><%= m.movement_type %></span>
+              <span class="text-[11px] font-mono text-slate-400"><%= m.movement_date %></span>
+            </div>
+            <div class="text-slate-200">
+              <%= m.from_branch_code ? `[${m.from_branch_code}]` : 'Registrasi' %> &rarr;
+              <span class="font-semibold text-emerald-400"><%= m.to_branch_code ? `[${m.to_branch_code}]` : '-' %></span>
+              (<%= m.to_location || '-' %>)
+            </div>
+            <% if (m.notes) { %>
+              <div class="text-slate-400"><%= m.notes %></div>
+            <% } %>
+            <div class="text-[11px] text-slate-500">PIC: <%= m.moved_by %></div>
+          </div>
+        <% }) %>
+      </div>
+    </div>
+
+    <!-- Timeline Perbaikan / Service -->
+    <div class="bg-slate-800 border border-slate-700 rounded-xl p-5 space-y-3">
+      <h3 class="text-sm font-semibold text-amber-400 border-b border-slate-700 pb-2.5">Riwayat Perbaikan / Maintenance</h3>
+      <div class="space-y-3 text-xs max-h-80 overflow-y-auto pr-1">
+        <% if (maintenances.length === 0) { %>
+          <p class="text-slate-500 py-4 text-center">Belum ada riwayat kerusakan atau perbaikan.</p>
+        <% } %>
+        <% maintenances.forEach(mt => { %>
+          <div class="bg-slate-900/70 border border-slate-700/80 rounded-lg p-3 space-y-1">
+            <div class="flex items-center justify-between">
+              <span class="font-bold uppercase <%= mt.status === 'resolved' ? 'text-emerald-400' : 'text-amber-400' %>"><%= mt.status %></span>
+              <span class="text-[11px] font-mono text-slate-400"><%= mt.issue_date %></span>
+            </div>
+            <div class="font-semibold text-white"><%= mt.problem_description %></div>
+            <% if (mt.action_taken) { %>
+              <div class="text-slate-300">Tindakan: <%= mt.action_taken %></div>
+            <% } %>
+            <div class="text-[11px] text-slate-400">
+              Vendor: <%= mt.service_vendor %> | Biaya: Rp <%= (Number(mt.cost) || 0).toLocaleString('id-ID') %>
+            </div>
+          </div>
+        <% }) %>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<% if (can('asset.write')) { %>
+<!-- MODAL MUTASI ASET -->
+<div id="modal-move-asset" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4">
+  <div onclick="closeModal('modal-move-asset')" class="fixed inset-0 bg-slate-950/75 backdrop-blur-sm"></div>
+  <div class="relative bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-md p-6 shadow-2xl z-10 space-y-4">
+    <div class="flex items-center justify-between border-b border-slate-700 pb-3">
+      <h3 class="text-base font-semibold text-sky-400">Mutasi / Perpindahan Aset</h3>
+      <button type="button" onclick="closeModal('modal-move-asset')" class="text-slate-400 hover:text-white cursor-pointer">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+    </div>
+    <form action="/assets/<%= asset.id %>/move" method="POST" class="space-y-4 text-sm">
+      <input type="hidden" name="redirect_to" value="/assets/<%= asset.id %>">
+      <div>
+        <label class="block text-slate-300 mb-1">Jenis Pergerakan *</label>
+        <select name="movement_type" required class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white">
+          <option value="MUTASI_CABANG">Mutasi Antar Cabang</option>
+          <option value="PINDAH_RUANG">Pindah Ruangan / Rak</option>
+          <option value="DISMANTLE">Tarik ke Gudang (Spare / Lepas dari Jaringan)</option>
+          <option value="DISPOSAL">Afkir / Penghapusan Aset (Disposal)</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-slate-300 mb-1">Cabang Tujuan *</label>
+        <select name="to_branch_id" required class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white">
+          <% branches.forEach(b => { %>
+            <option value="<%= b.id %>" <%= String(b.id) === String(asset.branch_id) ? 'selected' : '' %>>
+              [<%= b.branch_code %>] <%= b.branch_name %>
+            </option>
+          <% }) %>
+        </select>
+      </div>
+      <div>
+        <label class="block text-slate-300 mb-1">Ruangan / Lokasi Tujuan</label>
+        <input type="text" name="to_location" placeholder="Contoh: Ruang Server Lt. 2 / Gudang IT" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white">
+      </div>
+      <div>
+        <label class="block text-slate-300 mb-1">Alasan / Keterangan</label>
+        <textarea name="notes" rows="2" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white"></textarea>
+      </div>
+      <div class="pt-2 flex justify-end gap-2">
+        <button type="button" onclick="closeModal('modal-move-asset')" class="px-4 py-2 rounded-lg bg-slate-700 text-slate-200 cursor-pointer">Batal</button>
+        <button type="submit" class="px-4 py-2 rounded-lg bg-sky-500 text-slate-950 font-semibold cursor-pointer">Simpan Mutasi</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- MODAL CATAT PERBAIKAN / SERVICE -->
+<div id="modal-maintenance-asset" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4">
+  <div onclick="closeModal('modal-maintenance-asset')" class="fixed inset-0 bg-slate-950/75 backdrop-blur-sm"></div>
+  <div class="relative bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-md p-6 shadow-2xl z-10 space-y-4">
+    <div class="flex items-center justify-between border-b border-slate-700 pb-3">
+      <h3 class="text-base font-semibold text-amber-400">Catat Service / Perbaikan Aset</h3>
+      <button type="button" onclick="closeModal('modal-maintenance-asset')" class="text-slate-400 hover:text-white cursor-pointer">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+    </div>
+    <form action="/assets/<%= asset.id %>/maintenance" method="POST" class="space-y-3 text-sm">
+      <input type="hidden" name="redirect_to" value="/assets/<%= asset.id %>">
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-slate-300 mb-1">Tanggal Lapor *</label>
+          <input type="date" name="issue_date" required value="<%= new Date().toISOString().split('T')[0] %>" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white">
+        </div>
+        <div>
+          <label class="block text-slate-300 mb-1">Tanggal Selesai</label>
+          <input type="date" name="resolved_date" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white">
+        </div>
+      </div>
+      <div>
+        <label class="block text-slate-300 mb-1">Keluhan / Kerusakan *</label>
+        <textarea name="problem_description" rows="2" required placeholder="Contoh: Port 1-4 mati total / Adaptor rusak" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white"></textarea>
+      </div>
+      <div>
+        <label class="block text-slate-300 mb-1">Tindakan Perbaikan</label>
+        <textarea name="action_taken" rows="2" placeholder="Contoh: Penggantian adaptor & reset konfigurasi" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white"></textarea>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-slate-300 mb-1">Pelaksana / Vendor</label>
+          <input type="text" name="service_vendor" value="Internal IT" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white">
+        </div>
+        <div>
+          <label class="block text-slate-300 mb-1">Biaya (Rp)</label>
+          <input type="number" name="cost" min="0" value="0" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white">
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-slate-300 mb-1">Status Perbaikan</label>
+          <select name="maintenance_status" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white">
+            <option value="open">Proses (Open)</option>
+            <option value="resolved">Selesai (Resolved)</option>
+            <option value="unrepairable">Tidak Bisa Diperbaiki</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-slate-300 mb-1">Update Status Aset</label>
+          <select name="asset_status_after" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white">
+            <option value="">-- Tetap --</option>
+            <option value="maintenance">Service / RMA</option>
+            <option value="spare">Kembali ke Gudang (Spare)</option>
+            <option value="active">Kembali Aktif</option>
+            <option value="broken">Rusak Total (Broken)</option>
+          </select>
+        </div>
+      </div>
+      <div class="pt-2 flex justify-end gap-2">
+        <button type="button" onclick="closeModal('modal-maintenance-asset')" class="px-4 py-2 rounded-lg bg-slate-700 text-slate-200 cursor-pointer">Batal</button>
+        <button type="submit" class="px-4 py-2 rounded-lg bg-amber-500 text-slate-950 font-semibold cursor-pointer">Simpan Log</button>
+      </div>
+    </form>
+  </div>
+</div>
+<% } %>
+
+<%- include('partials/footer') %>

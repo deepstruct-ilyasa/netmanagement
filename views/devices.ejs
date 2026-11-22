@@ -33,7 +33,7 @@
         <div class="relative flex-1 sm:flex-initial sm:w-72">
           <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"></i>
           <input type="text" id="device-search-input"
-            placeholder="Cari hostname, cabang, lokasi, IP, brand..."
+            placeholder="Cari hostname, kode aset, cabang, IP, brand..."
             oninput="handleSearchChange()"
             class="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg pl-9 pr-8 py-2 text-xs text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:border-emerald-500 dark:focus:border-emerald-400 transition shadow-2xs">
           <button type="button" id="clear-search-btn" onclick="clearDeviceSearch()"
@@ -80,6 +80,11 @@
                       <%= dev.hostname %>
                     </a>
                   </div>
+                  <% if (dev.asset_code) { %>
+                    <a href="/assets/<%= dev.asset_id %>" class="inline-block mt-0.5 text-[10px] font-mono text-sky-400 hover:underline">
+                      <%= dev.asset_code %>
+                    </a>
+                  <% } %>
                 </td>
                 <td class="py-3.5 px-4">
                   <div class="text-slate-200 font-medium"><%= dev.branch_code %></div>
@@ -214,10 +219,40 @@
     </div>
 
     <form action="/devices" method="POST" enctype="multipart/form-data" class="p-6 overflow-y-auto space-y-4 text-sm">
+      <!-- Pilih dari Stok Master Assets (Spare) -->
+      <div class="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-3.5 space-y-2">
+        <div class="flex items-center justify-between">
+          <label class="text-xs font-semibold text-emerald-300">Ambil Unit dari Stok Master Assets (Spare)</label>
+          <% if (can('menu.assets')) { %>
+            <a href="/assets" class="text-[11px] text-sky-400 hover:underline font-medium">+ Registrasi Aset Baru</a>
+          <% } %>
+        </div>
+        <select name="asset_id" id="add_asset_id" onchange="onSelectSpareAsset(this)"
+          class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-400">
+          <option value="">-- Input Manual / Buat Kode Aset Otomatis --</option>
+          <% if (typeof spareAssets !== 'undefined') { %>
+            <% spareAssets.forEach(sa => { %>
+              <option value="<%= sa.id %>"
+                data-branch="<%= sa.branch_id %>"
+                data-type="<%= sa.device_type_id %>"
+                data-brand="<%= sa.brand_id || '' %>"
+                data-model="<%= sa.model_id || '' %>"
+                data-mac="<%= sa.mac_address || '' %>"
+                data-sn="<%= sa.serial_number || '' %>">
+                [<%= sa.asset_code %>] <%= sa.type_name %> - <%= sa.brand_name || '' %> <%= sa.model_name || '' %> (SN: <%= sa.serial_number || '-' %>)
+              </option>
+            <% }) %>
+          <% } %>
+        </select>
+        <p class="text-[11px] text-slate-400">
+          Jika memilih unit dari stok di atas, cabang, jenis, brand, model, SN & MAC otomatis terisi dan status aset berubah menjadi <span class="text-emerald-400 font-semibold">Active</span>.
+        </p>
+      </div>
+
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label class="block text-slate-300 mb-1">Cabang *</label>
-          <select name="branch_id" required class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-400">
+          <select name="branch_id" id="add_branch_id" required class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-400">
             <% branches.forEach(b => { %>
               <option value="<%= b.id %>">[<%= b.branch_code %>] <%= b.branch_name %></option>
             <% }) %>
@@ -298,11 +333,11 @@
         </div>
         <div>
           <label class="block text-slate-300 text-xs mb-1">MAC Address</label>
-          <input type="text" name="mac_address" placeholder="AA:BB:CC:11:22:33" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white text-xs">
+          <input type="text" name="mac_address" id="add_mac_address" placeholder="AA:BB:CC:11:22:33" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white text-xs">
         </div>
         <div>
           <label class="block text-slate-300 text-xs mb-1">Serial Number</label>
-          <input type="text" name="serial_number" placeholder="SN12345678" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white text-xs">
+          <input type="text" name="serial_number" id="add_serial_number" placeholder="SN12345678" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white text-xs">
         </div>
       </div>
 
@@ -784,11 +819,11 @@
       <div class="p-2.5 rounded-full bg-rose-500/15 border border-rose-500/30">
         <i data-lucide="alert-triangle" class="w-6 h-6"></i>
       </div>
-      <h3 class="text-lg font-semibold text-white">Hapus Perangkat?</h3>
+      <h3 class="text-lg font-semibold text-white">Hapus / Bongkar Perangkat?</h3>
     </div>
 
     <p class="text-sm text-slate-300 leading-relaxed">
-      Apakah Anda yakin ingin menghapus perangkat <span id="delete-device-name" class="font-bold text-rose-400"></span>? Seluruh data port dan koneksi kabel yang terhubung ke perangkat ini juga akan ikut terhapus.
+      Apakah Anda yakin ingin menghapus perangkat <span id="delete-device-name" class="font-bold text-rose-400"></span> dari topologi jaringan? Seluruh data port dan koneksi kabel akan dihapus, sementara unit asetnya otomatis dikembalikan ke status <span class="text-amber-400 font-semibold">Spare</span> di Master Assets.
     </p>
 
     <form id="delete-device-form" method="POST" class="pt-2 flex justify-end gap-3 text-sm">
@@ -796,7 +831,7 @@
         Batal
       </button>
       <button type="submit" class="px-4 py-2 rounded-lg bg-rose-500 hover:bg-rose-600 text-white font-semibold transition cursor-pointer">
-        Ya, Hapus Permanen
+        Ya, Hapus dari Jaringan
       </button>
     </form>
   </div>
@@ -862,6 +897,35 @@
 <script>
   const allDeviceModels = <%- JSON.stringify(typeof deviceModels !== 'undefined' ? deviceModels : []) %>;
   let currentEditingDevice = null;
+
+  // =========================================================
+  // AUTO-FILL SAAT MEMILIH STOK MASTER ASSETS (SPARE)
+  // =========================================================
+  function onSelectSpareAsset(selectEl) {
+    const opt = selectEl.options[selectEl.selectedIndex];
+    const hasAsset = Boolean(selectEl.value);
+
+    const branchEl = document.getElementById('add_branch_id');
+    const typeEl = document.getElementById('add_device_type_id');
+    const brandEl = document.getElementById('add_brand_id');
+    const modelEl = document.getElementById('add_model_id');
+    const macEl = document.getElementById('add_mac_address');
+    const snEl = document.getElementById('add_serial_number');
+
+    if (hasAsset) {
+      if (branchEl) branchEl.value = opt.getAttribute('data-branch') || '';
+      if (typeEl) {
+        typeEl.value = opt.getAttribute('data-type') || '';
+        onDeviceTypeChange('add');
+      }
+      if (brandEl) {
+        brandEl.value = opt.getAttribute('data-brand') || '';
+        populateModelDropdown('add', opt.getAttribute('data-model') || '');
+      }
+      if (macEl) macEl.value = opt.getAttribute('data-mac') || '';
+      if (snEl) snEl.value = opt.getAttribute('data-sn') || '';
+    }
+  }
 
   // =========================================================
   // AUTO-ADJUST PORT LAYOUT SAAT TEMPLATE FACEPLATE DIPILIH
@@ -982,7 +1046,6 @@
     if (currentPage > totalPages) currentPage = totalPages;
     if (currentPage < 1) currentPage = 1;
 
-    // Simpan state terakhir setiap kali tabel dirender
     saveTableState();
 
     const startIndex = (currentPage - 1) * effectivePerPage;
@@ -1301,6 +1364,7 @@
       confirmBar.classList.remove('hidden');
       footerBar.classList.add('hidden');
     } else {
+      confirmBar.classList.remove('hidden');
       confirmBar.classList.add('hidden');
       footerBar.classList.remove('hidden');
     }
@@ -1316,7 +1380,6 @@
     toggleSwitchOptions('add');
     populateModelDropdown('add');
 
-    // Pulihkan nilai input search & dropdown jumlah per halaman dari sessionStorage
     const searchInput = document.getElementById('device-search-input');
     const perPageSelect = document.getElementById('devices-per-page');
     const clearBtn = document.getElementById('clear-search-btn');

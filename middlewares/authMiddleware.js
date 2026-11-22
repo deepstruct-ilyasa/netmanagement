@@ -97,6 +97,9 @@ function requireAuth(req, res, next) {
     if (user.role === 'viewer') return false;
 
     if (user.role === 'branch_user') {
+      if (permission === 'asset.write') {
+        return hasMenuAccess('assets');
+      }
       if (permission === 'device.write' || permission === 'port.connect') {
         return hasMenuAccess('devices');
       }

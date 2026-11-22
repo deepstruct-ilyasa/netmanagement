@@ -1,0 +1,39 @@
+const express = require('express');
+const router = express.Router();
+const multer = require('multer');
+const path = require('path');
+const assetController = require('../controllers/assetController');
+const { requirePermission } = require('../middlewares/authMiddleware');
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, path.join(__dirname, '..', 'public', 'uploads'));
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    const prefix = file.fieldname === 'sn_photo' ? 'asset_sn' : 'asset_phys';
+    cb(null, `${prefix}_${Date.now()}_${Math.round(Math.random() * 1e6)}${ext}`);
+  }
+});
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 5 * 1024 * 1024 } // Maks 5MB per foto
+});
+
+const assetUploads = upload.fields([
+  { name: 'physical_photo', maxCount: 1 },
+  { name: 'sn_photo', maxCount: 1 }
+]);
+
+router.get('/assets', requirePermission('menu.assets'), assetController.listAssets);
+router.get('/assets/:id', requirePermission('menu.assets'), assetController.detailAsset);
+
+router.post('/assets', requirePermission('asset.write'), assetUploads, assetController.createAsset);
+router.post('/assets/settings', requirePermission('asset.write'), assetController.updateAssetSettings);
+router.post('/assets/:id/update', requirePermission('asset.write'), assetUploads, assetController.updateAsset);
+router.post('/assets/:id/move', requirePermission('asset.write'), assetController.moveAsset);
+router.post('/assets/:id/maintenance', requirePermission('asset.write'), assetController.addMaintenance);
+router.post('/assets/:id/delete', requirePermission('asset.write'), assetController.deleteAsset);
+
+module.exports = router;
