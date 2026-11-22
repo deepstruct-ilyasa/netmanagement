@@ -1,6 +1,12 @@
 const Database = require('better-sqlite3');
+const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+
+const dbDir = path.join(__dirname, 'database');
+if (!fs.existsSync(dbDir)) {
+  fs.mkdirSync(dbDir, { recursive: true });
+}
 
 const db = new Database(path.join(__dirname, 'database', 'netmanagement.db'));
 

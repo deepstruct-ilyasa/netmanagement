@@ -1,7 +1,13 @@
 const express = require('express');
+const fs = require('fs');
 const path = require('path');
 const { requireAuth } = require('./middlewares/authMiddleware');
 const branchContext = require('./middlewares/branchContext');
+
+const uploadDir = path.join(__dirname, 'public', 'uploads');
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
 
 const authRoutes = require('./routes/authRoutes');
 const deviceRoutes = require('./routes/deviceRoutes');
