@@ -2,7 +2,7 @@
 <div id="sidebar-backdrop" onclick="toggleSidebar()" class="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-30 hidden lg:hidden"></div>
 
 <!-- Sidebar Navigation (Sticky di Desktop) -->
-<aside id="sidebar" class="fixed lg:sticky top-0 left-0 z-40 h-screen w-80 bg-slate-800 border-r border-slate-700 flex flex-col transition-all duration-300 -translate-x-full lg:translate-x-0 shrink-0">
+<aside id="sidebar" class="fixed lg:sticky top-0 left-0 z-40 h-screen w-72 bg-slate-800 border-r border-slate-700 flex flex-col transition-all duration-300 -translate-x-full lg:translate-x-0 shrink-0">
   
   <!-- Brand Header -->
   <div class="h-16 px-5 border-b border-slate-700 flex items-center justify-between shrink-0">
@@ -66,13 +66,6 @@
       </a>
     <% } %>
 
-    <% if (can('menu.branches')) { %>
-      <a href="/branches" class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition <%= activeMenu === 'branches' ? 'bg-emerald-500/15 text-emerald-400 font-semibold border border-emerald-500/30' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' %>">
-        <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
-        <span>Branches</span>
-      </a>
-    <% } %>
-
     <!-- PARENT DROPDOWN: MASTER -->
     <%
       const isMasterActive = ['device-types', 'brands', 'device-models'].includes(activeMenu);
@@ -118,10 +111,17 @@
       </div>
     <% } %>
 
-    <% if (can('menu.audit-logs') || can('menu.users')) { %>
+    <% if (can('menu.audit-logs') || can('menu.users') || can('menu.branches')) { %>
       <div class="px-3 pt-4 pb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
         Governance & System
       </div>
+    <% } %>
+
+    <% if (can('menu.branches')) { %>
+      <a href="/branches" class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition <%= activeMenu === 'branches' ? 'bg-emerald-500/15 text-emerald-400 font-semibold border border-emerald-500/30' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' %>">
+        <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+        <span>Branches</span>
+      </a>
     <% } %>
 
     <% if (can('menu.audit-logs')) { %>
