@@ -846,7 +846,7 @@ exports.listMaintenances = (req, res) => {
   };
 
   res.render('assets/asset-maintenances', {
-    title: 'Riwayat Service & Maintenance',
+    title: 'Service & Maintenance',
     activeMenu: 'asset-maintenances',
     maintenances,
     stats,
