@@ -449,32 +449,7 @@
       <img id="photo-modal-img" src="" alt="Preview Dokumentasi" class="max-h-[65vh] w-auto object-contain rounded-lg border border-slate-800">
     </div>
 
-    <% if (can('device.write')) { %>
-      <div id="photo-delete-confirm-bar" class="hidden px-5 py-3 bg-rose-950/60 border-t border-rose-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
-        <span class="text-rose-200 font-medium">Yakin ingin menghapus foto ini secara permanen dari server?</span>
-        <form action="/devices/<%= device.id %>/delete-photo" method="POST" class="flex items-center gap-2 shrink-0">
-          <input type="hidden" name="photo_type" id="delete-photo-type-input">
-          <button type="button" onclick="togglePhotoDeleteConfirm(false)" class="px-3 py-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-200 cursor-pointer">
-            Batal
-          </button>
-          <button type="submit" class="px-3.5 py-1.5 rounded-lg bg-rose-500 hover:bg-rose-600 text-white font-semibold cursor-pointer">
-            Ya, Hapus Foto
-          </button>
-        </form>
-      </div>
-    <% } %>
-
-    <div id="photo-modal-footer" class="px-5 py-3.5 border-t border-slate-700 flex items-center justify-between gap-3 bg-slate-800">
-      <% if (can('device.write')) { %>
-        <button type="button" onclick="togglePhotoDeleteConfirm(true)"
-          class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 border border-rose-500/30 text-xs font-semibold transition cursor-pointer">
-          <i data-lucide="trash-2" class="w-4 h-4"></i>
-          <span>Hapus</span>
-        </button>
-      <% } else { %>
-        <div></div>
-      <% } %>
-
+    <div id="photo-modal-footer" class="px-5 py-3.5 border-t border-slate-700 flex items-center justify-end gap-3 bg-slate-800">
       <div class="flex items-center gap-2">
         <a id="photo-modal-download" href="#" download
           class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-slate-950 text-xs font-semibold transition">
@@ -575,7 +550,10 @@
   function openPhotoModal(photoUrl, title, photoType) {
     document.getElementById('photo-modal-title').textContent = title;
     document.getElementById('photo-modal-img').src = photoUrl;
-    document.getElementById('photo-modal-download').href = photoUrl;
+
+    const dlBtn = document.getElementById('photo-modal-download');
+    dlBtn.href = photoUrl;
+    dlBtn.setAttribute('download', photoUrl.split('/').pop() || '-');
 
     const typeInput = document.getElementById('delete-photo-type-input');
     if (typeInput) typeInput.value = photoType;

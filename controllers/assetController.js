@@ -15,6 +15,29 @@ function deleteFileIfExists(publicRelativePath) {
   }
 }
 
+function renamePhotoWithAssetCode(uploadedFile, assetCode, suffixType) {
+  if (!uploadedFile) return null;
+
+  // Bersihkan karakter '/' atau simbol ilegal pada kode inventaris agar aman jadi nama file
+  const safeCode = String(assetCode || 'ASSET')
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9_-]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+
+  const ext = path.extname(uploadedFile.originalname || uploadedFile.filename || '.jpg').toLowerCase() || '.jpg';
+  const newFilename = `${safeCode}_${suffixType}_${Date.now()}${ext}`;
+  const oldPath = uploadedFile.path;
+  const newPath = path.join(path.dirname(oldPath), newFilename);
+
+  try {
+    fs.renameSync(oldPath, newPath);
+    return '/uploads/' + newFilename;
+  } catch (e) {
+    return '/uploads/' + uploadedFile.filename;
+  }
+}
+
 // 1. GET /assets - Daftar Master Aset & Statistik
 exports.listAssets = (req, res) => {
   const selectedBranchId = req.selectedBranchId || 'all';
@@ -64,7 +87,6 @@ exports.listAssets = (req, res) => {
     totalValue: assets.reduce((sum, a) => sum + (Number(a.purchase_price) || 0), 0)
   };
 
-  // Cek total keseluruhan data aset di database untuk mengunci/membuka pengaturan format kode
   const globalCountRow = db.prepare(`SELECT COUNT(*) AS total FROM assets`).get();
   const totalAssetCount = globalCountRow ? Number(globalCountRow.total) : 0;
 
@@ -219,8 +241,14 @@ exports.createAsset = (req, res) => {
       }
     }
 
-    const physicalPhoto = req.files?.['physical_photo'] ? '/uploads/' + req.files['physical_photo'][0].filename : null;
-    const snPhoto = req.files?.['sn_photo'] ? '/uploads/' + req.files['sn_photo'][0].filename : null;
+    // Penamaan file foto berdasarkan Kode Inventaris
+    const physicalPhoto = req.files?.['physical_photo']
+      ? renamePhotoWithAssetCode(req.files['physical_photo'][0], finalAssetCode, 'FISIK')
+      : null;
+    const snPhoto = req.files?.['sn_photo']
+      ? renamePhotoWithAssetCode(req.files['sn_photo'][0], finalAssetCode, 'SN')
+      : null;
+
     const finalStatus = status || 'spare';
     const finalCondition = condition || 'good';
 
@@ -331,13 +359,13 @@ exports.updateAsset = (req, res) => {
     let physicalPhoto = oldAsset.physical_photo;
     if (req.files?.['physical_photo']) {
       deleteFileIfExists(oldAsset.physical_photo);
-      physicalPhoto = '/uploads/' + req.files['physical_photo'][0].filename;
+      physicalPhoto = renamePhotoWithAssetCode(req.files['physical_photo'][0], cleanCode, 'FISIK');
     }
 
     let snPhoto = oldAsset.sn_photo;
     if (req.files?.['sn_photo']) {
       deleteFileIfExists(oldAsset.sn_photo);
-      snPhoto = '/uploads/' + req.files['sn_photo'][0].filename;
+      snPhoto = renamePhotoWithAssetCode(req.files['sn_photo'][0], cleanCode, 'SN');
     }
 
     const linkedDevice = db.prepare(`SELECT * FROM devices WHERE asset_id = ?`).get(assetId);
@@ -445,6 +473,55 @@ exports.updateAsset = (req, res) => {
   } catch (err) {
     console.error(err);
     res.redirect('/assets?error=Gagal+memperbarui+data+aset');
+  }
+};
+
+// 4b. POST /assets/:id/delete-photo - Hapus Foto Fisik atau Foto SN Aset
+exports.deleteAssetPhoto = (req, res) => {
+  try {
+    const assetId = req.params.id;
+    const { photo_type } = req.body; // 'physical' atau 'sn'
+
+    const asset = db.prepare(`SELECT * FROM assets WHERE id = ?`).get(assetId);
+    if (!asset) {
+      return res.redirect('/assets?error=Aset+tidak+ditemukan');
+    }
+
+    if (!req.canAccessBranch(asset.branch_id)) {
+      return res.status(403).render('forbidden', {
+        title: '403 Akses Ditolak',
+        message: 'Anda tidak memiliki hak akses untuk menghapus foto aset pada cabang tersebut.'
+      });
+    }
+
+    if (photo_type !== 'physical' && photo_type !== 'sn') {
+      return res.redirect('/assets?error=Tipe+foto+tidak+valid');
+    }
+
+    const column = photo_type === 'physical' ? 'physical_photo' : 'sn_photo';
+    const currentPhotoPath = asset[column];
+
+    deleteFileIfExists(currentPhotoPath);
+
+    db.transaction(() => {
+      db.prepare(`UPDATE assets SET ${column} = NULL WHERE id = ?`).run(assetId);
+      db.prepare(`UPDATE devices SET ${column} = NULL WHERE asset_id = ?`).run(assetId);
+    })();
+
+    logAudit(req, {
+      branchId: asset.branch_id,
+      action: 'DELETE',
+      entityType: 'asset_photo',
+      entityId: assetId,
+      description: `Menghapus foto ${photo_type === 'physical' ? 'fisik' : 'SN'} aset ${asset.asset_code}`
+    });
+
+    const redirectTarget = req.body.redirect_to || '/assets';
+    const labelJenis = photo_type === 'physical' ? 'Foto+fisik' : 'Foto+SN';
+    res.redirect(`${redirectTarget}?success=${labelJenis}+aset+${encodeURIComponent(asset.asset_code)}+berhasil+dihapus`);
+  } catch (err) {
+    console.error(err);
+    res.redirect('/assets?error=Gagal+menghapus+foto+aset');
   }
 };
 
@@ -656,7 +733,6 @@ exports.updateAssetSettings = (req, res) => {
     const { asset_code_format, organization_name } = req.body;
     const currentSettings = getAssetSettings();
 
-    // Cek apakah sudah ada data aset tersimpan di database
     const globalCountRow = db.prepare(`SELECT COUNT(*) AS total FROM assets`).get();
     const totalAssetCount = globalCountRow ? Number(globalCountRow.total) : 0;
 
@@ -672,7 +748,6 @@ exports.updateAssetSettings = (req, res) => {
       upsert.run('organization_name', organization_name.trim());
     }
 
-    // Pola format kode hanya boleh diubah jika belum ada data aset sama sekali
     const isFormatChanged = asset_code_format && asset_code_format.trim() !== currentSettings.asset_code_format;
     if (totalAssetCount === 0 && asset_code_format && asset_code_format.trim() !== '') {
       upsert.run('asset_code_format', asset_code_format.trim());

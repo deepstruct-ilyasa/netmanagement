@@ -33,6 +33,15 @@
       <p class="text-xs text-slate-400">Registrasi fisik perangkat, pelacakan status operasional, garansi, mutasi lokasi, dan riwayat perbaikan.</p>
     </div>
     <div class="flex flex-wrap items-center gap-2">
+      <!-- Tombol Cetak Massal (Muncul otomatis saat ada checkbox dicentang) -->
+      <div id="bulk-print-toolbar" class="hidden items-center gap-1.5 text-slate-950 bg-amber-400 hover:bg-amber-800 border border-amber-500/40 px-2.5 py-2.5 rounded-lg">
+        <button type="button" onclick="openBulkQrLabelModal()"
+          class="inline-flex items-center justify-center gap-1.5 font-semibold text-xs rounded-md transition shadow-sm cursor-pointer">
+          <i data-lucide="printer" class="w-3.5 h-3.5"></i>
+          <span>Cetak Label</span>
+        </button>
+      </div>
+
       <% if (can('asset.write')) { %>
         <button type="button" onclick="openModal('modal-asset-settings')"
           class="inline-flex items-center justify-center gap-2 bg-slate-700 hover:bg-slate-600 text-slate-200 border border-slate-600 font-medium text-xs px-3.5 py-2.5 rounded-lg transition cursor-pointer">
@@ -121,14 +130,6 @@
           <input type="text" id="asset-search-input" oninput="onAssetSearch(this.value)"
             placeholder="Cari kode aset, SN, brand, model, hostname..."
             class="w-full bg-slate-900 border border-slate-600 rounded-lg pl-9 pr-3 py-2 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-emerald-400">
-        </div>
-        <!-- Tombol Cetak Massal (Muncul otomatis saat ada checkbox dicentang) -->
-        <div id="bulk-print-toolbar" class="hidden items-center gap-1.5 bg-amber-600 hover:bg-amber-800 border border-amber-500/40 px-2 py-2 rounded-lg">
-          <button type="button" onclick="openBulkQrLabelModal()"
-            class="inline-flex items-center justify-center gap-1.5 text-slate-950 font-semibold text-xs transition shadow-sm cursor-pointer">
-            <i data-lucide="printer" class="w-3.5 h-3.5"></i>
-            <span>Cetak Label</span>
-          </button>
         </div>
         <div class="flex items-center gap-2 text-xs shrink-0">
           <select id="asset-per-page" onchange="changeAssetPerPage(this.value)" class="bg-slate-900 border border-slate-600 rounded-lg px-2 py-2 text-white focus:outline-none focus:border-emerald-400">
@@ -549,12 +550,31 @@
         </div>
 
         <div class="grid grid-cols-2 gap-2.5 sm:gap-3">
-          <div>
-            <label class="block text-slate-300 text-xs mb-1">Ganti Foto Fisik</label>
+          <div class="space-y-1.5">
+            <label class="block text-slate-300 text-xs">Ganti Foto Fisik</label>
+            <div id="edit_physical_photo_preview_wrap" class="hidden items-center justify-between gap-2 bg-slate-900/80 border border-slate-700 rounded-lg p-1.5">
+              <div class="flex items-center gap-2 min-w-0">
+                <button type="button" onclick="zoomEditPhoto('physical')" title="Klik untuk memperbesar"
+                  class="relative group shrink-0 rounded overflow-hidden border border-slate-600 hover:border-sky-400 cursor-pointer">
+                  <img id="edit_physical_photo_preview" src="" alt="Foto Fisik Saat Ini" class="w-12 h-9 object-cover group-hover:scale-105 transition">
+                </button>
+                <span class="text-[10px] text-slate-400 truncate">Foto fisik tersimpan</span>
+              </div>
+            </div>
             <input type="file" name="physical_photo" accept="image/*" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-2 py-1.5 text-slate-300 text-[11px] file:mr-2 file:py-0.5 file:px-2 file:rounded file:border-0 file:text-[11px] file:bg-slate-700 file:text-slate-200">
           </div>
-          <div>
-            <label class="block text-slate-300 text-xs mb-1">Ganti Foto SN</label>
+
+          <div class="space-y-1.5">
+            <label class="block text-slate-300 text-xs">Ganti Foto SN</label>
+            <div id="edit_sn_photo_preview_wrap" class="hidden items-center justify-between gap-2 bg-slate-900/80 border border-slate-700 rounded-lg p-1.5">
+              <div class="flex items-center gap-2 min-w-0">
+                <button type="button" onclick="zoomEditPhoto('sn')" title="Klik untuk memperbesar"
+                  class="relative group shrink-0 rounded overflow-hidden border border-slate-600 hover:border-sky-400 cursor-pointer">
+                  <img id="edit_sn_photo_preview" src="" alt="Foto SN Saat Ini" class="w-12 h-9 object-cover group-hover:scale-105 transition">
+                </button>
+                <span class="text-[10px] text-slate-400 truncate">Foto SN tersimpan</span>
+              </div>
+            </div>
             <input type="file" name="sn_photo" accept="image/*" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-2 py-1.5 text-slate-300 text-[11px] file:mr-2 file:py-0.5 file:px-2 file:rounded file:border-0 file:text-[11px] file:bg-slate-700 file:text-slate-200">
           </div>
         </div>
@@ -656,6 +676,63 @@
 <% } %>
 
 <!-- =========================================================
+     MODAL ZOOM / PERBESAR FOTO EDIT ASET
+     ========================================================= -->
+<div id="modal-zoom-edit-photo" class="fixed inset-0 z-[60] hidden flex items-center justify-center p-4">
+  <div onclick="closeModal('modal-zoom-edit-photo')" class="fixed inset-0 bg-slate-950/85 backdrop-blur-sm"></div>
+
+  <div class="relative bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-2xl max-h-[88vh] flex flex-col shadow-2xl z-10 overflow-hidden">
+    <div class="px-5 py-3 border-b border-slate-700 flex items-center justify-between">
+      <h4 id="zoom-edit-photo-title" class="text-sm font-semibold text-white truncate">Preview Foto Aset</h4>
+      <button type="button" onclick="closeModal('modal-zoom-edit-photo')" class="text-slate-400 hover:text-white p-1 cursor-pointer">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+    </div>
+
+    <div class="p-4 bg-slate-950 flex-1 overflow-auto flex items-center justify-center">
+      <img id="zoom-edit-photo-img" src="" alt="Perbesar Foto" class="max-h-[65vh] w-auto object-contain rounded-lg border border-slate-800">
+    </div>
+
+    <div id="zoom-edit-photo-delete-confirm" class="hidden px-5 py-3 bg-rose-950/80 border-t border-rose-500/40 flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs bg-slate-800">
+      <span class="text-rose-200 font-medium">Yakin ingin menghapus foto ini secara permanen?</span>
+      <form id="zoom-edit-photo-delete-form" method="POST" class="flex items-center gap-2 shrink-0">
+        <input type="hidden" name="photo_type" id="zoom-edit-photo-type-input" value="">
+        <button type="button" onclick="toggleZoomEditPhotoDeleteConfirm(false)" class="px-3 py-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-200 cursor-pointer">
+          Batal
+        </button>
+        <button type="submit" class="px-3.5 py-1.5 rounded-lg bg-rose-500 hover:bg-rose-600 text-white font-semibold cursor-pointer">
+          Ya, Hapus Foto
+        </button>
+      </form>
+    </div>
+
+    <div id="zoom-edit-photo-footer" class="px-5 py-3 border-t border-slate-700 flex items-center justify-between gap-2 bg-slate-800">
+      <% if (can('asset.write')) { %>
+        <button type="button" onclick="toggleZoomEditPhotoDeleteConfirm(true)"
+          class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 border border-rose-500/30 text-xs font-semibold transition cursor-pointer">
+          <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+          <span>Hapus</span>
+        </button>
+      <% } else { %>
+        <div></div>
+      <% } %>
+
+      <div class="flex items-center gap-2">
+        <a id="zoom-edit-photo-download" href="#" download
+          class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-slate-950 text-xs font-semibold transition">
+          <i data-lucide="download" class="w-3.5 h-3.5"></i>
+          <span>Download</span>
+        </a>
+        <button type="button" onclick="closeModal('modal-zoom-edit-photo')"
+          class="px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-medium cursor-pointer">
+          Tutup
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- =========================================================
      MODAL CETAK STIKER LABEL QR ASET (SATUAN & MASSAL - WYSIWYG)
      ========================================================= -->
 <div id="modal-qr-label" class="fixed inset-0 z-50 hidden flex items-center justify-center p-3 sm:p-4">
@@ -712,9 +789,9 @@
   const allAssetModels = <%- JSON.stringify(typeof models !== 'undefined' ? models : []) %>;
   const ORG_NAME_FOR_STICKER = <%- JSON.stringify(settings.organization_name || 'IT ASSET') %>;
 
-  // State pilihan checkbox (disimpan berdasarkan ID aset agar tidak hilang saat pindah halaman/search)
   const selectedAssetsMap = new Map();
   let preparedStickersList = [];
+  let currentEditingAssetId = null;
 
   // =========================================================
   // CASCADING KETAT: JENIS PERANGKAT -> BRAND -> MODEL
@@ -874,7 +951,6 @@
       }
     }
 
-    // Sinkronkan status checkbox header dengan baris yang sedang tampil
     const masterCb = document.getElementById('select-all-visible-assets');
     if (masterCb) {
       const visibleCheckboxes = Array.from(document.querySelectorAll('#assets-table-body .asset-row:not(.hidden) .asset-select-checkbox'));
@@ -1078,6 +1154,7 @@
   }
 
   function openEditAssetModal(asset) {
+    currentEditingAssetId = asset.id;
     document.getElementById('edit-asset-form').action = `/assets/${asset.id}/update`;
     document.getElementById('edit_asset_code').value = asset.asset_code || '';
     document.getElementById('edit_asset_type_id').value = asset.device_type_id || '';
@@ -1093,7 +1170,84 @@
     document.getElementById('edit_asset_warranty_end').value = asset.warranty_end || '';
     document.getElementById('edit_asset_vendor').value = asset.vendor_name || '';
     document.getElementById('edit_asset_notes').value = asset.notes || '';
+
+    const physWrap = document.getElementById('edit_physical_photo_preview_wrap');
+    const physImg = document.getElementById('edit_physical_photo_preview');
+    if (physWrap && physImg) {
+      if (asset.physical_photo) {
+        physImg.src = asset.physical_photo;
+        physWrap.classList.remove('hidden');
+        physWrap.classList.add('flex');
+      } else {
+        physImg.src = '';
+        physWrap.classList.add('hidden');
+        physWrap.classList.remove('flex');
+      }
+    }
+
+    const snWrap = document.getElementById('edit_sn_photo_preview_wrap');
+    const snImg = document.getElementById('edit_sn_photo_preview');
+    if (snWrap && snImg) {
+      if (asset.sn_photo) {
+        snImg.src = asset.sn_photo;
+        snWrap.classList.remove('hidden');
+        snWrap.classList.add('flex');
+      } else {
+        snImg.src = '';
+        snWrap.classList.add('hidden');
+        snWrap.classList.remove('flex');
+      }
+    }
+
     openModal('modal-edit-asset');
+  }
+
+  function zoomEditPhoto(type) {
+    const isPhys = type === 'physical';
+    const imgEl = document.getElementById(isPhys ? 'edit_physical_photo_preview' : 'edit_sn_photo_preview');
+    const src = imgEl ? imgEl.getAttribute('src') : '';
+    if (!src) return;
+
+    const codeVal = document.getElementById('edit_asset_code')?.value || 'Aset';
+    document.getElementById('zoom-edit-photo-title').textContent =
+      `${isPhys ? 'Foto Fisik' : 'Foto Stiker SN'} - ${codeVal}`;
+    document.getElementById('zoom-edit-photo-img').src = src;
+
+    const dlBtn = document.getElementById('zoom-edit-photo-download');
+    if (dlBtn) {
+      dlBtn.href = src;
+      dlBtn.setAttribute('download', src.split('/').pop() || 'foto-aset.jpg');
+    }
+
+    const delForm = document.getElementById('zoom-edit-photo-delete-form');
+    const typeInput = document.getElementById('zoom-edit-photo-type-input');
+    if (delForm && currentEditingAssetId) {
+      delForm.action = `/assets/${currentEditingAssetId}/delete-photo`;
+    }
+    if (typeInput) {
+      typeInput.value = isPhys ? 'physical' : 'sn';
+    }
+
+    toggleZoomEditPhotoDeleteConfirm(false);
+    openModal('modal-zoom-edit-photo');
+  }
+
+  function toggleZoomEditPhotoDeleteConfirm(showConfirm) {
+    const confirmBar = document.getElementById('zoom-edit-photo-delete-confirm');
+    const footerBar = document.getElementById('zoom-edit-photo-footer');
+    if (!confirmBar || !footerBar) return;
+
+    if (showConfirm) {
+      confirmBar.classList.remove('hidden');
+      confirmBar.classList.add('flex');
+      footerBar.classList.add('hidden');
+      footerBar.classList.remove('flex');
+    } else {
+      confirmBar.classList.add('hidden');
+      confirmBar.classList.remove('flex');
+      footerBar.classList.remove('hidden');
+      footerBar.classList.add('flex');
+    }
   }
 
   function openDeleteAssetModal(id, code) {
@@ -1274,7 +1428,7 @@
     }
     if (totalBadgeEl) totalBadgeEl.textContent = String(assetsArray.length);
     if (printBtnLabelEl) {
-      printBtnLabelEl.textContent = isBulk ? `Print Semua (${assetsArray.length})` : 'Print Stiker';
+      printBtnLabelEl.textContent = isBulk ? `Print (${assetsArray.length})` : 'Print Stiker';
     }
 
     container.innerHTML = '<div class="text-xs text-slate-400 py-8">Membuat QR Code...</div>';

@@ -40,6 +40,7 @@ router.post('/assets/settings', requirePermission('asset.write'), assetControlle
 router.post('/assets/move', requirePermission('asset.write'), assetController.moveAsset);
 router.post('/assets/maintenance', requirePermission('asset.write'), assetController.addMaintenance);
 router.post('/assets/:id/update', requirePermission('asset.write'), assetUploads, assetController.updateAsset);
+router.post('/assets/:id/delete-photo', requirePermission('asset.write'), assetController.deleteAssetPhoto);
 router.post('/assets/:id/move', requirePermission('asset.write'), assetController.moveAsset);
 router.post('/assets/:id/maintenance', requirePermission('asset.write'), assetController.addMaintenance);
 router.post('/assets/:id/delete', requirePermission('asset.write'), assetController.deleteAsset);
