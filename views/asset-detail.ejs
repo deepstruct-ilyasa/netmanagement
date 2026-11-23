@@ -35,10 +35,10 @@
       <div>
         <div class="flex items-center gap-2">
           <h2 class="text-base font-bold font-mono text-emerald-400"><%= asset.asset_code %></h2>
-          <span class="px-2 py-0.5 rounded text-[11px] font-bold uppercase bg-slate-900 border border-slate-600 text-slate-200">
-            <%= asset.status %>
-          </span>
         </div>
+        <span class="px-2 py-0.5 rounded text-[11px] font-bold uppercase bg-slate-900 border border-slate-600 text-slate-200">
+          <%= asset.status %>
+        </span>
         <p class="text-xs text-slate-400"><%= asset.type_name %> — <%= asset.brand_name || '-' %> <%= asset.model_name || '' %></p>
       </div>
     </div>
@@ -48,12 +48,12 @@
         <button type="button" onclick="openModal('modal-move-asset')"
           class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-sky-500/15 hover:bg-sky-500/25 text-sky-400 border border-sky-500/30 font-semibold transition cursor-pointer">
           <i data-lucide="arrow-left-right" class="w-4 h-4"></i>
-          <span>Mutasi / Pindah Lokasi</span>
+          <span>Mutasi Lokasi</span>
         </button>
         <button type="button" onclick="openModal('modal-maintenance-asset')"
           class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 text-amber-400 border border-amber-500/30 font-semibold transition cursor-pointer">
           <i data-lucide="wrench" class="w-4 h-4"></i>
-          <span>Catat Service / Perbaikan</span>
+          <span>Catat Service</span>
         </button>
       </div>
     <% } %>
@@ -72,7 +72,10 @@
         <div>
           <span class="text-slate-400 block">Status Operasional Jaringan</span>
           <% if (asset.linked_hostname) { %>
-            <span class="text-emerald-400 font-semibold">Terpasang: <%= asset.linked_hostname %> (<%= asset.linked_ip || 'No IP' %>)</span>
+            <a href="/devices/<%= asset.linked_device_id %>/visual" class="text-emerald-400 hover:underline font-semibold inline-flex items-center gap-1">
+              <span>Terpasang: <%= asset.linked_hostname %> (<%= asset.linked_ip || 'No IP' %>)</span>
+              <i data-lucide="external-link" class="w-3 h-3"></i>
+            </a>
           <% } else { %>
             <span class="text-amber-400">Belum terpasang di topologi / Gudang IT</span>
           <% } %>
@@ -107,7 +110,15 @@
         <div>
           <span class="text-slate-400 block mb-1">Foto Fisik Perangkat</span>
           <% if (asset.physical_photo) { %>
-            <img src="<%= asset.physical_photo %>" alt="Foto Fisik" class="w-full h-36 object-cover rounded-lg border border-slate-600">
+            <div onclick="openAssetImageZoom('<%= asset.physical_photo %>', 'Foto Fisik - <%= asset.asset_code %>')"
+              class="relative rounded-lg overflow-hidden border border-slate-600 cursor-zoom-in group">
+              <img src="<%= asset.physical_photo %>" alt="Foto Fisik" class="w-full h-36 object-cover group-hover:scale-105 transition duration-300">
+              <div class="absolute inset-0 bg-slate-950/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition">
+                <span class="px-2.5 py-1 rounded bg-slate-900/90 text-emerald-400 font-semibold inline-flex items-center gap-1">
+                  <i data-lucide="maximize-2" class="w-3.5 h-3.5"></i> Perbesar
+                </span>
+              </div>
+            </div>
           <% } else { %>
             <div class="w-full h-24 rounded-lg bg-slate-900 border border-slate-700 flex items-center justify-center text-slate-500">Belum ada foto fisik</div>
           <% } %>
@@ -115,7 +126,15 @@
         <div>
           <span class="text-slate-400 block mb-1">Foto Stiker Serial Number</span>
           <% if (asset.sn_photo) { %>
-            <img src="<%= asset.sn_photo %>" alt="Foto SN" class="w-full h-36 object-cover rounded-lg border border-slate-600">
+            <div onclick="openAssetImageZoom('<%= asset.sn_photo %>', 'Foto Stiker SN - <%= asset.asset_code %>')"
+              class="relative rounded-lg overflow-hidden border border-slate-600 cursor-zoom-in group">
+              <img src="<%= asset.sn_photo %>" alt="Foto SN" class="w-full h-36 object-cover group-hover:scale-105 transition duration-300">
+              <div class="absolute inset-0 bg-slate-950/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition">
+                <span class="px-2.5 py-1 rounded bg-slate-900/90 text-emerald-400 font-semibold inline-flex items-center gap-1">
+                  <i data-lucide="maximize-2" class="w-3.5 h-3.5"></i> Perbesar
+                </span>
+              </div>
+            </div>
           <% } else { %>
             <div class="w-full h-24 rounded-lg bg-slate-900 border border-slate-700 flex items-center justify-center text-slate-500">Belum ada foto SN</div>
           <% } %>
@@ -180,6 +199,33 @@
   </div>
 
 </main>
+
+<!-- MODAL ZOOM FOTO DOKUMENTASI ASET -->
+<div id="modal-asset-image-zoom" class="fixed inset-0 z-[60] hidden flex items-center justify-center p-4">
+  <div onclick="closeModal('modal-asset-image-zoom')" class="fixed inset-0 bg-slate-950/85 backdrop-blur-sm"></div>
+  <div class="relative bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-3xl max-h-[90vh] flex flex-col shadow-2xl z-10 overflow-hidden">
+    <div class="px-5 py-3.5 border-b border-slate-700 flex items-center justify-between">
+      <h3 id="zoom-asset-img-title" class="text-sm font-semibold text-white truncate">Preview Foto</h3>
+      <button type="button" onclick="closeModal('modal-asset-image-zoom')" class="text-slate-400 hover:text-white p-1 cursor-pointer">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+    </div>
+    <div class="p-4 bg-slate-950 flex-1 overflow-auto flex items-center justify-center">
+      <img id="zoom-asset-img-src" src="" alt="Preview Foto" class="max-h-[65vh] w-auto object-contain rounded-lg border border-slate-800">
+    </div>
+    <div class="px-5 py-3.5 border-t border-slate-700 flex justify-end gap-2 bg-slate-800">
+      <a id="zoom-asset-img-download" href="#" download
+        class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-slate-950 text-xs font-semibold transition">
+        <i data-lucide="download" class="w-4 h-4"></i>
+        <span>Download</span>
+      </a>
+      <button type="button" onclick="closeModal('modal-asset-image-zoom')"
+        class="px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-medium cursor-pointer">
+        Tutup
+      </button>
+    </div>
+  </div>
+</div>
 
 <% if (can('asset.write')) { %>
 <!-- MODAL MUTASI ASET -->
@@ -297,5 +343,14 @@
   </div>
 </div>
 <% } %>
+
+<script>
+  function openAssetImageZoom(src, title) {
+    document.getElementById('zoom-asset-img-title').textContent = title;
+    document.getElementById('zoom-asset-img-src').src = src;
+    document.getElementById('zoom-asset-img-download').href = src;
+    openModal('modal-asset-image-zoom');
+  }
+</script>
 
 <%- include('partials/footer') %>

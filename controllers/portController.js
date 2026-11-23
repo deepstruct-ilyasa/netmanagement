@@ -5,10 +5,23 @@ exports.showVisual = (req, res) => {
   const deviceId = req.params.id;
 
   const device = db.prepare(`
-    SELECT d.*, b.branch_code, b.branch_name, dt.type_name, dt.is_switch
+    SELECT
+      d.*,
+      b.branch_code,
+      b.branch_name,
+      dt.type_name,
+      dt.is_switch,
+      a.asset_code,
+      a.status AS asset_status,
+      a.condition AS asset_condition,
+      COALESCE(br.brand_name, d.brand) AS display_brand,
+      COALESCE(dm.model_name, d.model) AS display_model
     FROM devices d
     JOIN branches b ON d.branch_id = b.id
     JOIN device_types dt ON d.device_type_id = dt.id
+    LEFT JOIN assets a ON d.asset_id = a.id
+    LEFT JOIN brands br ON d.brand_id = br.id
+    LEFT JOIN device_models dm ON d.model_id = dm.id
     WHERE d.id = ?
   `).get(deviceId);
 

@@ -2,16 +2,40 @@
 
 <main class="p-4 sm:p-6 flex-1 w-full space-y-5">
 
+  <% if (typeof errorMsg !== 'undefined' && errorMsg) { %>
+    <div id="alert-error" class="bg-rose-500/15 border border-rose-500/40 text-rose-400 px-4 py-3 rounded-xl flex items-center justify-between text-sm">
+      <div class="flex items-center gap-2.5">
+        <i data-lucide="alert-circle" class="w-5 h-5 shrink-0"></i>
+        <span><%= errorMsg %></span>
+      </div>
+      <button onclick="document.getElementById('alert-error').remove()" class="p-1 hover:text-white cursor-pointer">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+    </div>
+  <% } %>
+
+  <% if (typeof successMsg !== 'undefined' && successMsg) { %>
+    <div id="alert-success" class="bg-emerald-500/15 border border-emerald-500/40 text-emerald-400 px-4 py-3 rounded-xl flex items-center justify-between text-sm">
+      <div class="flex items-center gap-2.5">
+        <i data-lucide="check-circle-2" class="w-5 h-5 shrink-0"></i>
+        <span><%= successMsg %></span>
+      </div>
+      <button onclick="document.getElementById('alert-success').remove()" class="p-1 hover:text-white cursor-pointer">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+    </div>
+  <% } %>
+
   <!-- Bar Atas: Info Ringkas & Tombol Buka Modal Tambah -->
   <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-800 border border-slate-700 p-4 rounded-xl">
     <div>
-      <h2 class="text-base font-semibold text-white">Daftar Aset Perangkat</h2>
-      <p class="text-xs text-slate-400">Kelola perangkat jaringan tiap cabang dan konfigurasi port-nya.</p>
+      <h2 class="text-base font-semibold text-white">Daftar Perangkat Operasional & Faceplate</h2>
+      <p class="text-xs text-slate-400">Pasang aset dari Master Assets ke topologi jaringan, atur visual faceplate, dan kelola koneksi antar port.</p>
     </div>
     <% if (can('device.write')) { %>
       <button onclick="openModal('modal-add-device')" class="inline-flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-semibold text-sm px-4 py-2.5 rounded-lg transition shadow-sm cursor-pointer">
         <i data-lucide="plus" class="w-4 h-4"></i>
-        <span>Tambah Perangkat</span>
+        <span>Pasang Perangkat dari Aset</span>
       </button>
     <% } %>
   </div>
@@ -20,10 +44,10 @@
   <div class="bg-slate-800 border border-slate-700 rounded-xl shadow-lg overflow-hidden">
     <% if (devices.length === 0) { %>
       <div class="text-center py-16 px-4 text-slate-400 text-sm">
-        <p class="mb-3">Belum ada data perangkat yang terdaftar.</p>
+        <p class="mb-3">Belum ada data perangkat yang terpasang di jaringan.</p>
         <% if (can('device.write')) { %>
           <button onclick="openModal('modal-add-device')" class="text-emerald-400 hover:underline font-medium cursor-pointer">
-            + Tambah perangkat pertama sekarang
+            + Pasang perangkat pertama dari stok Master Assets
           </button>
         <% } %>
       </div>
@@ -58,7 +82,7 @@
         <table class="w-full text-left border-collapse text-sm whitespace-nowrap">
           <thead>
             <tr class="bg-slate-900/60 border-b border-slate-700 text-slate-400 text-xs uppercase">
-              <th class="py-3 px-4">Hostname</th>
+              <th class="py-3 px-4">Hostname & Kode Aset</th>
               <th class="py-3 px-4">Cabang</th>
               <th class="py-3 px-4">Lokasi</th>
               <th class="py-3 px-4">Jenis</th>
@@ -150,26 +174,23 @@
                 </td>
                 <td class="py-3.5 px-4 text-right">
                   <div class="inline-flex items-center justify-end gap-1.5">
-                    <!-- Icon Visual Faceplate -->
                     <a href="/devices/<%= dev.id %>/visual"
-                      title="Visual"
+                      title="Visual Faceplate & Port"
                       class="p-2 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 border border-emerald-500/30 transition">
                       <i data-lucide="network" class="w-4 h-4"></i>
                     </a>
 
                     <% if (can('device.write')) { %>
-                      <!-- Icon Edit Perangkat -->
                       <button type="button"
-                        title="Edit"
+                        title="Edit Visual & Port"
                         data-device="<%= JSON.stringify(dev) %>"
                         onclick="openEditDeviceModal(this)"
                         class="p-2 rounded-lg bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 border border-sky-500/30 transition cursor-pointer">
                         <i data-lucide="square-pen" class="w-4 h-4"></i>
                       </button>
 
-                      <!-- Icon Hapus Perangkat -->
                       <button type="button"
-                        title="Hapus"
+                        title="Bongkar dari Jaringan"
                         onclick="confirmDeleteDevice('<%= dev.id %>', '<%= dev.hostname %>')"
                         class="p-2 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 transition cursor-pointer">
                         <i data-lucide="trash-2" class="w-4 h-4"></i>
@@ -205,70 +226,69 @@
 </main>
 
 <!-- =========================================================
-     MODAL 1: TAMBAH MASTER PERANGKAT
+     MODAL 1: PASANG PERANGKAT DARI MASTER ASSETS
      ========================================================= -->
 <div id="modal-add-device" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4">
   <div onclick="closeModal('modal-add-device')" class="fixed inset-0 bg-slate-950/75 backdrop-blur-sm"></div>
 
   <div class="relative bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl z-10">
     <div class="px-6 py-4 border-b border-slate-700 flex items-center justify-between">
-      <h3 class="text-base font-semibold text-emerald-400">+ Tambah Master Perangkat</h3>
+      <h3 class="text-base font-semibold text-emerald-400">+ Distribusi Perangkat dari Aset</h3>
       <button type="button" onclick="closeModal('modal-add-device')" class="text-slate-400 hover:text-white p-1 cursor-pointer">
         <i data-lucide="x" class="w-5 h-5"></i>
       </button>
     </div>
 
-    <form action="/devices" method="POST" enctype="multipart/form-data" class="p-6 overflow-y-auto space-y-4 text-sm">
-      <!-- Pilih dari Stok Master Assets (Spare) -->
-      <div class="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-3.5 space-y-2">
+    <form action="/devices" method="POST" class="p-6 overflow-y-auto space-y-4 text-sm">
+      <!-- Pilih Unit dari Stok Master Assets (Spare) -->
+      <div class="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-3.5 space-y-2.5">
         <div class="flex items-center justify-between">
-          <label class="text-xs font-semibold text-emerald-300">Ambil Unit dari Stok Master Assets (Spare)</label>
+          <label class="text-xs font-semibold text-emerald-300">Pilih Unit Aset *</label>
           <% if (can('menu.assets')) { %>
-            <a href="/assets" class="text-[11px] text-sky-400 hover:underline font-medium">+ Registrasi Aset Baru</a>
+            <a href="/assets" class="text-[11px] text-sky-400 hover:underline font-medium">+ Tambah Aset Baru</a>
           <% } %>
         </div>
-        <select name="asset_id" id="add_asset_id" onchange="onSelectSpareAsset(this)"
+        <select name="asset_id" id="add_asset_id" required onchange="onSelectSpareAsset(this)"
           class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-400">
-          <option value="">-- Input Manual / Buat Kode Aset Otomatis --</option>
+          <option value="">-- Pilih Kode Aset Spare yang Akan Dipasang --</option>
           <% if (typeof spareAssets !== 'undefined') { %>
             <% spareAssets.forEach(sa => { %>
               <option value="<%= sa.id %>"
-                data-branch="<%= sa.branch_id %>"
-                data-type="<%= sa.device_type_id %>"
-                data-brand="<%= sa.brand_id || '' %>"
-                data-model="<%= sa.model_id || '' %>"
-                data-mac="<%= sa.mac_address || '' %>"
-                data-sn="<%= sa.serial_number || '' %>">
-                [<%= sa.asset_code %>] <%= sa.type_name %> - <%= sa.brand_name || '' %> <%= sa.model_name || '' %> (SN: <%= sa.serial_number || '-' %>)
+                data-code="<%= sa.asset_code %>"
+                data-branch-label="[<%= sa.branch_code %>] <%= sa.branch_name %>"
+                data-type-name="<%= sa.type_name %>"
+                data-is-switch="<%= sa.is_switch %>"
+                data-brand-model="<%= [sa.brand_name, sa.model_name].filter(Boolean).join(' ') || '-' %>"
+                data-mac="<%= sa.mac_address || '-' %>"
+                data-sn="<%= sa.serial_number || '-' %>">
+                [<%= sa.asset_code %>] <%= sa.type_name %> - <%= sa.brand_name || '' %> <%= sa.model_name || '' %> (<%= sa.branch_code %> | SN: <%= sa.serial_number || '-' %>)
               </option>
             <% }) %>
           <% } %>
         </select>
-        <p class="text-[11px] text-slate-400">
-          Jika memilih unit dari stok di atas, cabang, jenis, brand, model, SN & MAC otomatis terisi dan status aset berubah menjadi <span class="text-emerald-400 font-semibold">Active</span>.
-        </p>
-      </div>
 
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div>
-          <label class="block text-slate-300 mb-1">Cabang *</label>
-          <select name="branch_id" id="add_branch_id" required class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-400">
-            <% branches.forEach(b => { %>
-              <option value="<%= b.id %>">[<%= b.branch_code %>] <%= b.branch_name %></option>
-            <% }) %>
-          </select>
-        </div>
-
-        <div>
-          <label class="block text-slate-300 mb-1">Jenis Perangkat *</label>
-          <select name="device_type_id" id="add_device_type_id" onchange="onDeviceTypeChange('add')" required class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-400">
-            <% deviceTypes.forEach(dt => { %>
-              <option value="<%= dt.id %>" data-is-switch="<%= dt.is_switch %>"><%= dt.type_name %></option>
-            <% }) %>
-          </select>
+        <!-- Ringkasan Spesifikasi Fisik Otomatis dari Master Assets -->
+        <div id="add_asset_spec_card" class="hidden bg-slate-900/90 border border-slate-700 rounded-lg p-3 grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
+          <div>
+            <span class="text-[10px] text-slate-400 block uppercase">Cabang</span>
+            <span id="spec_branch" class="text-slate-200 font-semibold">-</span>
+          </div>
+          <div>
+            <span class="text-[10px] text-slate-400 block uppercase">Jenis & Brand/Model</span>
+            <span id="spec_device" class="text-slate-200 font-semibold">-</span>
+          </div>
+          <div>
+            <span class="text-[10px] text-slate-400 block uppercase">Serial Number</span>
+            <span id="spec_sn" class="text-slate-200 font-mono">-</span>
+          </div>
+          <div>
+            <span class="text-[10px] text-slate-400 block uppercase">MAC Address</span>
+            <span id="spec_mac" class="text-slate-200 font-mono">-</span>
+          </div>
         </div>
       </div>
 
+      <!-- Opsi Switch (Otomatis muncul jika aset berjenis Switch) -->
       <div id="add_switch_options" class="hidden bg-slate-900/80 border border-emerald-500/30 rounded-lg p-3.5 grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
           <label class="block text-emerald-300 text-xs mb-1">Tipe Switch</label>
@@ -286,66 +306,27 @@
         </div>
       </div>
 
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div>
-          <label class="block text-slate-300 mb-1">Nama / Hostname *</label>
-          <input type="text" name="hostname" placeholder="RSB-IGD-SW-01" required class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-400">
-        </div>
-        <div>
-          <label class="block text-slate-300 mb-1">Lokasi</label>
-          <input type="text" name="room_location" placeholder="Ruang Server Lt.2" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-400">
-        </div>
-      </div>
-
-      <!-- Cascading Dropdown Brand & Type/Model -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div>
-          <div class="flex items-center justify-between mb-1">
-            <label class="text-slate-300">Brand / Merk</label>
-            <% if (can('menu.brands')) { %>
-              <a href="/brands" class="text-[11px] text-emerald-400 hover:underline font-medium">+ Kelola Brand</a>
-            <% } %>
-          </div>
-          <select name="brand_id" id="add_brand_id" onchange="populateModelDropdown('add')" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-400">
-            <option value="">-- Pilih Brand --</option>
-            <% brands.forEach(b => { %>
-              <option value="<%= b.id %>"><%= b.brand_name %></option>
-            <% }) %>
-          </select>
-        </div>
-        <div>
-          <div class="flex items-center justify-between mb-1">
-            <label class="text-slate-300">Type / Model</label>
-            <% if (can('menu.device-models')) { %>
-              <a href="/device-models" class="text-[11px] text-sky-400 hover:underline font-medium">+ Tambah Model</a>
-            <% } %>
-          </div>
-          <select name="model_id" id="add_model_id" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-400">
-            <option value="">-- Pilih Brand Terlebih Dahulu --</option>
-          </select>
-        </div>
-      </div>
-
+      <!-- Data Operasional Jaringan -->
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div>
+          <label class="block text-slate-300 text-xs mb-1">Nama / Hostname *</label>
+          <input type="text" name="hostname" placeholder="RSB-IGD-SW-01" required class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-emerald-400">
+        </div>
+        <div>
+          <label class="block text-slate-300 text-xs mb-1">Lokasi Ruangan</label>
+          <input type="text" name="room_location" placeholder="Ruang Server Lt.2" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-emerald-400">
+        </div>
+        <div>
           <label class="block text-slate-300 text-xs mb-1">IP Address</label>
-          <input type="text" name="ip_address" id="add_ip_address" placeholder="10.10.1.2" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white text-xs">
-        </div>
-        <div>
-          <label class="block text-slate-300 text-xs mb-1">MAC Address</label>
-          <input type="text" name="mac_address" id="add_mac_address" placeholder="AA:BB:CC:11:22:33" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white text-xs">
-        </div>
-        <div>
-          <label class="block text-slate-300 text-xs mb-1">Serial Number</label>
-          <input type="text" name="serial_number" id="add_serial_number" placeholder="SN12345678" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white text-xs">
+          <input type="text" name="ip_address" id="add_ip_address" placeholder="10.10.1.2" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-emerald-400">
         </div>
       </div>
 
       <!-- Konfigurasi Semua Tipe Port, Template Faceplate & Kapasitas -->
       <div class="bg-slate-900/60 border border-slate-700 rounded-lg p-3.5 space-y-3">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-800">
-          <span class="text-xs font-semibold text-slate-300 uppercase tracking-wider">Konfigurasi Port & Visual Faceplate</span>
-          <div class="flex flex-wrap items-center gap-2">
+          <span class="text-xs font-semibold text-slate-300 uppercase tracking-wider">Konfigurasi Port & Faceplate</span>
+          <div class="flex flex-wrap items-center justify-center gap-2">
             <select name="faceplate_template" id="add_faceplate_template" onchange="onFaceplateTemplateChange('add')"
               title="Template Visual Sasis Perangkat"
               class="bg-slate-800 border border-emerald-500/40 rounded px-2.5 py-1 text-xs text-emerald-300 font-medium focus:outline-none focus:border-emerald-400">
@@ -443,76 +424,12 @@
         </div>
       </div>
 
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-        <!-- Upload & Preview Foto Fisik Perangkat -->
-        <div class="space-y-2">
-          <span class="block text-slate-300">Foto Fisik Perangkat <span id="add_physical_status" class="text-sky-400"></span></span>
-
-          <div id="add_physical_preview_box" class="hidden relative rounded-lg overflow-hidden border border-slate-600 aspect-video bg-slate-900 group">
-            <img id="add_physical_preview_img" src="" alt="Preview Foto Fisik" class="w-full h-full object-cover">
-            <div class="absolute inset-0 bg-slate-950/60 opacity-0 group-hover:opacity-100 flex items-center justify-center gap-2 transition">
-              <button type="button" onclick="openAddPhotoPopup('physical')"
-                class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-slate-900/95 hover:bg-emerald-500 text-emerald-400 hover:text-slate-950 border border-emerald-500/40 font-semibold transition cursor-pointer">
-                <i data-lucide="maximize-2" class="w-3.5 h-3.5"></i>
-                <span>Perbesar</span>
-              </button>
-              <button type="button" onclick="clearAddPhoto('physical')"
-                class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-slate-900/95 hover:bg-rose-500 text-rose-400 hover:text-white border border-rose-500/40 font-semibold transition cursor-pointer">
-                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-                <span>Hapus</span>
-              </button>
-            </div>
-          </div>
-
-          <label class="flex items-center gap-2.5 bg-slate-900/80 border border-slate-600 hover:border-emerald-400 rounded-lg p-1.5 cursor-pointer transition group">
-            <span class="inline-flex items-center gap-1.5 bg-slate-700 group-hover:bg-emerald-500 group-hover:text-slate-950 text-slate-200 font-semibold px-3 py-1.5 rounded-md transition shrink-0">
-              <i data-lucide="upload" class="w-3.5 h-3.5"></i>
-              <span>Pilih Foto</span>
-            </span>
-            <span id="add_physical_filename" class="text-slate-400 truncate">Belum ada file dipilih</span>
-            <input type="file" id="add_physical_input" name="physical_photo" accept="image/*" class="hidden"
-              onchange="handleAddFileSelect(this, 'physical')">
-          </label>
-        </div>
-
-        <!-- Upload & Preview Foto Stiker SN -->
-        <div class="space-y-2">
-          <span class="block text-slate-300">Foto Stiker SN <span id="add_sn_status" class="text-sky-400"></span></span>
-
-          <div id="add_sn_preview_box" class="hidden relative rounded-lg overflow-hidden border border-slate-600 aspect-video bg-slate-900 group">
-            <img id="add_sn_preview_img" src="" alt="Preview Foto SN" class="w-full h-full object-cover">
-            <div class="absolute inset-0 bg-slate-950/60 opacity-0 group-hover:opacity-100 flex items-center justify-center gap-2 transition">
-              <button type="button" onclick="openAddPhotoPopup('sn')"
-                class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-slate-900/95 hover:bg-emerald-500 text-emerald-400 hover:text-slate-950 border border-emerald-500/40 font-semibold transition cursor-pointer">
-                <i data-lucide="maximize-2" class="w-3.5 h-3.5"></i>
-                <span>Perbesar</span>
-              </button>
-              <button type="button" onclick="clearAddPhoto('sn')"
-                class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-slate-900/95 hover:bg-rose-500 text-rose-400 hover:text-white border border-rose-500/40 font-semibold transition cursor-pointer">
-                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-                <span>Hapus</span>
-              </button>
-            </div>
-          </div>
-
-          <label class="flex items-center gap-2.5 bg-slate-900/80 border border-slate-600 hover:border-emerald-400 rounded-lg p-1.5 cursor-pointer transition group">
-            <span class="inline-flex items-center gap-1.5 bg-slate-700 group-hover:bg-emerald-500 group-hover:text-slate-950 text-slate-200 font-semibold px-3 py-1.5 rounded-md transition shrink-0">
-              <i data-lucide="upload" class="w-3.5 h-3.5"></i>
-              <span>Pilih Foto</span>
-            </span>
-            <span id="add_sn_filename" class="text-slate-400 truncate">Belum ada file dipilih</span>
-            <input type="file" id="add_sn_input" name="sn_photo" accept="image/*" class="hidden"
-              onchange="handleAddFileSelect(this, 'sn')">
-          </label>
-        </div>
-      </div>
-
       <div class="pt-3 border-t border-slate-700 flex justify-end gap-3">
         <button type="button" onclick="closeModal('modal-add-device')" class="px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-200 font-medium transition cursor-pointer">
           Batal
         </button>
         <button type="submit" class="px-5 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-semibold transition cursor-pointer">
-          Simpan & Generate Port
+          Pasang & Generate Port
         </button>
       </div>
     </form>
@@ -520,40 +437,56 @@
 </div>
 
 <!-- =========================================================
-     MODAL 2: EDIT MASTER PERANGKAT
+     MODAL 2: EDIT KONFIGURASI PERANGKAT & FACEPLATE
      ========================================================= -->
 <div id="modal-edit-device" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4">
   <div onclick="closeModal('modal-edit-device')" class="fixed inset-0 bg-slate-950/75 backdrop-blur-sm"></div>
 
   <div class="relative bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl z-10">
     <div class="px-6 py-4 border-b border-slate-700 flex items-center justify-between">
-      <h3 class="text-base font-semibold text-sky-400">Edit Master Perangkat</h3>
+      <h3 class="text-base font-semibold text-sky-400">Edit Konfigurasi Perangkat</h3>
       <button type="button" onclick="closeModal('modal-edit-device')" class="text-slate-400 hover:text-white p-1 cursor-pointer">
         <i data-lucide="x" class="w-5 h-5"></i>
       </button>
     </div>
 
-    <form id="edit-device-form" method="POST" enctype="multipart/form-data" class="p-6 overflow-y-auto space-y-4 text-sm">
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div>
-          <label class="block text-slate-300 mb-1">Cabang *</label>
-          <select name="branch_id" id="edit_branch_id" required class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-sky-400">
-            <% branches.forEach(b => { %>
-              <option value="<%= b.id %>">[<%= b.branch_code %>] <%= b.branch_name %></option>
-            <% }) %>
-          </select>
+    <form id="edit-device-form" method="POST" class="p-6 overflow-y-auto space-y-4 text-sm">
+      <!-- Kartu Spesifikasi Aset Terhubung -->
+      <div class="bg-sky-500/10 border border-sky-500/30 rounded-xl p-3.5 space-y-2.5 text-xs">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <span class="text-slate-400">Unit Master Assets:</span>
+            <span id="edit_asset_code_label" class="font-mono font-bold text-sky-400 ml-1">-</span>
+          </div>
+          <a id="edit_asset_detail_link" href="#" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-700 text-sky-300 border border-sky-500/30 font-semibold shrink-0 transition">
+            <span>Detail, Foto & Mutasi Aset</span>
+            <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+          </a>
         </div>
 
-        <div>
-          <label class="block text-slate-300 mb-1">Jenis Perangkat *</label>
-          <select name="device_type_id" id="edit_device_type_id" onchange="onDeviceTypeChange('edit')" required class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-sky-400">
-            <% deviceTypes.forEach(dt => { %>
-              <option value="<%= dt.id %>" data-is-switch="<%= dt.is_switch %>"><%= dt.type_name %></option>
-            <% }) %>
-          </select>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+          <div>
+            <span class="text-[10px] text-slate-400 block uppercase">Cabang</span>
+            <span id="edit_spec_branch" class="text-slate-200 font-semibold">-</span>
+          </div>
+          <div>
+            <span class="text-[10px] text-slate-400 block uppercase">Jenis & Brand/Model</span>
+            <span id="edit_spec_device" class="text-slate-200 font-semibold">-</span>
+          </div>
+          <div>
+            <span class="text-[10px] text-slate-400 block uppercase">Serial Number</span>
+            <span id="edit_spec_sn" class="text-slate-200 font-mono">-</span>
+          </div>
+          <div>
+            <span class="text-[10px] text-slate-400 block uppercase">MAC Address</span>
+            <span id="edit_spec_mac" class="text-slate-200 font-mono">-</span>
+          </div>
         </div>
       </div>
 
+      <input type="hidden" id="edit_is_switch_flag" value="0">
+
+      <!-- Opsi Switch -->
       <div id="edit_switch_options" class="hidden bg-slate-900/80 border border-sky-500/30 rounded-lg p-3.5 grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
           <label class="block text-sky-300 text-xs mb-1">Tipe Switch</label>
@@ -571,66 +504,27 @@
         </div>
       </div>
 
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div>
-          <label class="block text-slate-300 mb-1">Nama / Hostname *</label>
-          <input type="text" name="hostname" id="edit_hostname" required class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-sky-400">
-        </div>
-        <div>
-          <label class="block text-slate-300 mb-1">Lokasi</label>
-          <input type="text" name="room_location" id="edit_room_location" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-sky-400">
-        </div>
-      </div>
-
-      <!-- Cascading Dropdown Brand & Type/Model -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div>
-          <div class="flex items-center justify-between mb-1">
-            <label class="text-slate-300">Brand / Merk</label>
-            <% if (can('menu.brands')) { %>
-              <a href="/brands" class="text-[11px] text-sky-400 hover:underline font-medium">+ Kelola Brand</a>
-            <% } %>
-          </div>
-          <select name="brand_id" id="edit_brand_id" onchange="populateModelDropdown('edit')" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-sky-400">
-            <option value="">-- Pilih Brand --</option>
-            <% brands.forEach(b => { %>
-              <option value="<%= b.id %>"><%= b.brand_name %></option>
-            <% }) %>
-          </select>
-        </div>
-        <div>
-          <div class="flex items-center justify-between mb-1">
-            <label class="text-slate-300">Type / Model</label>
-            <% if (can('menu.device-models')) { %>
-              <a href="/device-models" class="text-[11px] text-emerald-400 hover:underline font-medium">+ Tambah Model</a>
-            <% } %>
-          </div>
-          <select name="model_id" id="edit_model_id" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-sky-400">
-            <option value="">-- Pilih Brand Terlebih Dahulu --</option>
-          </select>
-        </div>
-      </div>
-
+      <!-- Data Operasional Jaringan -->
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div>
+          <label class="block text-slate-300 text-xs mb-1">Nama / Hostname *</label>
+          <input type="text" name="hostname" id="edit_hostname" required class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-sky-400">
+        </div>
+        <div>
+          <label class="block text-slate-300 text-xs mb-1">Lokasi Ruangan</label>
+          <input type="text" name="room_location" id="edit_room_location" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-sky-400">
+        </div>
+        <div>
           <label class="block text-slate-300 text-xs mb-1">IP Address</label>
-          <input type="text" name="ip_address" id="edit_ip_address" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white text-xs">
-        </div>
-        <div>
-          <label class="block text-slate-300 text-xs mb-1">MAC Address</label>
-          <input type="text" name="mac_address" id="edit_mac_address" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white text-xs">
-        </div>
-        <div>
-          <label class="block text-slate-300 text-xs mb-1">Serial Number</label>
-          <input type="text" name="serial_number" id="edit_serial_number" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white text-xs">
+          <input type="text" name="ip_address" id="edit_ip_address" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-sky-400">
         </div>
       </div>
 
       <!-- Konfigurasi Semua Tipe Port, Template Faceplate & Kapasitas -->
       <div class="bg-slate-900/60 border border-slate-700 rounded-lg p-3.5 space-y-3">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-800">
-          <span class="text-xs font-semibold text-slate-300 uppercase tracking-wider">Konfigurasi Port & Visual Faceplate</span>
-          <div class="flex flex-wrap items-center gap-2">
+          <span class="text-xs font-semibold text-slate-300 uppercase tracking-wider">Konfigurasi Port & Faceplate</span>
+          <div class="flex flex-wrap items-center justify-center gap-2">
             <select name="faceplate_template" id="edit_faceplate_template" onchange="onFaceplateTemplateChange('edit')"
               title="Template Visual Sasis Perangkat"
               class="bg-slate-800 border border-sky-500/40 rounded px-2.5 py-1 text-xs text-sky-300 font-medium focus:outline-none focus:border-sky-400">
@@ -693,7 +587,7 @@
               <select name="sfp_plus_capacity" id="edit_sfp_plus_capacity" class="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1.5 text-white">
                 <option value="1G">1 Gbps</option>
                 <option value="10G">10 Gbps</option>
-                <option value="25G">25 Gbps (SFP28)</option>
+                <option value="25G">25 Gbps</option>
               </select>
             </div>
           </div>
@@ -707,7 +601,7 @@
             <div class="col-span-4">
               <select name="qsfp_plus_capacity" id="edit_qsfp_plus_capacity" class="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1.5 text-white">
                 <option value="40G">40 Gbps</option>
-                <option value="4x10G">4x10 Gbps (Breakout)</option>
+                <option value="4x10G">4x10 Gbps</option>
               </select>
             </div>
           </div>
@@ -725,74 +619,6 @@
               </select>
             </div>
           </div>
-        </div>
-      </div>
-
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-        <!-- Foto Fisik -->
-        <div class="space-y-2">
-          <span class="block text-slate-300">Foto Fisik <span id="edit_physical_status" class="text-emerald-400"></span></span>
-
-          <div id="edit_physical_preview_box" class="hidden relative rounded-lg overflow-hidden border border-slate-600 aspect-video bg-slate-900 group">
-            <img id="edit_physical_preview_img" src="" alt="Foto Fisik" class="w-full h-full object-cover">
-            <div class="absolute inset-0 bg-slate-950/60 opacity-0 group-hover:opacity-100 flex items-center justify-center gap-2 transition">
-              <button type="button" onclick="openEditPhotoPopup('physical')"
-                class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-slate-900/95 hover:bg-emerald-500 text-emerald-400 hover:text-slate-950 border border-emerald-500/40 font-semibold transition cursor-pointer">
-                <i data-lucide="maximize-2" class="w-3.5 h-3.5"></i>
-                <span>Perbesar</span>
-              </button>
-              <button type="button" onclick="markPhotoDeleted('physical')"
-                class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-slate-900/95 hover:bg-rose-500 text-rose-400 hover:text-white border border-rose-500/40 font-semibold transition cursor-pointer">
-                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-                <span>Hapus</span>
-              </button>
-            </div>
-          </div>
-
-          <input type="hidden" name="delete_physical_photo" id="delete_physical_photo_input" value="0">
-
-          <label class="flex items-center gap-2.5 bg-slate-900/80 border border-slate-600 hover:border-emerald-400 rounded-lg p-1.5 cursor-pointer transition group">
-            <span class="inline-flex items-center gap-1.5 bg-slate-700 group-hover:bg-emerald-500 group-hover:text-slate-950 text-slate-200 font-semibold px-3 py-1.5 rounded-md transition shrink-0">
-              <i data-lucide="upload" class="w-3.5 h-3.5"></i>
-              <span>Pilih Foto</span>
-            </span>
-            <span id="edit_physical_filename" class="text-slate-400 truncate">Belum ada file dipilih</span>
-            <input type="file" name="physical_photo" accept="image/*" class="hidden"
-              onchange="handleEditFileSelect(this, 'physical')">
-          </label>
-        </div>
-
-        <!-- Foto Stiker SN -->
-        <div class="space-y-2">
-          <span class="block text-slate-300">Foto Stiker SN <span id="edit_sn_status" class="text-emerald-400"></span></span>
-
-          <div id="edit_sn_preview_box" class="hidden relative rounded-lg overflow-hidden border border-slate-600 aspect-video bg-slate-900 group">
-            <img id="edit_sn_preview_img" src="" alt="Foto SN" class="w-full h-full object-cover">
-            <div class="absolute inset-0 bg-slate-950/60 opacity-0 group-hover:opacity-100 flex items-center justify-center gap-2 transition">
-              <button type="button" onclick="openEditPhotoPopup('sn')"
-                class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-slate-900/95 hover:bg-emerald-500 text-emerald-400 hover:text-slate-950 border border-emerald-500/40 font-semibold transition cursor-pointer">
-                <i data-lucide="maximize-2" class="w-3.5 h-3.5"></i>
-                <span>Perbesar</span>
-              </button>
-              <button type="button" onclick="markPhotoDeleted('sn')"
-                class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-slate-900/95 hover:bg-rose-500 text-rose-400 hover:text-white border border-rose-500/40 font-semibold transition cursor-pointer">
-                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-                <span>Hapus</span>
-              </button>
-            </div>
-          </div>
-
-          <input type="hidden" name="delete_sn_photo" id="delete_sn_photo_input" value="0">
-
-          <label class="flex items-center gap-2.5 bg-slate-900/80 border border-slate-600 hover:border-emerald-400 rounded-lg p-1.5 cursor-pointer transition group">
-            <span class="inline-flex items-center gap-1.5 bg-slate-700 group-hover:bg-emerald-500 group-hover:text-slate-950 text-slate-200 font-semibold px-3 py-1.5 rounded-md transition shrink-0">
-              <i data-lucide="upload" class="w-3.5 h-3.5"></i>
-              <span>Pilih Foto</span>
-            </span>
-            <span id="edit_sn_filename" class="text-slate-400 truncate">Belum ada file dipilih</span>
-            <input type="file" name="sn_photo" accept="image/*" class="hidden"
-              onchange="handleEditFileSelect(this, 'sn')">
-          </label>
         </div>
       </div>
 
@@ -819,11 +645,11 @@
       <div class="p-2.5 rounded-full bg-rose-500/15 border border-rose-500/30">
         <i data-lucide="alert-triangle" class="w-6 h-6"></i>
       </div>
-      <h3 class="text-lg font-semibold text-white">Hapus / Bongkar Perangkat?</h3>
+      <h3 class="text-lg font-semibold text-white">Bongkar Perangkat dari Jaringan?</h3>
     </div>
 
     <p class="text-sm text-slate-300 leading-relaxed">
-      Apakah Anda yakin ingin menghapus perangkat <span id="delete-device-name" class="font-bold text-rose-400"></span> dari topologi jaringan? Seluruh data port dan koneksi kabel akan dihapus, sementara unit asetnya otomatis dikembalikan ke status <span class="text-amber-400 font-semibold">Spare</span> di Master Assets.
+      Apakah Anda yakin ingin membongkar perangkat <span id="delete-device-name" class="font-bold text-rose-400"></span> dari topologi jaringan? Seluruh data port dan koneksi kabel akan dihapus, sementara unit asetnya otomatis dikembalikan ke status <span class="text-amber-400 font-semibold">Spare</span> di Master Assets.
     </p>
 
     <form id="delete-device-form" method="POST" class="pt-2 flex justify-end gap-3 text-sm">
@@ -831,100 +657,46 @@
         Batal
       </button>
       <button type="submit" class="px-4 py-2 rounded-lg bg-rose-500 hover:bg-rose-600 text-white font-semibold transition cursor-pointer">
-        Ya, Hapus dari Jaringan
+        Ya, Bongkar & Kembalikan ke Spare
       </button>
     </form>
   </div>
 </div>
 
-<!-- =========================================================
-     MODAL 4: POPUP PREVIEW, DOWNLOAD & HAPUS FOTO
-     ========================================================= -->
-<div id="modal-edit-photo-popup" class="fixed inset-0 z-[60] hidden flex items-center justify-center p-4">
-  <div onclick="closeModal('modal-edit-photo-popup')" class="fixed inset-0 bg-slate-950/85 backdrop-blur-sm"></div>
-
-  <div class="relative bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-3xl max-h-[90vh] flex flex-col shadow-2xl z-10 overflow-hidden">
-    <div class="px-5 py-3.5 border-b border-slate-700 flex items-center justify-between">
-      <h3 id="popup-photo-title" class="text-sm font-semibold text-white truncate">Preview Foto</h3>
-      <button type="button" onclick="closeModal('modal-edit-photo-popup')" class="text-slate-400 hover:text-white p-1 cursor-pointer">
-        <i data-lucide="x" class="w-5 h-5"></i>
-      </button>
-    </div>
-
-    <div class="p-4 bg-slate-950 flex-1 overflow-auto flex items-center justify-center">
-      <img id="popup-photo-img" src="" alt="Preview Foto" class="max-h-[65vh] w-auto object-contain rounded-lg border border-slate-800">
-    </div>
-
-    <!-- Konfirmasi Hapus Langsung -->
-    <div id="popup-photo-confirm-bar" class="hidden px-5 py-3 bg-rose-950/60 border-t border-rose-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
-      <span class="text-rose-200 font-medium">Hapus foto ini secara permanen dari server sekarang?</span>
-      <form id="popup-photo-delete-form" method="POST" class="flex items-center gap-2 shrink-0">
-        <input type="hidden" name="photo_type" id="popup-photo-type-input">
-        <input type="hidden" name="redirect_to" value="/devices">
-        <button type="button" onclick="togglePopupDeleteConfirm(false)" class="px-3 py-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-200 cursor-pointer">
-          Batal
-        </button>
-        <button type="submit" class="px-3.5 py-1.5 rounded-lg bg-rose-500 hover:bg-rose-600 text-white font-semibold cursor-pointer">
-          Ya, Hapus Permanen
-        </button>
-      </form>
-    </div>
-
-    <div id="popup-photo-footer" class="px-5 py-3.5 border-t border-slate-700 flex items-center justify-between gap-3 bg-slate-800">
-      <% if (can('device.write')) { %>
-        <button type="button" onclick="togglePopupDeleteConfirm(true)"
-          class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 border border-rose-500/30 text-xs font-semibold transition cursor-pointer">
-          <i data-lucide="trash-2" class="w-4 h-4"></i>
-          <span>Hapus</span>
-        </button>
-      <% } %>
-
-      <div class="flex items-center gap-2">
-        <a id="popup-photo-download" href="#" download
-          class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-slate-950 text-xs font-semibold transition">
-          <i data-lucide="download" class="w-4 h-4"></i>
-          <span>Download</span>
-        </a>
-        <button type="button" onclick="closeModal('modal-edit-photo-popup')"
-          class="px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-medium cursor-pointer">
-          Tutup
-        </button>
-      </div>
-    </div>
-  </div>
-</div>
-
 <script>
-  const allDeviceModels = <%- JSON.stringify(typeof deviceModels !== 'undefined' ? deviceModels : []) %>;
-  let currentEditingDevice = null;
+  let addSelectedIsSwitch = false;
 
   // =========================================================
-  // AUTO-FILL SAAT MEMILIH STOK MASTER ASSETS (SPARE)
+  // TAMPILKAN RINGKASAN SPESIFIKASI SAAT MEMILIH ASET SPARE
   // =========================================================
   function onSelectSpareAsset(selectEl) {
     const opt = selectEl.options[selectEl.selectedIndex];
-    const hasAsset = Boolean(selectEl.value);
+    const specCard = document.getElementById('add_asset_spec_card');
+    const switchOpts = document.getElementById('add_switch_options');
 
-    const branchEl = document.getElementById('add_branch_id');
-    const typeEl = document.getElementById('add_device_type_id');
-    const brandEl = document.getElementById('add_brand_id');
-    const modelEl = document.getElementById('add_model_id');
-    const macEl = document.getElementById('add_mac_address');
-    const snEl = document.getElementById('add_serial_number');
-
-    if (hasAsset) {
-      if (branchEl) branchEl.value = opt.getAttribute('data-branch') || '';
-      if (typeEl) {
-        typeEl.value = opt.getAttribute('data-type') || '';
-        onDeviceTypeChange('add');
-      }
-      if (brandEl) {
-        brandEl.value = opt.getAttribute('data-brand') || '';
-        populateModelDropdown('add', opt.getAttribute('data-model') || '');
-      }
-      if (macEl) macEl.value = opt.getAttribute('data-mac') || '';
-      if (snEl) snEl.value = opt.getAttribute('data-sn') || '';
+    if (!selectEl.value) {
+      specCard.classList.add('hidden');
+      switchOpts.classList.add('hidden');
+      addSelectedIsSwitch = false;
+      toggleIpField('add');
+      return;
     }
+
+    document.getElementById('spec_branch').textContent = opt.getAttribute('data-branch-label') || '-';
+    const typeName = opt.getAttribute('data-type-name') || '';
+    const brandModel = opt.getAttribute('data-brand-model') || '';
+    document.getElementById('spec_device').textContent = `${typeName} (${brandModel})`;
+    document.getElementById('spec_sn').textContent = opt.getAttribute('data-sn') || '-';
+    document.getElementById('spec_mac').textContent = opt.getAttribute('data-mac') || '-';
+    specCard.classList.remove('hidden');
+
+    addSelectedIsSwitch = opt.getAttribute('data-is-switch') === '1';
+    if (addSelectedIsSwitch) {
+      switchOpts.classList.remove('hidden');
+    } else {
+      switchOpts.classList.add('hidden');
+    }
+    toggleIpField('add');
   }
 
   // =========================================================
@@ -943,56 +715,21 @@
     }
   }
 
-  // =========================================================
-  // CASCADING DROPDOWN BRAND -> MODEL
-  // =========================================================
-  function populateModelDropdown(prefix, selectedModelId = '') {
-    const brandSelect = document.getElementById(`${prefix}_brand_id`);
-    const typeSelect = document.getElementById(`${prefix}_device_type_id`);
-    const modelSelect = document.getElementById(`${prefix}_model_id`);
+  function toggleIpField(prefix) {
+    const isSwitch = prefix === 'add'
+      ? addSelectedIsSwitch
+      : document.getElementById('edit_is_switch_flag').value === '1';
+    const mgmt = document.getElementById(`${prefix}_switch_management`).value;
+    const ipInput = document.getElementById(`${prefix}_ip_address`);
 
-    if (!brandSelect || !modelSelect) return;
-
-    const brandId = brandSelect.value;
-    const typeId = typeSelect ? typeSelect.value : '';
-
-    modelSelect.innerHTML = '';
-
-    if (!brandId) {
-      modelSelect.innerHTML = '<option value="">-- Pilih Brand Terlebih Dahulu --</option>';
-      return;
+    if (isSwitch && mgmt === 'Unmanaged') {
+      ipInput.value = '';
+      ipInput.disabled = true;
+      ipInput.placeholder = 'Unmanaged (No IP)';
+    } else {
+      ipInput.disabled = false;
+      ipInput.placeholder = '10.10.1.2';
     }
-
-    const filtered = allDeviceModels.filter(m =>
-      String(m.brand_id) === String(brandId) &&
-      (!m.device_type_id || String(m.device_type_id) === String(typeId) || String(m.id) === String(selectedModelId))
-    );
-
-    if (filtered.length === 0) {
-      modelSelect.innerHTML = '<option value="">-- Tidak ada model untuk jenis perangkat ini --</option>';
-      return;
-    }
-
-    const defaultOpt = document.createElement('option');
-    defaultOpt.value = '';
-    defaultOpt.textContent = '-- Pilih Type / Model --';
-    modelSelect.appendChild(defaultOpt);
-
-    filtered.forEach(m => {
-      const opt = document.createElement('option');
-      opt.value = m.id;
-      opt.textContent = m.model_name;
-      if (selectedModelId && String(m.id) === String(selectedModelId)) {
-        opt.selected = true;
-      }
-      modelSelect.appendChild(opt);
-    });
-  }
-
-  function onDeviceTypeChange(prefix) {
-    toggleSwitchOptions(prefix);
-    const currentModelVal = document.getElementById(`${prefix}_model_id`).value;
-    populateModelDropdown(prefix, currentModelVal);
   }
 
   // =========================================================
@@ -1157,106 +894,35 @@
   }
 
   // =========================================================
-  // LOGIKA MODAL TAMBAH, EDIT & PREVIEW FOTO
+  // LOGIKA MODAL EDIT
   // =========================================================
-  function handleAddFileSelect(input, type) {
-    const file = input.files[0];
-    document.getElementById(`add_${type}_filename`).textContent = file ? file.name : 'Belum ada file dipilih';
-    const box = document.getElementById(`add_${type}_preview_box`);
-    const img = document.getElementById(`add_${type}_preview_img`);
-    const status = document.getElementById(`add_${type}_status`);
+  function openEditDeviceModal(btn) {
+    const dev = JSON.parse(btn.getAttribute('data-device'));
 
-    if (file) {
-      img.src = URL.createObjectURL(file);
-      box.classList.remove('hidden');
-      status.textContent = '(Siap diupload)';
-    } else {
-      img.src = '';
-      box.classList.add('hidden');
-      status.textContent = '';
-    }
-  }
+    document.getElementById('edit-device-form').action = `/devices/${dev.id}/update`;
+    document.getElementById('edit_asset_code_label').textContent = dev.asset_code || `#${dev.asset_id || '-'}`;
+    document.getElementById('edit_asset_detail_link').href = dev.asset_id ? `/assets/${dev.asset_id}` : '/assets';
 
-  function clearAddPhoto(type) {
-    const input = document.getElementById(`add_${type}_input`);
-    input.value = '';
-    document.getElementById(`add_${type}_filename`).textContent = 'Belum ada file dipilih';
-    document.getElementById(`add_${type}_preview_img`).src = '';
-    document.getElementById(`add_${type}_preview_box`).classList.add('hidden');
-    document.getElementById(`add_${type}_status`).textContent = '';
-  }
+    document.getElementById('edit_spec_branch').textContent = `[${dev.branch_code}] ${dev.branch_name}`;
+    const brandModel = [dev.display_brand || dev.brand, dev.display_model || dev.model].filter(Boolean).join(' ') || '-';
+    document.getElementById('edit_spec_device').textContent = `${dev.type_name} (${brandModel})`;
+    document.getElementById('edit_spec_sn').textContent = dev.serial_number || '-';
+    document.getElementById('edit_spec_mac').textContent = dev.mac_address || '-';
 
-  function openAddPhotoPopup(type) {
-    const imgSrc = document.getElementById(`add_${type}_preview_img`).src;
-    const labelTitle = type === 'physical'
-      ? 'Preview Foto Fisik Perangkat'
-      : 'Preview Foto Stiker SN';
-
-    document.getElementById('popup-photo-title').textContent = labelTitle;
-    document.getElementById('popup-photo-img').src = imgSrc;
-    document.getElementById('popup-photo-download').href = imgSrc;
-
-    togglePopupDeleteConfirm(false);
-    const delBtn = document.querySelector('#popup-photo-footer button');
-    if (delBtn) delBtn.classList.add('hidden');
-    openModal('modal-edit-photo-popup');
-  }
-
-  function toggleSwitchOptions(prefix) {
-    const select = document.getElementById(`${prefix}_device_type_id`);
-    if (!select || select.options.length === 0) return;
-
-    const selectedOption = select.options[select.selectedIndex];
-    const isSwitch = selectedOption.getAttribute('data-is-switch') === '1';
-    const switchOpts = document.getElementById(`${prefix}_switch_options`);
-
+    const isSwitch = dev.is_switch === 1;
+    document.getElementById('edit_is_switch_flag').value = isSwitch ? '1' : '0';
+    const switchOpts = document.getElementById('edit_switch_options');
     if (isSwitch) {
       switchOpts.classList.remove('hidden');
     } else {
       switchOpts.classList.add('hidden');
-      document.getElementById(`${prefix}_ip_address`).disabled = false;
     }
-    toggleIpField(prefix);
-  }
 
-  function toggleIpField(prefix) {
-    const select = document.getElementById(`${prefix}_device_type_id`);
-    if (!select || select.options.length === 0) return;
-
-    const selectedOption = select.options[select.selectedIndex];
-    const isSwitch = selectedOption.getAttribute('data-is-switch') === '1';
-    const mgmt = document.getElementById(`${prefix}_switch_management`).value;
-    const ipInput = document.getElementById(`${prefix}_ip_address`);
-
-    if (isSwitch && mgmt === 'Unmanaged') {
-      ipInput.value = '';
-      ipInput.disabled = true;
-      ipInput.placeholder = 'Unmanaged (No IP)';
-    } else {
-      ipInput.disabled = false;
-      ipInput.placeholder = '10.10.1.2';
-    }
-  }
-
-  function openEditDeviceModal(btn) {
-    const dev = JSON.parse(btn.getAttribute('data-device'));
-    currentEditingDevice = dev;
-
-    document.getElementById('edit-device-form').action = `/devices/${dev.id}/update`;
-    document.getElementById('edit_branch_id').value = dev.branch_id;
-    document.getElementById('edit_device_type_id').value = dev.device_type_id;
     document.getElementById('edit_switch_management').value = dev.switch_management || 'Managed';
     document.getElementById('edit_is_poe').value = dev.is_poe ? '1' : '0';
-
     document.getElementById('edit_hostname').value = dev.hostname || '';
     document.getElementById('edit_room_location').value = dev.room_location || '';
-
-    document.getElementById('edit_brand_id').value = dev.brand_id || '';
-    populateModelDropdown('edit', dev.model_id || '');
-
     document.getElementById('edit_ip_address').value = dev.ip_address || '';
-    document.getElementById('edit_mac_address').value = dev.mac_address || '';
-    document.getElementById('edit_serial_number').value = dev.serial_number || '';
 
     document.getElementById('edit_faceplate_template').value = dev.faceplate_template || 'rackmount';
     document.getElementById('edit_port_layout').value = dev.port_layout || '2_row';
@@ -1276,98 +942,8 @@
     document.getElementById('edit_qsfp28_count').value = dev.qsfp28_count || 0;
     document.getElementById('edit_qsfp28_capacity').value = dev.qsfp28_capacity || '100G';
 
-    document.getElementById('delete_physical_photo_input').value = '0';
-    document.getElementById('edit_physical_filename').textContent = 'Belum ada file dipilih';
-    const physBox = document.getElementById('edit_physical_preview_box');
-    const physImg = document.getElementById('edit_physical_preview_img');
-    if (dev.physical_photo) {
-      document.getElementById('edit_physical_status').textContent = '(Sudah ada foto)';
-      document.getElementById('edit_physical_status').className = 'text-emerald-400';
-      physImg.src = dev.physical_photo;
-      physBox.classList.remove('hidden');
-    } else {
-      document.getElementById('edit_physical_status').textContent = '';
-      physImg.src = '';
-      physBox.classList.add('hidden');
-    }
-
-    document.getElementById('delete_sn_photo_input').value = '0';
-    document.getElementById('edit_sn_filename').textContent = 'Belum ada file dipilih';
-    const snBox = document.getElementById('edit_sn_preview_box');
-    const snImg = document.getElementById('edit_sn_preview_img');
-    if (dev.sn_photo) {
-      document.getElementById('edit_sn_status').textContent = '(Sudah ada foto)';
-      document.getElementById('edit_sn_status').className = 'text-emerald-400';
-      snImg.src = dev.sn_photo;
-      snBox.classList.remove('hidden');
-    } else {
-      document.getElementById('edit_sn_status').textContent = '';
-      snImg.src = '';
-      snBox.classList.add('hidden');
-    }
-
-    toggleSwitchOptions('edit');
+    toggleIpField('edit');
     openModal('modal-edit-device');
-  }
-
-  function handleEditFileSelect(input, type) {
-    const file = input.files[0];
-    document.getElementById(`edit_${type}_filename`).textContent = file ? file.name : 'Belum ada file dipilih';
-    if (file) {
-      document.getElementById(`delete_${type}_photo_input`).value = '0';
-      const previewUrl = URL.createObjectURL(file);
-      document.getElementById(`edit_${type}_preview_img`).src = previewUrl;
-      document.getElementById(`edit_${type}_preview_box`).classList.remove('hidden');
-      document.getElementById(`edit_${type}_status`).textContent = '(Foto baru dipilih)';
-      document.getElementById(`edit_${type}_status`).className = 'text-sky-400';
-    }
-  }
-
-  function markPhotoDeleted(type) {
-    document.getElementById(`delete_${type}_photo_input`).value = '1';
-    document.getElementById(`edit_${type}_preview_box`).classList.add('hidden');
-    document.getElementById(`edit_${type}_status`).textContent = '(Akan dihapus saat Update)';
-    document.getElementById(`edit_${type}_status`).className = 'text-rose-400';
-  }
-
-  function openEditPhotoPopup(type) {
-    if (!currentEditingDevice) return;
-    const imgSrc = document.getElementById(`edit_${type}_preview_img`).src;
-    const labelTitle = type === 'physical'
-      ? `Foto Fisik - ${currentEditingDevice.hostname}`
-      : `Foto Stiker SN - ${currentEditingDevice.hostname}`;
-
-    document.getElementById('popup-photo-title').textContent = labelTitle;
-    document.getElementById('popup-photo-img').src = imgSrc;
-    document.getElementById('popup-photo-download').href = imgSrc;
-    document.getElementById('popup-photo-delete-form').action = `/devices/${currentEditingDevice.id}/delete-photo`;
-    document.getElementById('popup-photo-type-input').value = type;
-
-    togglePopupDeleteConfirm(false);
-
-    const deleteBtn = document.querySelector('#popup-photo-footer button');
-    if (deleteBtn) {
-      if (imgSrc.startsWith('blob:')) {
-        deleteBtn.classList.add('hidden');
-      } else {
-        deleteBtn.classList.remove('hidden');
-      }
-    }
-
-    openModal('modal-edit-photo-popup');
-  }
-
-  function togglePopupDeleteConfirm(showConfirm) {
-    const confirmBar = document.getElementById('popup-photo-confirm-bar');
-    const footerBar = document.getElementById('popup-photo-footer');
-    if (showConfirm) {
-      confirmBar.classList.remove('hidden');
-      footerBar.classList.add('hidden');
-    } else {
-      confirmBar.classList.remove('hidden');
-      confirmBar.classList.add('hidden');
-      footerBar.classList.remove('hidden');
-    }
   }
 
   function confirmDeleteDevice(deviceId, hostname) {
@@ -1377,9 +953,6 @@
   }
 
   document.addEventListener('DOMContentLoaded', () => {
-    toggleSwitchOptions('add');
-    populateModelDropdown('add');
-
     const searchInput = document.getElementById('device-search-input');
     const perPageSelect = document.getElementById('devices-per-page');
     const clearBtn = document.getElementById('clear-search-btn');

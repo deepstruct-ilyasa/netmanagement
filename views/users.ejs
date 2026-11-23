@@ -244,6 +244,10 @@
               <input type="checkbox" name="allowed_menus" value="users" class="add-menu-cb rounded border-slate-600 text-emerald-500">
               <span>Users & Access</span>
             </label>
+            <label class="flex items-center gap-2 cursor-pointer p-1.5 rounded hover:bg-slate-800">
+              <input type="checkbox" name="allowed_menus" value="assets" class="add-menu-cb rounded border-slate-600 text-emerald-500">
+              <span>Asset</span>
+            </label>
           </div>
         </div>
       </div>
@@ -355,6 +359,10 @@
               <input type="checkbox" name="allowed_menus" value="users" class="edit-menu-cb rounded border-slate-600 text-sky-500">
               <span>Users & Access</span>
             </label>
+            <label class="flex items-center gap-2 cursor-pointer p-1.5 rounded hover:bg-slate-800">
+              <input type="checkbox" name="allowed_menus" value="assets" class="edit-menu-cb rounded border-slate-600 text-sky-500">
+              <span>Asset</span>
+            </label>
           </div>
         </div>
       </div>
@@ -405,7 +413,7 @@
     box.classList.remove('hidden');
     if (autoCheck) {
       const defaults = role === 'branch_user'
-        ? ['topology', 'devices', 'audit-logs', 'device-types', 'users', 'branches', 'brands', 'device-models']
+        ? ['topology', 'devices', 'audit-logs', 'device-types', 'users', 'branches', 'brands', 'device-models', 'assets']
         : ['topology', 'devices'];
       document.querySelectorAll(`.${prefix}-menu-cb`).forEach(cb => {
         cb.checked = defaults.includes(cb.value);

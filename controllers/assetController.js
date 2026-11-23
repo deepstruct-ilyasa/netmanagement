@@ -80,6 +80,7 @@ exports.listAssets = (req, res) => {
     assets,
     stats,
     branches,
+    selectedBranchId,
     deviceTypes,
     brands,
     models,
@@ -145,7 +146,7 @@ exports.detailAsset = (req, res) => {
     ORDER BY id DESC
   `).all(assetId);
 
-  const branches = db.prepare(`SELECT * FROM branches ORDER BY branch_code ASC`).all();
+  const branches = req.accessibleBranches || [];
   const settings = getAssetSettings();
 
   res.render('asset-detail', {
@@ -332,7 +333,10 @@ exports.updateAsset = (req, res) => {
       snPhoto = '/uploads/' + req.files['sn_photo'][0].filename;
     }
 
-    const newStatus = status || oldAsset.status;
+    const linkedDevice = db.prepare(`SELECT * FROM devices WHERE asset_id = ?`).get(assetId);
+    const requestedStatus = status || oldAsset.status;
+    const newStatus = (!linkedDevice && requestedStatus === 'active') ? 'spare' : requestedStatus;
+
     const parsedBrandId = brand_id ? Number(brand_id) : null;
     const parsedModelId = model_id ? Number(model_id) : null;
     const brandRow = parsedBrandId ? db.prepare('SELECT brand_name FROM brands WHERE id = ?').get(parsedBrandId) : null;
@@ -376,30 +380,49 @@ exports.updateAsset = (req, res) => {
         assetId
       );
 
-      db.prepare(`
-        UPDATE devices SET
-          device_type_id = ?,
-          brand_id = ?,
-          model_id = ?,
-          brand = ?,
-          model = ?,
-          serial_number = ?,
-          mac_address = ?,
-          physical_photo = ?,
-          sn_photo = ?
-        WHERE asset_id = ?
-      `).run(
-        device_type_id || oldAsset.device_type_id,
-        parsedBrandId,
-        parsedModelId,
-        brandRow ? brandRow.brand_name : null,
-        modelRow ? modelRow.model_name : null,
-        cleanSN,
-        mac_address ? mac_address.trim() : null,
-        physicalPhoto,
-        snPhoto,
-        assetId
-      );
+      if (linkedDevice) {
+        if (newStatus !== 'active') {
+          db.prepare(`
+            INSERT INTO asset_movements (
+              asset_id, movement_type, from_branch_id, to_branch_id,
+              from_location, to_location, moved_by, notes
+            ) VALUES (?, 'DISMANTLE', ?, ?, ?, 'Gudang / Service', ?, ?)
+          `).run(
+            assetId,
+            oldAsset.branch_id,
+            oldAsset.branch_id,
+            linkedDevice.room_location || '-',
+            req.user.full_name,
+            `Status aset diubah menjadi ${newStatus.toUpperCase()} (dilepas dari ${linkedDevice.hostname})`
+          );
+          db.prepare(`DELETE FROM devices WHERE id = ?`).run(linkedDevice.id);
+        } else {
+          db.prepare(`
+            UPDATE devices SET
+              device_type_id = ?,
+              brand_id = ?,
+              model_id = ?,
+              brand = ?,
+              model = ?,
+              serial_number = ?,
+              mac_address = ?,
+              physical_photo = ?,
+              sn_photo = ?
+            WHERE asset_id = ?
+          `).run(
+            device_type_id || oldAsset.device_type_id,
+            parsedBrandId,
+            parsedModelId,
+            brandRow ? brandRow.brand_name : null,
+            modelRow ? modelRow.model_name : null,
+            cleanSN,
+            mac_address ? mac_address.trim() : null,
+            physicalPhoto,
+            snPhoto,
+            assetId
+          );
+        }
+      }
     })();
 
     logAudit(req, {
@@ -434,6 +457,14 @@ exports.moveAsset = (req, res) => {
 
     const { movement_type, to_branch_id, to_location, notes } = req.body;
     const targetBranchId = to_branch_id ? parseInt(to_branch_id, 10) : asset.branch_id;
+
+    if (!req.canAccessBranch(targetBranchId)) {
+      return res.status(403).render('forbidden', {
+        title: '403 Akses Ditolak',
+        message: 'Anda tidak memiliki hak akses untuk memindahkan aset ke cabang tujuan tersebut.'
+      });
+    }
+
     const linkedDevice = db.prepare(`SELECT * FROM devices WHERE asset_id = ?`).get(assetId);
 
     db.transaction(() => {
@@ -517,6 +548,8 @@ exports.addMaintenance = (req, res) => {
       asset_status_after
     } = req.body;
 
+    const linkedDevice = db.prepare(`SELECT * FROM devices WHERE asset_id = ?`).get(assetId);
+
     db.transaction(() => {
       db.prepare(`
         INSERT INTO asset_maintenances (
@@ -536,12 +569,17 @@ exports.addMaintenance = (req, res) => {
       );
 
       if (asset_status_after) {
-        const nextCond = asset_status_after === 'broken' ? 'damaged' : asset.condition;
+        const finalAfterStatus = (!linkedDevice && asset_status_after === 'active') ? 'spare' : asset_status_after;
+        const nextCond = finalAfterStatus === 'broken' ? 'damaged' : asset.condition;
         db.prepare(`UPDATE assets SET status = ?, condition = ? WHERE id = ?`).run(
-          asset_status_after,
+          finalAfterStatus,
           nextCond,
           assetId
         );
+
+        if (linkedDevice && finalAfterStatus !== 'active') {
+          db.prepare(`DELETE FROM devices WHERE id = ?`).run(linkedDevice.id);
+        }
       }
     })();
 
