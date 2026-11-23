@@ -1,28 +1,30 @@
 const express = require('express');
 const router = express.Router();
 const manufactureController = require('../controllers/manufactureController');
+const deviceTypeController = require('../controllers/deviceTypeController');
 const { requireMenu, requirePermission } = require('../middlewares/authMiddleware');
 
 // Redirect kompatibel jika mengakses URL lama
-router.get('/manufactures', (req, res) => {
-  if (req.can && req.can('menu.brands')) return res.redirect('/brands');
-  if (req.can && req.can('menu.device-models')) return res.redirect('/device-models');
-  return res.status(403).render('forbidden', {
-    title: '403 Akses Ditolak',
-    message: 'Anda tidak memiliki hak akses untuk membuka menu ini.'
-  });
+router.get('/manufactures', requireMenu('assets'), (req, res) => {
+  return res.redirect('/brands');
 });
 
-// Master Brand / Merk (Menu: 'brands', Write: 'brand.write')
-router.get('/brands', requireMenu('brands'), manufactureController.indexBrands);
-router.post('/brands', requirePermission('brand.write'), manufactureController.storeBrand);
-router.post('/brands/:id/update', requirePermission('brand.write'), manufactureController.updateBrand);
-router.post('/brands/:id/delete', requirePermission('brand.write'), manufactureController.destroyBrand);
+// Master Device Types (1 Hak Akses: 'assets')
+router.get('/device-types', requireMenu('assets'), deviceTypeController.index);
+router.post('/device-types', requirePermission('asset.write'), deviceTypeController.store);
+router.post('/device-types/:id/update', requirePermission('asset.write'), deviceTypeController.update);
+router.post('/device-types/:id/delete', requirePermission('asset.write'), deviceTypeController.destroy);
 
-// Master Model / Type (Menu: 'device-models', Write: 'model.write')
-router.get('/device-models', requireMenu('device-models'), manufactureController.indexModels);
-router.post('/device-models', requirePermission('model.write'), manufactureController.storeModel);
-router.post('/device-models/:id/update', requirePermission('model.write'), manufactureController.updateModel);
-router.post('/device-models/:id/delete', requirePermission('model.write'), manufactureController.destroyModel);
+// Master Brand / Merk (1 Hak Akses: 'assets')
+router.get('/brands', requireMenu('assets'), manufactureController.indexBrands);
+router.post('/brands', requirePermission('asset.write'), manufactureController.storeBrand);
+router.post('/brands/:id/update', requirePermission('asset.write'), manufactureController.updateBrand);
+router.post('/brands/:id/delete', requirePermission('asset.write'), manufactureController.destroyBrand);
+
+// Master Model / Type (1 Hak Akses: 'assets')
+router.get('/device-models', requireMenu('assets'), manufactureController.indexModels);
+router.post('/device-models', requirePermission('asset.write'), manufactureController.storeModel);
+router.post('/device-models/:id/update', requirePermission('asset.write'), manufactureController.updateModel);
+router.post('/device-models/:id/delete', requirePermission('asset.write'), manufactureController.destroyModel);
 
 module.exports = router;

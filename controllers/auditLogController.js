@@ -30,7 +30,7 @@ exports.index = (req, res) => {
   const logs = db.prepare(query).all(...params);
 
   res.render('audit-logs', {
-    title: 'Audit Logs - NetAsset Hospital',
+    title: 'Audit Logs',
     activeMenu: 'audit-logs',
     logs
   });

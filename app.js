@@ -11,7 +11,6 @@ if (!fs.existsSync(uploadDir)) {
 
 const authRoutes = require('./routes/authRoutes');
 const deviceRoutes = require('./routes/deviceRoutes');
-const deviceTypeRoutes = require('./routes/deviceTypeRoutes');
 const branchRoutes = require('./routes/branchRoutes');
 const topologyRoutes = require('./routes/topologyRoutes');
 const userRoutes = require('./routes/userRoutes');
@@ -101,7 +100,6 @@ app.post('/set-branch', (req, res) => {
 
 // 5. Protected Application Routes
 app.use('/', deviceRoutes);
-app.use('/', deviceTypeRoutes);
 app.use('/', branchRoutes);
 app.use('/', topologyRoutes);
 app.use('/', userRoutes);

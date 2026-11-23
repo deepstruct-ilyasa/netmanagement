@@ -214,27 +214,19 @@
           <div class="grid grid-cols-2 gap-2 pt-1 text-xs text-slate-200">
             <label class="flex items-center gap-2 cursor-pointer p-1.5 rounded hover:bg-slate-800">
               <input type="checkbox" name="allowed_menus" value="topology" class="add-menu-cb rounded border-slate-600 text-emerald-500">
-              <span>Auto-Topology</span>
+              <span>Network Topology</span>
             </label>
             <label class="flex items-center gap-2 cursor-pointer p-1.5 rounded hover:bg-slate-800">
               <input type="checkbox" name="allowed_menus" value="devices" class="add-menu-cb rounded border-slate-600 text-emerald-500">
-              <span>Master Devices</span>
+              <span>Network Devices</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer p-1.5 rounded hover:bg-slate-800">
+              <input type="checkbox" name="allowed_menus" value="assets" class="add-menu-cb rounded border-slate-600 text-emerald-500">
+              <span>Master Assets (Full)</span>
             </label>
             <label class="flex items-center gap-2 cursor-pointer p-1.5 rounded hover:bg-slate-800">
               <input type="checkbox" name="allowed_menus" value="branches" class="add-menu-cb rounded border-slate-600 text-emerald-500">
               <span>Branches</span>
-            </label>
-            <label class="flex items-center gap-2 cursor-pointer p-1.5 rounded hover:bg-slate-800">
-              <input type="checkbox" name="allowed_menus" value="device-types" class="add-menu-cb rounded border-slate-600 text-emerald-500">
-              <span>Device Types</span>
-            </label>
-            <label class="flex items-center gap-2 cursor-pointer p-1.5 rounded hover:bg-slate-800">
-              <input type="checkbox" name="allowed_menus" value="brands" class="add-menu-cb rounded border-slate-600 text-emerald-500">
-              <span>Brand / Merk</span>
-            </label>
-            <label class="flex items-center gap-2 cursor-pointer p-1.5 rounded hover:bg-slate-800">
-              <input type="checkbox" name="allowed_menus" value="device-models" class="add-menu-cb rounded border-slate-600 text-emerald-500">
-              <span>Model / Type</span>
             </label>
             <label class="flex items-center gap-2 cursor-pointer p-1.5 rounded hover:bg-slate-800">
               <input type="checkbox" name="allowed_menus" value="audit-logs" class="add-menu-cb rounded border-slate-600 text-emerald-500">
@@ -243,10 +235,6 @@
             <label class="flex items-center gap-2 cursor-pointer p-1.5 rounded hover:bg-slate-800">
               <input type="checkbox" name="allowed_menus" value="users" class="add-menu-cb rounded border-slate-600 text-emerald-500">
               <span>Users & Access</span>
-            </label>
-            <label class="flex items-center gap-2 cursor-pointer p-1.5 rounded hover:bg-slate-800">
-              <input type="checkbox" name="allowed_menus" value="assets" class="add-menu-cb rounded border-slate-600 text-emerald-500">
-              <span>Asset</span>
             </label>
           </div>
         </div>
@@ -329,27 +317,19 @@
           <div class="grid grid-cols-2 gap-2 pt-1 text-xs text-slate-200">
             <label class="flex items-center gap-2 cursor-pointer p-1.5 rounded hover:bg-slate-800">
               <input type="checkbox" name="allowed_menus" value="topology" class="edit-menu-cb rounded border-slate-600 text-sky-500">
-              <span>Auto-Topology</span>
+              <span>Network Topology</span>
             </label>
             <label class="flex items-center gap-2 cursor-pointer p-1.5 rounded hover:bg-slate-800">
               <input type="checkbox" name="allowed_menus" value="devices" class="edit-menu-cb rounded border-slate-600 text-sky-500">
-              <span>Master Devices</span>
+              <span>Network Devices</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer p-1.5 rounded hover:bg-slate-800">
+              <input type="checkbox" name="allowed_menus" value="assets" class="edit-menu-cb rounded border-slate-600 text-sky-500">
+              <span>Master Assets (Full)</span>
             </label>
             <label class="flex items-center gap-2 cursor-pointer p-1.5 rounded hover:bg-slate-800">
               <input type="checkbox" name="allowed_menus" value="branches" class="edit-menu-cb rounded border-slate-600 text-sky-500">
               <span>Branches</span>
-            </label>
-            <label class="flex items-center gap-2 cursor-pointer p-1.5 rounded hover:bg-slate-800">
-              <input type="checkbox" name="allowed_menus" value="device-types" class="edit-menu-cb rounded border-slate-600 text-sky-500">
-              <span>Device Types</span>
-            </label>
-            <label class="flex items-center gap-2 cursor-pointer p-1.5 rounded hover:bg-slate-800">
-              <input type="checkbox" name="allowed_menus" value="brands" class="edit-menu-cb rounded border-slate-600 text-sky-500">
-              <span>Brand / Merk</span>
-            </label>
-            <label class="flex items-center gap-2 cursor-pointer p-1.5 rounded hover:bg-slate-800">
-              <input type="checkbox" name="allowed_menus" value="device-models" class="edit-menu-cb rounded border-slate-600 text-sky-500">
-              <span>Model / Type</span>
             </label>
             <label class="flex items-center gap-2 cursor-pointer p-1.5 rounded hover:bg-slate-800">
               <input type="checkbox" name="allowed_menus" value="audit-logs" class="edit-menu-cb rounded border-slate-600 text-sky-500">
@@ -358,10 +338,6 @@
             <label class="flex items-center gap-2 cursor-pointer p-1.5 rounded hover:bg-slate-800">
               <input type="checkbox" name="allowed_menus" value="users" class="edit-menu-cb rounded border-slate-600 text-sky-500">
               <span>Users & Access</span>
-            </label>
-            <label class="flex items-center gap-2 cursor-pointer p-1.5 rounded hover:bg-slate-800">
-              <input type="checkbox" name="allowed_menus" value="assets" class="edit-menu-cb rounded border-slate-600 text-sky-500">
-              <span>Asset</span>
             </label>
           </div>
         </div>
@@ -413,7 +389,7 @@
     box.classList.remove('hidden');
     if (autoCheck) {
       const defaults = role === 'branch_user'
-        ? ['topology', 'devices', 'audit-logs', 'device-types', 'users', 'branches', 'brands', 'device-models', 'assets']
+        ? ['topology', 'devices', 'assets', 'branches', 'audit-logs', 'users']
         : ['topology', 'devices'];
       document.querySelectorAll(`.${prefix}-menu-cb`).forEach(cb => {
         cb.checked = defaults.includes(cb.value);
@@ -442,15 +418,14 @@
     });
 
     const allowedMenus = u.menus || [];
-    const hasLegacyManufacture = allowedMenus.includes('manufactures');
+    const assetGroupMenus = ['assets', 'device-types', 'brands', 'device-models', 'manufactures'];
+    const hasAssetAccess = assetGroupMenus.some(k => allowedMenus.includes(k));
 
     document.querySelectorAll('.edit-menu-cb').forEach(cb => {
-      if (allowedMenus.includes(cb.value)) {
-        cb.checked = true;
-      } else if (hasLegacyManufacture && (cb.value === 'brands' || cb.value === 'device-models')) {
-        cb.checked = true;
+      if (cb.value === 'assets') {
+        cb.checked = hasAssetAccess;
       } else {
-        cb.checked = false;
+        cb.checked = allowedMenus.includes(cb.value);
       }
     });
 

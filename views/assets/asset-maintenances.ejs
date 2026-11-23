@@ -1,0 +1,403 @@
+<%- include('../partials/header', { pageTitle: 'Service & Maintenance Aset' }) %>
+
+<main class="p-4 sm:p-6 flex-1 w-full space-y-5">
+
+  <% if (typeof errorMsg !== 'undefined' && errorMsg) { %>
+    <div id="alert-error" class="bg-rose-500/15 border border-rose-500/40 text-rose-400 px-4 py-3 rounded-xl flex items-center justify-between text-sm">
+      <div class="flex items-center gap-2.5">
+        <i data-lucide="alert-circle" class="w-5 h-5 shrink-0"></i>
+        <span><%= errorMsg %></span>
+      </div>
+      <button onclick="document.getElementById('alert-error').remove()" class="p-1 hover:text-white cursor-pointer">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+    </div>
+  <% } %>
+
+  <% if (typeof successMsg !== 'undefined' && successMsg) { %>
+    <div id="alert-success" class="bg-emerald-500/15 border border-emerald-500/40 text-emerald-400 px-4 py-3 rounded-xl flex items-center justify-between text-sm">
+      <div class="flex items-center gap-2.5">
+        <i data-lucide="check-circle-2" class="w-5 h-5 shrink-0"></i>
+        <span><%= successMsg %></span>
+      </div>
+      <button onclick="document.getElementById('alert-success').remove()" class="p-1 hover:text-white cursor-pointer">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+    </div>
+  <% } %>
+
+  <!-- Header Bar -->
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-800 border border-slate-700 p-4 rounded-xl">
+    <div>
+      <h2 class="text-base font-semibold text-white">Riwayat Service, Perbaikan & RMA Aset</h2>
+      <p class="text-xs text-slate-400">Pencatatan keluhan kerusakan perangkat, tindakan perbaikan internal/vendor, status RMA, dan estimasi biaya.</p>
+    </div>
+    <% if (can('asset.write')) { %>
+      <button type="button" onclick="openModal('modal-new-maintenance')"
+        class="inline-flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-semibold text-sm px-4 py-2.5 rounded-lg transition shadow-sm cursor-pointer">
+        <i data-lucide="plus" class="w-4 h-4"></i>
+        <span>Catat Service / RMA</span>
+      </button>
+    <% } %>
+  </div>
+
+  <!-- Ringkasan Statistik Service -->
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+    <div class="bg-slate-800 border border-slate-700 rounded-xl p-4">
+      <div class="flex items-center justify-between text-slate-400 text-xs mb-1">
+        <span>Total Riwayat Service</span>
+        <i data-lucide="clipboard-list" class="w-4 h-4 text-sky-400"></i>
+      </div>
+      <div class="text-2xl font-bold text-white"><%= stats.total %> <span class="text-xs font-normal text-slate-400">Kasus</span></div>
+      <div class="text-[11px] text-slate-400 mt-1">Biaya: Rp <%= stats.totalCost.toLocaleString('id-ID') %></div>
+    </div>
+
+    <div class="bg-slate-800 border border-slate-700 rounded-xl p-4">
+      <div class="flex items-center justify-between text-slate-400 text-xs mb-1">
+        <span>Open (Menunggu)</span>
+        <i data-lucide="clock" class="w-4 h-4 text-rose-400"></i>
+      </div>
+      <div class="text-2xl font-bold text-rose-400"><%= stats.open %> <span class="text-xs font-normal text-slate-400">Unit</span></div>
+      <div class="text-[11px] text-slate-400 mt-1">Belum ditangani</div>
+    </div>
+
+    <div class="bg-slate-800 border border-slate-700 rounded-xl p-4">
+      <div class="flex items-center justify-between text-slate-400 text-xs mb-1">
+        <span>In Progress (Proses)</span>
+        <i data-lucide="wrench" class="w-4 h-4 text-amber-400"></i>
+      </div>
+      <div class="text-2xl font-bold text-amber-400"><%= stats.inProgress %> <span class="text-xs font-normal text-slate-400">Unit</span></div>
+      <div class="text-[11px] text-slate-400 mt-1">Sedang diperbaiki / RMA</div>
+    </div>
+
+    <div class="bg-slate-800 border border-slate-700 rounded-xl p-4">
+      <div class="flex items-center justify-between text-slate-400 text-xs mb-1">
+        <span>Resolved (Selesai)</span>
+        <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-400"></i>
+      </div>
+      <div class="text-2xl font-bold text-emerald-400"><%= stats.resolved %> <span class="text-xs font-normal text-slate-400">Unit</span></div>
+      <div class="text-[11px] text-slate-400 mt-1">Selesai perbaikan</div>
+    </div>
+  </div>
+
+  <!-- Tabel Riwayat Service -->
+  <div class="bg-slate-800 border border-slate-700 rounded-xl shadow-lg overflow-hidden">
+    <div class="p-4 border-b border-slate-700/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-900/30">
+      <div class="flex flex-wrap items-center gap-1.5 text-xs">
+        <button type="button" onclick="setMntFilter('all')" data-mnt-btn="all"
+          class="mnt-pill px-3 py-1.5 rounded-lg font-semibold bg-emerald-500 text-slate-950 cursor-pointer transition">
+          Semua
+        </button>
+        <button type="button" onclick="setMntFilter('open')" data-mnt-btn="open"
+          class="mnt-pill px-3 py-1.5 rounded-lg font-medium bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 cursor-pointer transition">
+          Open
+        </button>
+        <button type="button" onclick="setMntFilter('in_progress')" data-mnt-btn="in_progress"
+          class="mnt-pill px-3 py-1.5 rounded-lg font-medium bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 cursor-pointer transition">
+          In Progress
+        </button>
+        <button type="button" onclick="setMntFilter('resolved')" data-mnt-btn="resolved"
+          class="mnt-pill px-3 py-1.5 rounded-lg font-medium bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 cursor-pointer transition">
+          Resolved
+        </button>
+      </div>
+
+      <div class="flex flex-row items-center justify-end gap-3">
+        <div class="relative flex-1 sm:flex-initial sm:w-72">
+          <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"></i>
+          <input type="text" id="mnt-search-input" oninput="onMntSearch(this.value)"
+            placeholder="Cari kode aset, SN, keluhan, vendor..."
+            class="w-full bg-slate-900 border border-slate-600 rounded-lg pl-9 pr-3 py-2 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-emerald-400">
+        </div>
+        <select id="mnt-per-page" onchange="changeMntPerPage(this.value)" class="bg-slate-900 border border-slate-600 rounded-lg px-2 py-2 text-xs text-white focus:outline-none focus:border-emerald-400">
+          <option value="8">8</option>
+          <option value="25">25</option>
+          <option value="50">50</option>
+          <option value="100">100</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="overflow-x-auto">
+      <table class="w-full text-left border-collapse text-sm whitespace-nowrap">
+        <thead>
+          <tr class="bg-slate-900/60 border-b border-slate-700 text-slate-400 text-xs uppercase">
+            <th class="py-3 px-4 w-12 text-center">No</th>
+            <th class="py-3 px-4">Tgl Lapor</th>
+            <th class="py-3 px-4">Cabang</th>
+            <th class="py-3 px-4">Kode Aset</th>
+            <th class="py-3 px-4">Perangkat</th>
+            <th class="py-3 px-4">Keluhan / Kerusakan</th>
+            <th class="py-3 px-4">Tindakan & Vendor</th>
+            <th class="py-3 px-4 text-right">Biaya (Rp)</th>
+            <th class="py-3 px-4 text-center">Status</th>
+            <th class="py-3 px-4 text-center">Aksi</th>
+          </tr>
+        </thead>
+        <tbody id="mnt-table-body" class="divide-y divide-slate-700/60">
+          <% if (maintenances.length === 0) { %>
+            <tr>
+              <td colspan="10" class="py-10 text-center text-xs text-slate-400">Belum ada data riwayat service / maintenance aset.</td>
+            </tr>
+          <% } %>
+
+          <% maintenances.forEach((m, idx) => { %>
+            <tr class="mnt-row hover:bg-slate-700/25 transition" data-status="<%= m.status %>">
+              <td class="mnt-no-cell py-3.5 px-4 text-center text-slate-400 font-mono"><%= idx + 1 %></td>
+              <td class="py-3.5 px-4 text-xs text-slate-300 font-mono">
+                <div><%= m.issue_date %></div>
+                <% if (m.resolved_date) { %>
+                  <div class="text-[10px] text-emerald-400">Selesai: <%= m.resolved_date %></div>
+                <% } %>
+              </td>
+              <td class="py-3.5 px-4">
+                <span class="px-2 py-0.5 rounded bg-slate-900 border border-slate-700 text-xs font-semibold text-sky-400">
+                  <%= m.branch_code %>
+                </span>
+              </td>
+              <td class="py-3.5 px-4">
+                <a href="/assets/<%= m.asset_id %>" class="font-mono font-bold text-emerald-400 hover:underline">
+                  <%= m.asset_code %>
+                </a>
+                <div class="text-[11px] text-slate-400 font-mono">SN: <%= m.serial_number || '-' %></div>
+              </td>
+              <td class="py-3.5 px-4">
+                <div class="font-semibold text-white text-xs"><%= m.brand_name || '-' %> <%= m.model_name || '' %></div>
+                <div class="text-[11px] text-slate-400"><%= m.type_name || '-' %></div>
+              </td>
+              <td class="py-3.5 px-4 text-xs text-slate-200 max-w-xs truncate" title="<%= m.problem_description %>">
+                <%= m.problem_description %>
+              </td>
+              <td class="py-3.5 px-4 text-xs">
+                <div class="text-slate-300 max-w-xs truncate" title="<%= m.action_taken || '-' %>"><%= m.action_taken || '-' %></div>
+                <div class="text-[11px] text-slate-400">Vendor: <%= m.service_vendor || 'Internal IT' %></div>
+              </td>
+              <td class="py-3.5 px-4 text-right text-xs font-mono text-slate-200">
+                <%= (Number(m.cost) || 0).toLocaleString('id-ID') %>
+              </td>
+              <td class="py-3.5 px-4 text-center">
+                <%
+                  const mntBadge = {
+                    open: { label: 'OPEN', cls: 'bg-rose-500/15 text-rose-400 border-rose-500/30' },
+                    in_progress: { label: 'IN PROGRESS', cls: 'bg-amber-500/15 text-amber-400 border-amber-500/30' },
+                    resolved: { label: 'RESOLVED', cls: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30' }
+                  };
+                  const st = mntBadge[m.status] || mntBadge.open;
+                %>
+                <span class="px-2.5 py-0.5 rounded text-[11px] font-bold border <%= st.cls %>">
+                  <%= st.label %>
+                </span>
+              </td>
+              <td class="py-3.5 px-4 text-center">
+                <a href="/assets/<%= m.asset_id %>" title="Lihat Detail Aset"
+                  class="inline-flex p-2 rounded-lg bg-slate-700/70 hover:bg-slate-700 text-slate-200 border border-slate-600 transition">
+                  <i data-lucide="eye" class="w-4 h-4"></i>
+                </a>
+              </td>
+            </tr>
+          <% }) %>
+
+          <tr id="mnt-no-result" class="hidden">
+            <td colspan="10" class="py-10 text-center text-xs text-slate-400">Tidak ada data service yang cocok dengan filter/pencarian.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Footer Pagination -->
+    <div id="mnt-pagination-footer" class="px-4 py-3 border-t border-slate-200 dark:border-slate-700/80 bg-slate-50/80 dark:bg-slate-900/30 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-600 dark:text-slate-400">
+      <div id="mnt-page-info">
+        Menampilkan <span class="text-slate-900 dark:text-white font-semibold">0</span> perangkat
+      </div>
+      <div id="mnt-page-buttons" class="inline-flex items-center gap-1.5"></div>
+    </div>
+  </div>
+
+</main>
+
+<% if (can('asset.write')) { %>
+<!-- MODAL CATAT SERVICE / MAINTENANCE -->
+<div id="modal-new-maintenance" class="fixed inset-0 z-50 hidden flex items-center justify-center p-3 sm:p-4">
+  <div onclick="closeModal('modal-new-maintenance')" class="fixed inset-0 bg-slate-950/75 backdrop-blur-sm"></div>
+  <div class="relative bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-xl max-h-[90vh] flex flex-col shadow-2xl z-10 overflow-hidden">
+    <div class="px-4 sm:px-6 py-3.5 border-b border-slate-700 flex items-center justify-between shrink-0">
+      <h3 class="text-sm sm:text-base font-semibold text-emerald-400">+ Catat Riwayat Service / RMA Aset</h3>
+      <button type="button" onclick="closeModal('modal-new-maintenance')" class="text-slate-400 hover:text-white p-1 cursor-pointer">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+    </div>
+
+    <form action="/assets/maintenance" method="POST" class="flex flex-col flex-1 min-h-0 text-xs sm:text-sm">
+      <input type="hidden" name="redirect_to" value="/asset-maintenances">
+      <div class="p-4 sm:p-6 overflow-y-auto space-y-3.5 flex-1">
+        <div>
+          <label class="block text-slate-300 text-xs mb-1">Pilih Unit Aset *</label>
+          <select name="asset_id" required class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-emerald-400">
+            <option value="">-- Pilih Aset --</option>
+            <% accessibleAssets.forEach(a => { %>
+              <option value="<%= a.id %>">[<%= a.branch_code %>] <%= a.asset_code %> - <%= a.brand_name || '' %> <%= a.model_name || a.type_name %> (SN: <%= a.serial_number || '-' %>)</option>
+            <% }) %>
+          </select>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2.5 sm:gap-3">
+          <div>
+            <label class="block text-slate-300 text-xs mb-1">Tanggal Lapor / Masuk *</label>
+            <input type="date" name="issue_date" required value="<%= new Date().toISOString().split('T')[0] %>"
+              class="w-full bg-slate-900 border border-slate-600 rounded-lg px-2.5 py-2 text-white text-xs focus:outline-none focus:border-emerald-400">
+          </div>
+          <div>
+            <label class="block text-slate-300 text-xs mb-1">Tanggal Selesai</label>
+            <input type="date" name="resolved_date"
+              class="w-full bg-slate-900 border border-slate-600 rounded-lg px-2.5 py-2 text-white text-xs focus:outline-none focus:border-emerald-400">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-slate-300 text-xs mb-1">Deskripsi Keluhan / Kerusakan *</label>
+          <textarea name="problem_description" rows="2" required placeholder="Contoh: Port ether1 mati total / adaptor terbakar"
+            class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-emerald-400"></textarea>
+        </div>
+
+        <div>
+          <label class="block text-slate-300 text-xs mb-1">Tindakan Perbaikan</label>
+          <textarea name="action_taken" rows="2" placeholder="Contoh: Ganti adaptor 24V / kirim RMA ke distributor"
+            class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-emerald-400"></textarea>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2.5 sm:gap-3">
+          <div>
+            <label class="block text-slate-300 text-xs mb-1">Vendor / Teknisi</label>
+            <input type="text" name="service_vendor" placeholder="Internal IT / Nama Vendor"
+              class="w-full bg-slate-900 border border-slate-600 rounded-lg px-2.5 py-2 text-white text-xs focus:outline-none focus:border-emerald-400">
+          </div>
+          <div>
+            <label class="block text-slate-300 text-xs mb-1">Biaya Service (Rp)</label>
+            <input type="number" name="cost" min="0" value="0"
+              class="w-full bg-slate-900 border border-slate-600 rounded-lg px-2.5 py-2 text-white text-xs focus:outline-none focus:border-emerald-400">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2.5 sm:gap-3">
+          <div>
+            <label class="block text-slate-300 text-xs mb-1">Status Tiket Service</label>
+            <select name="maintenance_status" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-2.5 py-2 text-white text-xs focus:outline-none focus:border-emerald-400">
+              <option value="open">Open (Menunggu)</option>
+              <option value="in_progress">In Progress (Sedang Diproses)</option>
+              <option value="resolved">Resolved (Selesai)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-slate-300 text-xs mb-1">Update Status Fisik Aset</label>
+            <select name="asset_status_after" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-2.5 py-2 text-white text-xs focus:outline-none focus:border-emerald-400">
+              <option value="">-- Biarkan Tetap --</option>
+              <option value="maintenance">Service / RMA</option>
+              <option value="spare">Spare (Siap Pakai)</option>
+              <option value="broken">Rusak Total</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="px-4 sm:px-6 py-3 border-t border-slate-700 bg-slate-800/95 flex justify-end gap-2 shrink-0">
+        <button type="button" onclick="closeModal('modal-new-maintenance')" class="px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs sm:text-sm cursor-pointer">Batal</button>
+        <button type="submit" class="px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-semibold text-xs sm:text-sm cursor-pointer">Simpan Log Service</button>
+      </div>
+    </form>
+  </div>
+</div>
+<% } %>
+
+<script>
+  let mntState = { page: 1, perPage: 8, status: 'all', search: '' };
+
+  function setMntFilter(status) {
+    mntState.status = status;
+    mntState.page = 1;
+    document.querySelectorAll('.mnt-pill').forEach(btn => {
+      const active = btn.getAttribute('data-mnt-btn') === status;
+      btn.className = active
+        ? 'mnt-pill px-3 py-1.5 rounded-lg font-semibold bg-emerald-500 text-slate-950 cursor-pointer transition'
+        : 'mnt-pill px-3 py-1.5 rounded-lg font-medium bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 cursor-pointer transition';
+    });
+    renderMntTable();
+  }
+
+  function onMntSearch(val) {
+    mntState.search = val;
+    mntState.page = 1;
+    renderMntTable();
+  }
+
+  function changeMntPerPage(val) {
+    mntState.perPage = parseInt(val, 10) || 8;
+    mntState.page = 1;
+    renderMntTable();
+  }
+
+  function renderMntTable() {
+    const rows = Array.from(document.querySelectorAll('#mnt-table-body .mnt-row'));
+    const noRes = document.getElementById('mnt-no-result');
+    const q = (mntState.search || '').trim().toLowerCase();
+
+    const matched = rows.filter(row => {
+      const matchStatus = mntState.status === 'all' || row.getAttribute('data-status') === mntState.status;
+      const matchSearch = !q || row.textContent.toLowerCase().includes(q);
+      if (!(matchStatus && matchSearch)) row.classList.add('hidden');
+      return matchStatus && matchSearch;
+    });
+
+    const total = matched.length;
+    const totalPages = Math.max(1, Math.ceil(total / mntState.perPage));
+    if (mntState.page > totalPages) mntState.page = totalPages;
+
+    const start = (mntState.page - 1) * mntState.perPage;
+    const end = start + mntState.perPage;
+
+    matched.forEach((row, idx) => {
+      const show = idx >= start && idx < end;
+      row.classList.toggle('hidden', !show);
+      if (show) {
+        const noCell = row.querySelector('.mnt-no-cell');
+        if (noCell) noCell.textContent = idx + 1;
+      }
+    });
+
+    if (noRes) noRes.classList.toggle('hidden', total > 0 || rows.length === 0);
+
+    const infoEl = document.getElementById('mnt-page-info');
+    const btnEl = document.getElementById('mnt-page-buttons');
+    const from = total === 0 ? 0 : start + 1;
+    const to = Math.min(end, total);
+    infoEl.textContent = `Menampilkan ${from} - ${to} dari ${total} data`;
+
+    btnEl.innerHTML = '';
+    if (total === 0) return;
+
+    const addBtn = (label, target, disabled, active) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = label;
+      b.disabled = disabled;
+      b.className = active
+        ? 'px-2.5 py-1 rounded-md bg-emerald-500 text-slate-950 font-bold cursor-pointer'
+        : disabled
+          ? 'px-2.5 py-1 rounded-md bg-slate-800/50 text-slate-600 border border-slate-700/50 cursor-not-allowed'
+          : 'px-2.5 py-1 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition cursor-pointer';
+      if (!disabled && !active) b.onclick = () => { mntState.page = target; renderMntTable(); };
+      btnEl.appendChild(b);
+    };
+
+    addBtn('‹ Prev', mntState.page - 1, mntState.page <= 1, false);
+    for (let p = 1; p <= totalPages; p++) {
+      if (p === 1 || p === totalPages || (p >= mntState.page - 1 && p <= mntState.page + 1)) {
+        addBtn(String(p), p, false, p === mntState.page);
+      }
+    }
+    addBtn('Next ›', mntState.page + 1, mntState.page >= totalPages, false);
+  }
+
+  document.addEventListener('DOMContentLoaded', renderMntTable);
+</script>
+
+<%- include('../partials/footer') %>

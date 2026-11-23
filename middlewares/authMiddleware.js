@@ -73,13 +73,19 @@ function requireAuth(req, res, next) {
   const branchRows = db.prepare('SELECT branch_id FROM user_branches WHERE user_id = ?').all(user.id);
   user.allowed_branch_ids = branchRows.map(r => Number(r.branch_id));
 
-  // Helper pengecekan akses menu (dengan kompatibilitas mundur 'manufactures')
+  // Grup menu yang digabung ke dalam 1 hak akses 'assets'
+  const assetGroupMenus = ['assets', 'device-types', 'brands', 'device-models', 'manufactures'];
+
+  // Helper pengecekan akses menu
   const hasMenuAccess = (menuKey) => {
     if (user.role === 'administrator') return true;
     if (user.menus.includes(menuKey)) return true;
-    if ((menuKey === 'brands' || menuKey === 'device-models') && user.menus.includes('manufactures')) {
-      return true;
+
+    // Jika menuKey termasuk grup Master Assets, cukup punya akses 'assets' (atau salah satu sub-menu lama)
+    if (assetGroupMenus.includes(menuKey)) {
+      return assetGroupMenus.some(k => user.menus.includes(k));
     }
+
     return false;
   };
 
@@ -97,7 +103,8 @@ function requireAuth(req, res, next) {
     if (user.role === 'viewer') return false;
 
     if (user.role === 'branch_user') {
-      if (permission === 'asset.write') {
+      // Seluruh operasi tulis Assets, Mutasi, Service, Device Types, Brand & Model jadi 1 hak akses
+      if (['asset.write', 'device_type.write', 'brand.write', 'model.write', 'manufacture.write'].includes(permission)) {
         return hasMenuAccess('assets');
       }
       if (permission === 'device.write' || permission === 'port.connect') {
@@ -106,21 +113,8 @@ function requireAuth(req, res, next) {
       if (permission === 'branch.write') {
         return hasMenuAccess('branches');
       }
-      if (permission === 'device_type.write') {
-        return hasMenuAccess('device-types');
-      }
       if (permission === 'user.write') {
         return hasMenuAccess('users');
-      }
-      if (permission === 'brand.write') {
-        return hasMenuAccess('brands');
-      }
-      if (permission === 'model.write') {
-        return hasMenuAccess('device-models');
-      }
-      // Kompatibilitas lama
-      if (permission === 'manufacture.write') {
-        return hasMenuAccess('brands') || hasMenuAccess('device-models');
       }
       return false;
     }

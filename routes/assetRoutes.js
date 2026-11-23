@@ -26,11 +26,19 @@ const assetUploads = upload.fields([
   { name: 'sn_photo', maxCount: 1 }
 ]);
 
+// Halaman Utama & Detail Aset
 router.get('/assets', requirePermission('menu.assets'), assetController.listAssets);
 router.get('/assets/:id', requirePermission('menu.assets'), assetController.detailAsset);
 
+// Menu Terpisah: Riwayat Mutasi & Riwayat Service
+router.get('/asset-movements', requirePermission('menu.assets'), assetController.listMovements);
+router.get('/asset-maintenances', requirePermission('menu.assets'), assetController.listMaintenances);
+
+// Aksi CRUD, Mutasi & Service
 router.post('/assets', requirePermission('asset.write'), assetUploads, assetController.createAsset);
 router.post('/assets/settings', requirePermission('asset.write'), assetController.updateAssetSettings);
+router.post('/assets/move', requirePermission('asset.write'), assetController.moveAsset);
+router.post('/assets/maintenance', requirePermission('asset.write'), assetController.addMaintenance);
 router.post('/assets/:id/update', requirePermission('asset.write'), assetUploads, assetController.updateAsset);
 router.post('/assets/:id/move', requirePermission('asset.write'), assetController.moveAsset);
 router.post('/assets/:id/maintenance', requirePermission('asset.write'), assetController.addMaintenance);

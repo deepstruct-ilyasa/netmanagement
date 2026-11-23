@@ -1,4 +1,4 @@
-<%- include('partials/header', { pageTitle: 'Detail & Riwayat Aset' }) %>
+<%- include('../partials/header', { pageTitle: 'Detail & Riwayat Aset' }) %>
 
 <main class="p-4 sm:p-6 flex-1 w-full space-y-5">
 
@@ -252,7 +252,7 @@
       <div>
         <label class="block text-slate-300 mb-1">Cabang Tujuan *</label>
         <select name="to_branch_id" required class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white">
-          <% branches.forEach(b => { %>
+          <% (typeof allBranches !== 'undefined' ? allBranches : branches).forEach(b => { %>
             <option value="<%= b.id %>" <%= String(b.id) === String(asset.branch_id) ? 'selected' : '' %>>
               [<%= b.branch_code %>] <%= b.branch_name %>
             </option>
@@ -353,4 +353,4 @@
   }
 </script>
 
-<%- include('partials/footer') %>
+<%- include('../partials/footer') %>

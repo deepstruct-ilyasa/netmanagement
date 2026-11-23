@@ -16,7 +16,7 @@ exports.indexBrands = (req, res) => {
     ORDER BY b.brand_name ASC
   `).all();
 
-  res.render('brands', {
+  res.render('assets/brands', {
     title: 'Master Brand / Merk',
     activeMenu: 'brands',
     brands,
@@ -109,7 +109,7 @@ exports.indexModels = (req, res) => {
     ORDER BY b.brand_name ASC, dm.model_name ASC
   `).all();
 
-  res.render('device-models', {
+  res.render('assets/device-models', {
     title: 'Master Model / Type',
     activeMenu: 'device-models',
     brands,

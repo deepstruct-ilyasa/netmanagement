@@ -1,0 +1,376 @@
+<%- include('../partials/header', { pageTitle: 'Riwayat Mutasi Aset' }) %>
+
+<main class="p-4 sm:p-6 flex-1 w-full space-y-5">
+
+  <% if (typeof errorMsg !== 'undefined' && errorMsg) { %>
+    <div id="alert-error" class="bg-rose-500/15 border border-rose-500/40 text-rose-400 px-4 py-3 rounded-xl flex items-center justify-between text-sm">
+      <div class="flex items-center gap-2.5">
+        <i data-lucide="alert-circle" class="w-5 h-5 shrink-0"></i>
+        <span><%= errorMsg %></span>
+      </div>
+      <button onclick="document.getElementById('alert-error').remove()" class="p-1 hover:text-white cursor-pointer">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+    </div>
+  <% } %>
+
+  <% if (typeof successMsg !== 'undefined' && successMsg) { %>
+    <div id="alert-success" class="bg-emerald-500/15 border border-emerald-500/40 text-emerald-400 px-4 py-3 rounded-xl flex items-center justify-between text-sm">
+      <div class="flex items-center gap-2.5">
+        <i data-lucide="check-circle-2" class="w-5 h-5 shrink-0"></i>
+        <span><%= successMsg %></span>
+      </div>
+      <button onclick="document.getElementById('alert-success').remove()" class="p-1 hover:text-white cursor-pointer">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+    </div>
+  <% } %>
+
+  <!-- Header Bar -->
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-800 border border-slate-700 p-4 rounded-xl">
+    <div>
+      <h2 class="text-base font-semibold text-white">Log Mutasi & Perpindahan Aset</h2>
+      <p class="text-xs text-slate-400">Riwayat distribusi perangkat masuk gudang, pindah antar cabang/ruangan, penarikan, dan afkir.</p>
+    </div>
+    <% if (can('asset.write')) { %>
+      <button type="button" onclick="openModal('modal-new-movement')"
+        class="inline-flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-semibold text-sm px-4 py-2.5 rounded-lg transition shadow-sm cursor-pointer">
+        <i data-lucide="arrow-left-right" class="w-4 h-4"></i>
+        <span>Catat Mutasi Aset</span>
+      </button>
+    <% } %>
+  </div>
+
+  <!-- Ringkasan Statistik Mutasi -->
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+    <div class="bg-slate-800 border border-slate-700 rounded-xl p-4">
+      <div class="flex items-center justify-between text-slate-400 text-xs mb-1">
+        <span>Total Aktivitas Mutasi</span>
+        <i data-lucide="history" class="w-4 h-4 text-sky-400"></i>
+      </div>
+      <div class="text-2xl font-bold text-white"><%= stats.total %> <span class="text-xs font-normal text-slate-400">Log</span></div>
+      <div class="text-[11px] text-slate-400 mt-1">Seluruh catatan mutasi</div>
+    </div>
+
+    <div class="bg-slate-800 border border-slate-700 rounded-xl p-4">
+      <div class="flex items-center justify-between text-slate-400 text-xs mb-1">
+        <span>Mutasi Cabang / Lokasi</span>
+        <i data-lucide="truck" class="w-4 h-4 text-emerald-400"></i>
+      </div>
+      <div class="text-2xl font-bold text-emerald-400"><%= stats.mutasiCabang %> <span class="text-xs font-normal text-slate-400">Kali</span></div>
+      <div class="text-[11px] text-slate-400 mt-1">Perpindahan antar lokasi</div>
+    </div>
+
+    <div class="bg-slate-800 border border-slate-700 rounded-xl p-4">
+      <div class="flex items-center justify-between text-slate-400 text-xs mb-1">
+        <span>Registrasi Masuk Gudang</span>
+        <i data-lucide="package-plus" class="w-4 h-4 text-amber-400"></i>
+      </div>
+      <div class="text-2xl font-bold text-amber-400"><%= stats.masukGudang %> <span class="text-xs font-normal text-slate-400">Unit</span></div>
+      <div class="text-[11px] text-slate-400 mt-1">Penerimaan stok baru</div>
+    </div>
+
+    <div class="bg-slate-800 border border-slate-700 rounded-xl p-4">
+      <div class="flex items-center justify-between text-slate-400 text-xs mb-1">
+        <span>Dismantle / Disposal</span>
+        <i data-lucide="archive-x" class="w-4 h-4 text-rose-400"></i>
+      </div>
+      <div class="text-2xl font-bold text-rose-400"><%= stats.dismantleDisposal %> <span class="text-xs font-normal text-slate-400">Log</span></div>
+      <div class="text-[11px] text-slate-400 mt-1">Bongkar pasang / afkir</div>
+    </div>
+  </div>
+
+  <!-- Tabel Riwayat Mutasi -->
+  <div class="bg-slate-800 border border-slate-700 rounded-xl shadow-lg overflow-hidden">
+    <div class="p-4 border-b border-slate-700/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-900/30">
+      <div class="flex flex-wrap items-center gap-1.5 text-xs">
+        <button type="button" onclick="setMovFilter('all')" data-mov-btn="all"
+          class="mov-pill px-3 py-1.5 rounded-lg font-semibold bg-emerald-500 text-slate-950 cursor-pointer transition">
+          Semua
+        </button>
+        <button type="button" onclick="setMovFilter('MUTASI_CABANG')" data-mov-btn="MUTASI_CABANG"
+          class="mov-pill px-3 py-1.5 rounded-lg font-medium bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 cursor-pointer transition">
+          Mutasi Cabang
+        </button>
+        <button type="button" onclick="setMovFilter('MASUK_GUDANG')" data-mov-btn="MASUK_GUDANG"
+          class="mov-pill px-3 py-1.5 rounded-lg font-medium bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 cursor-pointer transition">
+          Masuk Gudang
+        </button>
+        <button type="button" onclick="setMovFilter('DISMANTLE')" data-mov-btn="DISMANTLE"
+          class="mov-pill px-3 py-1.5 rounded-lg font-medium bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 cursor-pointer transition">
+          Dismantle
+        </button>
+        <button type="button" onclick="setMovFilter('DISPOSAL')" data-mov-btn="DISPOSAL"
+          class="mov-pill px-3 py-1.5 rounded-lg font-medium bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 cursor-pointer transition">
+          Disposal
+        </button>
+      </div>
+
+      <div class="flex flex-row items-center justify-end gap-3">
+        <div class="relative flex-1 sm:flex-initial sm:w-72">
+          <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"></i>
+          <input type="text" id="mov-search-input" oninput="onMovSearch(this.value)"
+            placeholder="Cari kode aset, SN, cabang, lokasi, petugas..."
+            class="w-full bg-slate-900 border border-slate-600 rounded-lg pl-9 pr-3 py-2 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-emerald-400">
+        </div>
+        <select id="mov-per-page" onchange="changeMovPerPage(this.value)" class="bg-slate-900 border border-slate-600 rounded-lg px-2 py-2 text-xs text-white focus:outline-none focus:border-emerald-400">
+          <option value="8">8</option>
+          <option value="25">25</option>
+          <option value="50">50</option>
+          <option value="100">100</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="overflow-x-auto">
+      <table class="w-full text-left border-collapse text-sm whitespace-nowrap">
+        <thead>
+          <tr class="bg-slate-900/60 border-b border-slate-700 text-slate-400 text-xs uppercase">
+            <th class="py-3 px-4 w-12 text-center">No</th>
+            <th class="py-3 px-4">Waktu</th>
+            <th class="py-3 px-4">Kode Aset</th>
+            <th class="py-3 px-4">Perangkat</th>
+            <th class="py-3 px-4 text-center">Jenis Mutasi</th>
+            <th class="py-3 px-4">Asal</th>
+            <th class="py-3 px-4">Tujuan</th>
+            <th class="py-3 px-4">Petugas</th>
+            <th class="py-3 px-4">Catatan</th>
+          </tr>
+        </thead>
+        <tbody id="mov-table-body" class="divide-y divide-slate-700/60">
+          <% if (movements.length === 0) { %>
+            <tr>
+              <td colspan="9" class="py-10 text-center text-xs text-slate-400">Belum ada data riwayat mutasi aset.</td>
+            </tr>
+          <% } %>
+
+          <% movements.forEach((m, idx) => { %>
+            <tr class="mov-row hover:bg-slate-700/25 transition" data-type="<%= m.movement_type %>">
+              <td class="mov-no-cell py-3.5 px-4 text-center text-slate-400 font-mono"><%= idx + 1 %></td>
+              <td class="py-3.5 px-4 text-xs text-slate-300 font-mono">
+                <%= m.moved_at || m.created_at || '-' %>
+              </td>
+              <td class="py-3.5 px-4">
+                <a href="/assets/<%= m.asset_id %>" class="font-mono font-bold text-emerald-400 hover:underline">
+                  <%= m.asset_code %>
+                </a>
+                <div class="text-[11px] text-slate-400 font-mono">SN: <%= m.serial_number || '-' %></div>
+              </td>
+              <td class="py-3.5 px-4">
+                <div class="font-semibold text-white text-xs"><%= m.brand_name || '-' %> <%= m.model_name || '' %></div>
+                <div class="text-[11px] text-slate-400"><%= m.type_name || '-' %></div>
+              </td>
+              <td class="py-3.5 px-4 text-center">
+                <%
+                  const movBadge = {
+                    MUTASI_CABANG: 'bg-sky-500/15 text-sky-400 border-sky-500/30',
+                    MASUK_GUDANG: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
+                    DISMANTLE: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
+                    DISPOSAL: 'bg-rose-500/15 text-rose-400 border-rose-500/30'
+                  };
+                  const badgeCls = movBadge[m.movement_type] || 'bg-slate-700 text-slate-300 border-slate-600';
+                %>
+                <span class="px-2.5 py-0.5 rounded text-[11px] font-bold border <%= badgeCls %>">
+                  <%= m.movement_type %>
+                </span>
+              </td>
+              <td class="py-3.5 px-4 text-xs">
+                <% if (m.from_branch_code) { %>
+                  <span class="px-1.5 py-0.5 rounded bg-slate-900 border border-slate-700 text-slate-300 font-semibold"><%= m.from_branch_code %></span>
+                  <div class="text-[11px] text-slate-400 mt-0.5"><%= m.from_location || '-' %></div>
+                <% } else { %>
+                  <span class="text-slate-500">-</span>
+                <% } %>
+              </td>
+              <td class="py-3.5 px-4 text-xs">
+                <% if (m.to_branch_code) { %>
+                  <span class="px-1.5 py-0.5 rounded bg-slate-900 border border-slate-700 text-sky-400 font-semibold"><%= m.to_branch_code %></span>
+                  <div class="text-[11px] text-slate-300 mt-0.5"><%= m.to_location || '-' %></div>
+                <% } else { %>
+                  <span class="text-slate-500">-</span>
+                <% } %>
+              </td>
+              <td class="py-3.5 px-4 text-xs text-slate-300"><%= m.moved_by || '-' %></td>
+              <td class="py-3.5 px-4 text-xs text-slate-400 max-w-xs truncate" title="<%= m.notes || '' %>">
+                <%= m.notes || '-' %>
+              </td>
+            </tr>
+          <% }) %>
+
+          <tr id="mov-no-result" class="hidden">
+            <td colspan="9" class="py-10 text-center text-xs text-slate-400">Tidak ada data mutasi yang cocok dengan filter/pencarian.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Footer Pagination -->
+    <div id="mov-pagination-footer" class="px-4 py-3 border-t border-slate-200 dark:border-slate-700/80 bg-slate-50/80 dark:bg-slate-900/30 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-600 dark:text-slate-400">
+      <div id="mov-page-info">
+        Menampilkan <span class="text-slate-900 dark:text-white font-semibold">0</span> perangkat
+      </div>
+      <div id="mov-page-buttons" class="inline-flex items-center gap-1.5"></div>
+    </div>
+  </div>
+
+</main>
+
+<% if (can('asset.write')) { %>
+<!-- MODAL CATAT MUTASI ASET -->
+<div id="modal-new-movement" class="fixed inset-0 z-50 hidden flex items-center justify-center p-3 sm:p-4">
+  <div onclick="closeModal('modal-new-movement')" class="fixed inset-0 bg-slate-950/75 backdrop-blur-sm"></div>
+  <div class="relative bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-lg max-h-[90vh] flex flex-col shadow-2xl z-10 overflow-hidden">
+    <div class="px-4 sm:px-6 py-3.5 border-b border-slate-700 flex items-center justify-between shrink-0">
+      <h3 class="text-sm sm:text-base font-semibold text-emerald-400">Catat Mutasi / Perpindahan Aset</h3>
+      <button type="button" onclick="closeModal('modal-new-movement')" class="text-slate-400 hover:text-white p-1 cursor-pointer">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+    </div>
+
+    <form action="/assets/move" method="POST" class="flex flex-col flex-1 min-h-0 text-xs sm:text-sm">
+      <input type="hidden" name="redirect_to" value="/asset-movements">
+      <div class="p-4 sm:p-6 overflow-y-auto space-y-3.5 flex-1">
+        <div>
+          <label class="block text-slate-300 text-xs mb-1">Pilih Unit Aset *</label>
+          <select name="asset_id" required class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-emerald-400">
+            <option value="">-- Pilih Aset --</option>
+            <% accessibleAssets.forEach(a => { %>
+              <option value="<%= a.id %>">[<%= a.branch_code %>] <%= a.asset_code %> - <%= a.brand_name || '' %> <%= a.model_name || a.type_name %> (SN: <%= a.serial_number || '-' %>)</option>
+            <% }) %>
+          </select>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2.5 sm:gap-3">
+          <div>
+            <label class="block text-slate-300 text-xs mb-1">Jenis Mutasi *</label>
+            <select name="movement_type" required class="w-full bg-slate-900 border border-slate-600 rounded-lg px-2.5 py-2 text-white text-xs focus:outline-none focus:border-emerald-400">
+              <option value="MUTASI_CABANG">Mutasi Cabang / Lokasi</option>
+              <option value="DISMANTLE">Dismantle (Tarik ke Gudang)</option>
+              <option value="DISPOSAL">Disposal (Afkir / Hapus Buku)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-slate-300 text-xs mb-1">Cabang Tujuan *</label>
+            <select name="to_branch_id" required class="w-full bg-slate-900 border border-slate-600 rounded-lg px-2.5 py-2 text-white text-xs focus:outline-none focus:border-emerald-400">
+              <% (typeof allBranches !== 'undefined' ? allBranches : branches).forEach(b => { %>
+                <option value="<%= b.id %>">[<%= b.branch_code %>] <%= b.branch_name %></option>
+              <% }) %>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-slate-300 text-xs mb-1">Lokasi / Ruangan Tujuan *</label>
+          <input type="text" name="to_location" required placeholder="Contoh: Ruang Server Lt.2 / Gudang IT"
+            class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-emerald-400">
+        </div>
+
+        <div>
+          <label class="block text-slate-300 text-xs mb-1">Keterangan / Alasan Mutasi</label>
+          <textarea name="notes" rows="2" placeholder="Contoh: Penggantian switch core lantai 1"
+            class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-emerald-400"></textarea>
+        </div>
+      </div>
+
+      <div class="px-4 sm:px-6 py-3 border-t border-slate-700 bg-slate-800/95 flex justify-end gap-2 shrink-0">
+        <button type="button" onclick="closeModal('modal-new-movement')" class="px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs sm:text-sm cursor-pointer">Batal</button>
+        <button type="submit" class="px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-semibold text-xs sm:text-sm cursor-pointer">Simpan Mutasi</button>
+      </div>
+    </form>
+  </div>
+</div>
+<% } %>
+
+<script>
+  let movState = { page: 1, perPage: 8, type: 'all', search: '' };
+
+  function setMovFilter(type) {
+    movState.type = type;
+    movState.page = 1;
+    document.querySelectorAll('.mov-pill').forEach(btn => {
+      const active = btn.getAttribute('data-mov-btn') === type;
+      btn.className = active
+        ? 'mov-pill px-3 py-1.5 rounded-lg font-semibold bg-emerald-500 text-slate-950 cursor-pointer transition'
+        : 'mov-pill px-3 py-1.5 rounded-lg font-medium bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 cursor-pointer transition';
+    });
+    renderMovTable();
+  }
+
+  function onMovSearch(val) {
+    movState.search = val;
+    movState.page = 1;
+    renderMovTable();
+  }
+
+  function changeMovPerPage(val) {
+    movState.perPage = parseInt(val, 10) || 8;
+    movState.page = 1;
+    renderMovTable();
+  }
+
+  function renderMovTable() {
+    const rows = Array.from(document.querySelectorAll('#mov-table-body .mov-row'));
+    const noRes = document.getElementById('mov-no-result');
+    const q = (movState.search || '').trim().toLowerCase();
+
+    const matched = rows.filter(row => {
+      const matchType = movState.type === 'all' || row.getAttribute('data-type') === movState.type;
+      const matchSearch = !q || row.textContent.toLowerCase().includes(q);
+      if (!(matchType && matchSearch)) row.classList.add('hidden');
+      return matchType && matchSearch;
+    });
+
+    const total = matched.length;
+    const totalPages = Math.max(1, Math.ceil(total / movState.perPage));
+    if (movState.page > totalPages) movState.page = totalPages;
+
+    const start = (movState.page - 1) * movState.perPage;
+    const end = start + movState.perPage;
+
+    matched.forEach((row, idx) => {
+      const show = idx >= start && idx < end;
+      row.classList.toggle('hidden', !show);
+      if (show) {
+        const noCell = row.querySelector('.mov-no-cell');
+        if (noCell) noCell.textContent = idx + 1;
+      }
+    });
+
+    if (noRes) noRes.classList.toggle('hidden', total > 0 || rows.length === 0);
+
+    const infoEl = document.getElementById('mov-page-info');
+    const btnEl = document.getElementById('mov-page-buttons');
+    const from = total === 0 ? 0 : start + 1;
+    const to = Math.min(end, total);
+    infoEl.textContent = `Menampilkan ${from} - ${to} dari ${total} data`;
+
+    btnEl.innerHTML = '';
+    if (total === 0) return;
+
+    const addBtn = (label, target, disabled, active) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = label;
+      b.disabled = disabled;
+      b.className = active
+        ? 'px-2.5 py-1 rounded-md bg-emerald-500 text-slate-950 font-bold cursor-pointer'
+        : disabled
+          ? 'px-2.5 py-1 rounded-md bg-slate-800/50 text-slate-600 border border-slate-700/50 cursor-not-allowed'
+          : 'px-2.5 py-1 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition cursor-pointer';
+      if (!disabled && !active) b.onclick = () => { movState.page = target; renderMovTable(); };
+      btnEl.appendChild(b);
+    };
+
+    addBtn('‹ Prev', movState.page - 1, movState.page <= 1, false);
+    for (let p = 1; p <= totalPages; p++) {
+      if (p === 1 || p === totalPages || (p >= movState.page - 1 && p <= movState.page + 1)) {
+        addBtn(String(p), p, false, p === movState.page);
+      }
+    }
+    addBtn('Next ›', movState.page + 1, movState.page >= totalPages, false);
+  }
+
+  document.addEventListener('DOMContentLoaded', renderMovTable);
+</script>
+
+<%- include('../partials/footer') %>

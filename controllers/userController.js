@@ -27,7 +27,7 @@ exports.index = (req, res) => {
   });
 
   res.render('users', {
-    title: 'Users & Access - NetAsset Hospital',
+    title: 'Users & Access',
     activeMenu: 'users',
     users,
     branches,

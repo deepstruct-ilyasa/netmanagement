@@ -50,7 +50,7 @@ exports.index = (req, res) => {
     };
   });
 
-  res.render('device-types', {
+  res.render('assets/device-types', {
     title: 'Master Jenis Perangkat',
     activeMenu: 'device-types',
     deviceTypes,
