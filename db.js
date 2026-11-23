@@ -230,7 +230,7 @@ insertSetting.run(
 );
 insertSetting.run(
   'organization_name',
-  'IT Infrastructure',
+  'IT Network Engineer',
   'Nama instansi/perusahaan yang dicetak pada label QR aset'
 );
 
@@ -264,7 +264,7 @@ if (countTypes.total === 0) {
 const countBrands = db.prepare('SELECT COUNT(*) as total FROM brands').get();
 if (countBrands.total === 0) {
   const insertBrand = db.prepare('INSERT INTO brands (brand_name) VALUES (?)');
-  ['MikroTik', 'Ruijie', 'UniFi', 'Cisco', 'Hikvision'].forEach(b => insertBrand.run(b));
+  ['MikroTik', 'Ruijie', 'UniFi', 'Hikvision'].forEach(b => insertBrand.run(b));
 }
 
 // Seed default administrator user if empty (admin / admin123)
