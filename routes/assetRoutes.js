@@ -26,6 +26,10 @@ const assetUploads = upload.fields([
   { name: 'sn_photo', maxCount: 1 }
 ]);
 
+// Halaman Validasi / Scan QR Stiker Aset
+router.get('/assets/validate', assetController.validateAssetPage);
+router.get('/api/assets/validate', assetController.apiValidateAsset);
+
 // Halaman Utama & Detail Aset
 router.get('/assets', requirePermission('menu.assets'), assetController.listAssets);
 router.get('/assets/:id', requirePermission('menu.assets'), assetController.detailAsset);

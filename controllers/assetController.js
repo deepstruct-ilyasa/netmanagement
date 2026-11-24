@@ -931,3 +931,91 @@ exports.listMaintenances = (req, res) => {
     errorMsg: req.query.error || null
   });
 };
+
+// Helper internal untuk mencari data lengkap aset berdasarkan asset_code atau serial_number
+function findAssetForValidation(rawQuery) {
+  const cleanCode = String(rawQuery || '').trim();
+  if (!cleanCode) return null;
+
+  const asset = db.prepare(`
+    SELECT
+      a.*,
+      b.branch_code,
+      b.branch_name,
+      dt.type_name,
+      br.brand_name,
+      dm.model_name,
+      d.id AS linked_device_id,
+      d.hostname AS linked_hostname,
+      d.ip_address AS linked_ip,
+      d.room_location AS linked_location
+    FROM assets a
+    LEFT JOIN branches b ON a.branch_id = b.id
+    LEFT JOIN device_types dt ON a.device_type_id = dt.id
+    LEFT JOIN brands br ON a.brand_id = br.id
+    LEFT JOIN device_models dm ON a.model_id = dm.id
+    LEFT JOIN devices d ON d.asset_id = a.id
+    WHERE UPPER(a.asset_code) = UPPER(?) OR UPPER(a.serial_number) = UPPER(?)
+    LIMIT 1
+  `).get(cleanCode, cleanCode);
+
+  if (!asset) return null;
+
+  const lastMovement = db.prepare(`
+    SELECT
+      m.*,
+      tb.branch_code AS to_branch_code,
+      tb.branch_name AS to_branch_name
+    FROM asset_movements m
+    LEFT JOIN branches tb ON m.to_branch_id = tb.id
+    WHERE m.asset_id = ?
+    ORDER BY m.id DESC
+    LIMIT 1
+  `).get(asset.id);
+
+  return { asset, lastMovement };
+}
+
+// 11. GET /assets/validate - Halaman Scan & Validasi QR Stiker Aset
+exports.validateAssetPage = (req, res) => {
+  const queryCode = req.query.code ? String(req.query.code).trim() : '';
+  const settings = getAssetSettings();
+
+  let result = null;
+  if (queryCode) {
+    result = findAssetForValidation(queryCode);
+  }
+
+  res.render('assets/asset-validate', {
+    title: 'Validasi QR Aset — SIMAJAR',
+    queryCode,
+    asset: result ? result.asset : null,
+    lastMovement: result ? result.lastMovement : null,
+    settings,
+    isAuthenticated: Boolean(req.user)
+  });
+};
+
+// 12. GET /api/assets/validate?code=... - Endpoint JSON untuk hasil scan kamera real-time
+exports.apiValidateAsset = (req, res) => {
+  const queryCode = req.query.code ? String(req.query.code).trim() : '';
+  if (!queryCode) {
+    return res.status(400).json({ valid: false, message: 'Kode aset atau Serial Number wajib diisi.' });
+  }
+
+  const result = findAssetForValidation(queryCode);
+  if (!result) {
+    return res.json({
+      valid: false,
+      queryCode,
+      message: `Kode "${queryCode}" tidak terdaftar dalam database inventaris.`
+    });
+  }
+
+  return res.json({
+    valid: true,
+    queryCode,
+    asset: result.asset,
+    lastMovement: result.lastMovement
+  });
+};

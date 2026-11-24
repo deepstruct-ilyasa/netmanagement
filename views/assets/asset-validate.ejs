@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="id" class="dark preload">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title><%= typeof title !== 'undefined' ? title : 'Validasi QR Aset — SIMAJAR' %></title>
+  <link rel="icon" type="image/png" href="/img/favicon.png">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class'
+    };
+
+    if (localStorage.getItem('theme') === 'light') {
+      document.documentElement.classList.remove('dark');
+    } else {
+      document.documentElement.classList.add('dark');
+    }
+  </script>
+  <style>
+    html.preload * { transition: none !important; }
+    .bg-grid-pattern {
+      background-image: radial-gradient(rgba(16, 185, 129, 0.14) 1px, transparent 1px);
+      background-size: 24px 24px;
+    }
+    .dark .bg-grid-pattern {
+      background-image: radial-gradient(rgba(16, 185, 129, 0.09) 1px, transparent 1px);
+      background-size: 24px 24px;
+    }
+    #qr-reader {
+      border: none !important;
+    }
+    #qr-reader video {
+      border-radius: 0.75rem;
+      object-fit: cover;
+      width: 100% !important;
+    }
+    #qr-reader__scan_region img {
+      display: none !important;
+    }
+  </style>
+</head>
+<body class="bg-slate-100 dark:bg-slate-950 text-slate-800 dark:text-slate-100 min-h-dvh flex flex-col font-sans transition-colors duration-200 bg-grid-pattern">
+
+  <!-- Top Navbar -->
+  <header class="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 sticky top-0 z-30">
+    <div class="max-w-3xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
+      <a href="<%= isAuthenticated ? '/assets' : '/assets/validate' %>" class="flex items-center gap-2.5 min-w-0 group">
+        <div class="w-12 h-12 rounded-xl p-1.5 flex items-center justify-center shrink-0 group-hover:border-emerald-500/50 transition">
+          <img src="/img/favicon.png" alt="SIMAJAR" class="w-full h-full object-contain"
+            onerror="this.classList.add('hidden'); this.nextElementSibling.classList.remove('hidden');">
+          <i data-lucide="network" class="hidden w-5 h-5 text-emerald-500"></i>
+        </div>
+        <div class="leading-tight min-w-0">
+          <div class="flex items-center gap-2">
+            <span class="text-base font-extrabold tracking-wider text-slate-900 dark:text-white">
+              SIM<span class="text-emerald-500">AJAR</span>
+            </span>
+            <span class="hidden sm:inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25">
+              Asset Verification
+            </span>
+          </div>
+          <span class="block text-[10px] text-slate-500 dark:text-slate-400 truncate">
+            Sistem Informasi Manajemen Aset Jaringan
+          </span>
+        </div>
+      </a>
+
+      <div class="flex items-center gap-2 shrink-0">
+        <% if (isAuthenticated && (typeof canAccessAssets === 'undefined' || canAccessAssets)) { %>
+          <a href="/assets" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-200/80 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-200 transition">
+            <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i>
+            <span>Master Aset</span>
+          </a>
+        <% } else if (!isAuthenticated) { %>
+          <a href="/login" title="Login IT" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white dark:text-slate-950 text-xs font-semibold shadow-sm shadow-emerald-500/20 transition">
+            <i data-lucide="log-in" class="w-3.5 h-3.5"></i>
+          </a>
+        <% } %>
+
+        <button type="button" onclick="toggleTheme()" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-200/80 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition cursor-pointer" title="Ganti Tema">
+          <i data-lucide="sun" class="w-4 h-4 text-amber-400 hidden dark:inline"></i>
+          <i data-lucide="moon" class="w-4 h-4 text-slate-700 inline dark:hidden"></i>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Konten Utama -->
+  <main class="flex-1 w-full max-w-3xl mx-auto px-4 sm:px-6 py-6 pb-[calc(2rem+env(safe-area-inset-bottom,0px))] flex flex-col justify-center">
+
+    <!-- PANEL PEMINDAIAN (Disembunyikan saat Detail Aset ditampilkan) -->
+    <div id="scanner-panel" class="<%= queryCode ? 'hidden' : '' %> space-y-4">
+      <div class="bg-white/95 dark:bg-slate-900/95 backdrop-blur border border-slate-200 dark:border-slate-800 rounded-2xl p-5 sm:p-6 shadow-md space-y-4">
+        <div class="flex items-start justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-3.5">
+          <div>
+            <h1 class="text-base sm:text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <span class="w-8 h-8 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-500 shrink-0">
+                <i data-lucide="scan-line" class="w-4 h-4"></i>
+              </span>
+              <span>Pemindai Stiker Aset</span>
+            </h1>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+              Masukkan kode inventaris / Serial Number atau klik ikon kamera di kanan untuk scan QR.
+            </p>
+          </div>
+        </div>
+
+        <!-- Viewport Kamera QR (Muncul saat tombol kamera diklik) -->
+        <div id="scanner-wrapper" class="hidden space-y-2.5">
+          <div class="relative rounded-xl overflow-hidden border-2 border-emerald-500/50 bg-slate-950 shadow-inner max-w-md mx-auto">
+            <div id="qr-reader" class="w-full"></div>
+          </div>
+          <div class="flex items-center justify-center gap-1.5 text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
+            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+            <span>Arahkan kamera ke kotak QR stiker perangkat...</span>
+          </div>
+        </div>
+
+        <!-- Form Input Kode Inventaris / SN + Tombol Kamera di Kanan -->
+        <form id="manual-validate-form" onsubmit="handleManualSubmit(event)" class="space-y-3">
+          <div>
+            <div class="flex items-stretch gap-2">
+              <div class="relative flex-1">
+                <i data-lucide="qr-code" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
+                <input type="text" id="input-asset-code" name="code" value="<%= queryCode %>" required autocomplete="off"
+                  placeholder="Kode Inventaris / Serial Number"
+                  class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl pl-10 pr-9 py-2.5 text-slate-900 dark:text-white font-mono text-xs sm:text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition">
+                <button type="button" onclick="clearInputOnly()" title="Bersihkan Input"
+                  class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer">
+                  <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+              </div>
+
+              <!-- Tombol Kamera (Logo Saja) di Kanan Form Input -->
+              <button type="button" id="btn-start-scan" onclick="startQrScanner()" title="Aktifkan Kamera Scanner" aria-label="Aktifkan Kamera Scanner"
+                class="w-11 shrink-0 inline-flex items-center justify-center rounded-xl bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white dark:text-slate-950 shadow-sm shadow-emerald-500/20 transition cursor-pointer">
+                <i data-lucide="camera" class="w-5 h-5"></i>
+              </button>
+              <button type="button" id="btn-stop-scan" onclick="stopQrScanner()" title="Matikan Kamera" aria-label="Matikan Kamera"
+                class="hidden w-11 shrink-0 inline-flex items-center justify-center rounded-xl bg-rose-500/15 hover:bg-rose-500/25 text-rose-500 border border-rose-500/30 active:scale-95 transition cursor-pointer">
+                <i data-lucide="camera-off" class="w-5 h-5"></i>
+              </button>
+            </div>
+          </div>
+
+          <button type="submit"
+            class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-sky-500 hover:bg-sky-600 active:scale-[0.99] text-white dark:text-slate-950 font-semibold text-xs sm:text-sm shadow-sm transition cursor-pointer">
+            <i data-lucide="shield-check" class="w-4 h-4"></i>
+            <span>Cek & Validasi Aset</span>
+          </button>
+        </form>
+      </div>
+
+      <!-- Info Panduan Singkat -->
+      <div class="bg-white/75 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800/80 rounded-2xl p-4 text-[11px] text-slate-500 dark:text-slate-400 space-y-1">
+        <div class="font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+          <i data-lucide="info" class="w-3.5 h-3.5 text-sky-500"></i>
+          <span>Petunjuk Verifikasi</span>
+        </div>
+        <p>• Klik ikon kamera di sebelah kanan kolom input untuk memindai stiker QR Aset.</p>
+        <p>• Mendukung pencarian menggunakan <strong>Kode Inventaris</strong> maupun <strong>Serial Number</strong>.</p>
+      </div>
+    </div>
+
+    <!-- PANEL HASIL VALIDASI (Muncul penuh menggantikan panel pemindaian) -->
+    <div id="validation-result-area" class="<%= queryCode ? '' : 'hidden' %>">
+      <% if (queryCode && !asset) { %>
+        <div class="bg-white dark:bg-slate-900 border border-rose-500/40 rounded-2xl overflow-hidden shadow-lg">
+          <div class="bg-rose-500/15 border-b border-rose-500/25 px-5 py-4 flex items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-rose-500/20 border border-rose-500/40 flex items-center justify-center text-rose-500 shrink-0">
+                <i data-lucide="shield-x" class="w-6 h-6"></i>
+              </div>
+              <div>
+                <h2 class="text-sm font-extrabold uppercase tracking-wide text-rose-600 dark:text-rose-400">
+                  Aset Tidak Terdaftar
+                </h2>
+                <p class="text-[11px] text-slate-600 dark:text-slate-300">Kode tidak ditemukan dalam database SIMAJAR</p>
+              </div>
+            </div>
+            <button type="button" onclick="closeValidationResult()" title="Tutup"
+              class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-200/80 dark:bg-slate-800 hover:bg-rose-500/20 text-slate-700 dark:text-slate-200 hover:text-rose-500 text-xs font-semibold transition cursor-pointer shrink-0">
+              <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
+          </div>
+          <div class="p-6 text-center space-y-4">
+            <p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+              Kode <span class="font-mono font-bold px-2 py-0.5 rounded bg-rose-500/15 text-rose-500"><%= queryCode %></span> tidak cocok dengan aset mana pun pada inventaris <strong><%= settings.organization_name || 'SIMAJAR' %></strong>.
+            </p>
+            <button type="button" onclick="closeValidationResult()"
+              class="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white dark:text-slate-950 text-xs font-semibold transition cursor-pointer">
+              <i data-lucide="scan-line" class="w-4 h-4"></i>
+              <span>Pindai / Cek Kode Lain</span>
+            </button>
+          </div>
+        </div>
+      <% } else if (asset) { %>
+        <script>
+          window.__INITIAL_VALIDATION__ = <%- JSON.stringify({ valid: true, queryCode, asset, lastMovement }) %>;
+        </script>
+      <% } %>
+    </div>
+
+  </main>
+
+  <!-- Modal Lightbox Preview Foto -->
+  <div id="photo-lightbox" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4">
+    <div onclick="closeLightbox()" class="fixed inset-0 bg-slate-950/85 backdrop-blur-sm"></div>
+    <div class="relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-2xl w-full overflow-hidden shadow-2xl z-10">
+      <div class="px-4 py-3 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+        <span id="lightbox-title" class="text-xs font-semibold text-slate-800 dark:text-white">Preview Foto</span>
+        <button type="button" onclick="closeLightbox()" class="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-white cursor-pointer">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+      <div class="p-4 bg-slate-100 dark:bg-slate-950 flex items-center justify-center">
+        <img id="lightbox-img" src="" alt="Preview" class="max-h-[70vh] w-auto object-contain rounded-lg">
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="border-t border-slate-200 dark:border-slate-800/80 py-3.5 px-4 text-center text-[11px] text-slate-500 dark:text-slate-400">
+    SIMAJAR — Sistem Informasi Manajemen Aset Jaringan
+  </footer>
+
+  <script>
+    const IS_AUTHENTICATED = <%= isAuthenticated ? 'true' : 'false' %>;
+    const ORG_NAME = <%- JSON.stringify(settings.organization_name || 'SIMAJAR') %>;
+    let html5QrCode = null;
+    let isScanning = false;
+
+    function escapeHtml(str) {
+      return String(str || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function openLightbox(src, title) {
+      document.getElementById('lightbox-title').textContent = title;
+      document.getElementById('lightbox-img').src = src;
+      document.getElementById('photo-lightbox').classList.remove('hidden');
+    }
+
+    function closeLightbox() {
+      document.getElementById('photo-lightbox').classList.add('hidden');
+    }
+
+    function copyCodeText(code, btnEl) {
+      if (!navigator.clipboard) return;
+      navigator.clipboard.writeText(code).then(() => {
+        const origHtml = btnEl.innerHTML;
+        btnEl.innerHTML = `<i data-lucide="check" class="w-3.5 h-3.5 text-emerald-500"></i><span>Tersalin</span>`;
+        lucide.createIcons();
+        setTimeout(() => {
+          btnEl.innerHTML = origHtml;
+          lucide.createIcons();
+        }, 1500);
+      });
+    }
+
+    function clearInputOnly() {
+      const inputEl = document.getElementById('input-asset-code');
+      if (inputEl) {
+        inputEl.value = '';
+        inputEl.focus();
+      }
+    }
+
+    // Tutup tampilan detail aset & munculkan kembali panel pemindaian
+    function closeValidationResult() {
+      const scannerPanel = document.getElementById('scanner-panel');
+      const resultArea = document.getElementById('validation-result-area');
+      const inputEl = document.getElementById('input-asset-code');
+
+      if (resultArea) {
+        resultArea.classList.add('hidden');
+        resultArea.innerHTML = '';
+      }
+      if (scannerPanel) {
+        scannerPanel.classList.remove('hidden');
+      }
+      if (inputEl) {
+        inputEl.value = '';
+        inputEl.focus();
+      }
+
+      window.history.replaceState({}, '', '/assets/validate');
+    }
+
+    function getStatusBadgeHtml(status) {
+      const st = String(status || '').toLowerCase();
+      const map = {
+        active: { label: 'ACTIVE / TERPASANG', cls: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30' },
+        spare: { label: 'SPARE / GUDANG', cls: 'bg-sky-500/15 text-sky-600 dark:text-sky-400 border-sky-500/30' },
+        maintenance: { label: 'MAINTENANCE / SERVICE', cls: 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30' },
+        broken: { label: 'BROKEN / RUSAK', cls: 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/30' },
+        disposed: { label: 'DISPOSED / AFKIR', cls: 'bg-slate-500/15 text-slate-500 dark:text-slate-400 border-slate-500/30' }
+      };
+      const item = map[st] || { label: st || '-', cls: 'bg-slate-500/15 text-slate-400 border-slate-500/30' };
+      return `<span class="px-2.5 py-0.5 rounded-md text-[10px] font-bold uppercase border ${item.cls}">${escapeHtml(item.label)}</span>`;
+    }
+
+    function renderValidationResult(payload) {
+      const scannerPanel = document.getElementById('scanner-panel');
+      const area = document.getElementById('validation-result-area');
+      if (!area) return;
+
+      // Sembunyikan panel pemindaian dan tampilkan area hasil validasi
+      if (scannerPanel) scannerPanel.classList.add('hidden');
+      area.classList.remove('hidden');
+
+      if (!payload || !payload.valid || !payload.asset) {
+        area.innerHTML = `
+          <div class="bg-white dark:bg-slate-900 border border-rose-500/40 rounded-2xl overflow-hidden shadow-lg">
+            <div class="bg-rose-500/15 border-b border-rose-500/25 px-5 py-4 flex items-center justify-between gap-3">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-rose-500/20 border border-rose-500/40 flex items-center justify-center text-rose-500 shrink-0">
+                  <i data-lucide="shield-x" class="w-6 h-6"></i>
+                </div>
+                <div>
+                  <h2 class="text-sm font-extrabold uppercase tracking-wide text-rose-600 dark:text-rose-400">
+                    Aset Tidak Terdaftar
+                  </h2>
+                  <p class="text-[11px] text-slate-600 dark:text-slate-300">Kode tidak ditemukan dalam database SIMAJAR</p>
+                </div>
+              </div>
+              <button type="button" onclick="closeValidationResult()" title="Tutup"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-200/80 dark:bg-slate-800 hover:bg-rose-500/20 text-slate-700 dark:text-slate-200 hover:text-rose-500 text-xs font-semibold transition cursor-pointer shrink-0">
+                <i data-lucide="x" class="w-4 h-4"></i>
+              </button>
+            </div>
+            <div class="p-6 text-center space-y-4">
+              <p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                ${escapeHtml(payload?.message || 'Data aset tidak ditemukan di sistem.')}
+              </p>
+              <button type="button" onclick="closeValidationResult()"
+                class="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white dark:text-slate-950 text-xs font-semibold transition cursor-pointer">
+                <i data-lucide="scan-line" class="w-4 h-4"></i>
+                <span>Pindai / Cek Kode Lain</span>
+              </button>
+            </div>
+          </div>
+        `;
+        lucide.createIcons();
+        return;
+      }
+
+      const a = payload.asset;
+      const m = payload.lastMovement;
+      const deviceTitle = [a.brand_name, a.model_name].filter(Boolean).join(' ') || '-';
+
+      const detailBtnHtml = IS_AUTHENTICATED
+        ? `<a href="/assets/${a.id}" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white dark:text-slate-950 font-semibold text-xs shadow-sm transition">
+             <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+             <span>Detail</span>
+           </a>`
+        : '';
+
+      const photosSectionHtml = (a.physical_photo || a.sn_photo)
+        ? `<div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-3 border-t border-slate-200 dark:border-slate-800">
+            ${a.physical_photo ? `
+              <div>
+                <span class="text-[11px] font-medium text-slate-500 dark:text-slate-400 block mb-1.5">Foto Fisik Perangkat</span>
+                <div onclick="openLightbox('${escapeHtml(a.physical_photo)}', 'Foto Fisik — ${escapeHtml(a.asset_code)}')"
+                  class="relative rounded-xl overflow-hidden border border-slate-300 dark:border-slate-700 cursor-zoom-in group">
+                  <img src="${escapeHtml(a.physical_photo)}" alt="Foto Fisik" class="w-full h-44 object-cover group-hover:scale-105 transition duration-300">
+                  <div class="absolute inset-0 bg-slate-950/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition">
+                    <span class="px-2.5 py-1 rounded-lg bg-slate-900/90 text-emerald-400 text-[11px] font-semibold inline-flex items-center gap-1">
+                      <i data-lucide="maximize-2" class="w-3 h-3"></i> Perbesar
+                    </span>
+                  </div>
+                </div>
+              </div>` : ''}
+            ${a.sn_photo ? `
+              <div>
+                <span class="text-[11px] font-medium text-slate-500 dark:text-slate-400 block mb-1.5">Foto Stiker Serial Number</span>
+                <div onclick="openLightbox('${escapeHtml(a.sn_photo)}', 'Foto Stiker SN — ${escapeHtml(a.asset_code)}')"
+                  class="relative rounded-xl overflow-hidden border border-slate-300 dark:border-slate-700 cursor-zoom-in group">
+                  <img src="${escapeHtml(a.sn_photo)}" alt="Foto SN" class="w-full h-44 object-cover group-hover:scale-105 transition duration-300">
+                  <div class="absolute inset-0 bg-slate-950/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition">
+                    <span class="px-2.5 py-1 rounded-lg bg-slate-900/90 text-emerald-400 text-[11px] font-semibold inline-flex items-center gap-1">
+                      <i data-lucide="maximize-2" class="w-3 h-3"></i> Perbesar
+                    </span>
+                  </div>
+                </div>
+              </div>` : ''}
+          </div>`
+        : '';
+
+      area.innerHTML = `
+        <div class="bg-white dark:bg-slate-900 border border-emerald-500/40 rounded-2xl overflow-hidden shadow-lg shadow-emerald-500/5">
+          <!-- Banner Terverifikasi + Tombol Close -->
+          <div class="bg-gradient-to-r from-emerald-500/15 via-emerald-500/10 to-sky-500/10 border-b border-emerald-500/25 px-5 py-4 flex items-center justify-between gap-3">
+            <div class="flex items-center gap-3 min-w-0">
+              <div class="w-11 h-11 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-500 shrink-0">
+                <i data-lucide="badge-check" class="w-6 h-6"></i>
+              </div>
+              <div class="min-w-0">
+                <div class="flex flex-wrap items-center gap-2">
+                  <span class="text-xs font-extrabold uppercase tracking-wide text-emerald-600 dark:text-emerald-400">
+                    ASET TERVERIFIKASI
+                  </span>
+                  ${getStatusBadgeHtml(a.status)}
+                </div>
+                <p class="text-[11px] text-slate-600 dark:text-slate-300 mt-0.5 truncate">
+                  Inventaris <strong>${escapeHtml(ORG_NAME)}</strong>
+                </p>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-2 shrink-0">
+              ${detailBtnHtml}
+              <button type="button" onclick="closeValidationResult()" title="Tutup"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-200/90 dark:bg-slate-800 hover:bg-rose-500/20 text-slate-700 dark:text-slate-200 hover:text-rose-500 border border-slate-300/80 dark:border-slate-700 text-xs font-semibold transition cursor-pointer">
+                <i data-lucide="x" class="w-4 h-4"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Highlight Kode & Cabang -->
+          <div class="p-5 space-y-4 text-xs">
+            <div class="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <span class="text-[10px] uppercase tracking-wider font-semibold text-slate-400 block">Kode Inventaris</span>
+                <div class="flex items-center gap-2 mt-0.5">
+                  <span class="text-base sm:text-lg font-bold font-mono text-emerald-600 dark:text-emerald-400">${escapeHtml(a.asset_code)}</span>
+                  <button type="button" onclick="copyCodeText('${escapeHtml(a.asset_code)}', this)"
+                    class="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-slate-200/80 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-[10px] font-medium text-slate-600 dark:text-slate-300 transition cursor-pointer">
+                    <i data-lucide="copy" class="w-3 h-3"></i>
+                    <span>Salin</span>
+                  </button>
+                </div>
+              </div>
+              <div class="sm:text-right">
+                <span class="text-[10px] uppercase tracking-wider font-semibold text-slate-400 block">Cabang Terdaftar</span>
+                <span class="font-bold text-slate-900 dark:text-white mt-0.5 inline-block">
+                  [${escapeHtml(a.branch_code || '-')}] ${escapeHtml(a.branch_name || '-')}
+                </span>
+              </div>
+            </div>
+
+            <!-- Grid Spesifikasi -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+              <div class="bg-slate-50/70 dark:bg-slate-950/60 border border-slate-200/70 dark:border-slate-800/80 rounded-xl p-3">
+                <span class="text-[11px] text-slate-500 dark:text-slate-400 block">Jenis Perangkat</span>
+                <span class="font-semibold text-slate-900 dark:text-white mt-0.5 block">${escapeHtml(a.type_name || '-')}</span>
+              </div>
+              <div class="bg-slate-50/70 dark:bg-slate-950/60 border border-slate-200/70 dark:border-slate-800/80 rounded-xl p-3">
+                <span class="text-[11px] text-slate-500 dark:text-slate-400 block">Merk & Model</span>
+                <span class="font-semibold text-slate-900 dark:text-white mt-0.5 block">${escapeHtml(deviceTitle)}</span>
+              </div>
+              <div class="bg-slate-50/70 dark:bg-slate-950/60 border border-slate-200/70 dark:border-slate-800/80 rounded-xl p-3">
+                <span class="text-[11px] text-slate-500 dark:text-slate-400 block">Serial Number (SN)</span>
+                <span class="font-mono font-semibold text-slate-900 dark:text-white mt-0.5 block">${escapeHtml(a.serial_number || '-')}</span>
+              </div>
+              <div class="bg-slate-50/70 dark:bg-slate-950/60 border border-slate-200/70 dark:border-slate-800/80 rounded-xl p-3">
+                <span class="text-[11px] text-slate-500 dark:text-slate-400 block">MAC Address</span>
+                <span class="font-mono font-semibold text-slate-900 dark:text-white mt-0.5 block">${escapeHtml(a.mac_address || '-')}</span>
+              </div>
+              <div class="bg-slate-50/70 dark:bg-slate-950/60 border border-slate-200/70 dark:border-slate-800/80 rounded-xl p-3">
+                <span class="text-[11px] text-slate-500 dark:text-slate-400 block">Kondisi</span>
+                <span class="font-semibold uppercase text-slate-900 dark:text-white mt-0.5 block">${escapeHtml(a.condition || '-')}</span>
+              </div>
+              <div class="bg-slate-50/70 dark:bg-slate-950/60 border border-slate-200/70 dark:border-slate-800/80 rounded-xl p-3">
+                <span class="text-[11px] text-slate-500 dark:text-slate-400 block">Penempatan / Hostname</span>
+                <span class="font-semibold text-slate-900 dark:text-white mt-0.5 block">
+                  ${a.linked_hostname
+                    ? `${escapeHtml(a.linked_location || '-')} — ${escapeHtml(a.linked_hostname)} (${escapeHtml(a.linked_ip || 'No IP')})`
+                    : (m && m.to_location ? escapeHtml(m.to_location) : 'Gudang / Spare Cabang')}
+                </span>
+              </div>
+            </div>
+
+            ${a.notes ? `
+              <div>
+                <span class="text-[11px] text-slate-500 dark:text-slate-400 block mb-1">Catatan Kelengkapan</span>
+                <p class="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-3 text-slate-700 dark:text-slate-300 leading-relaxed">
+                  ${escapeHtml(a.notes)}
+                </p>
+              </div>` : ''}
+
+            ${photosSectionHtml}
+
+            <!-- Tombol Bawah untuk Pindai Ulang -->
+            <div class="pt-2 flex justify-end">
+              <button type="button" onclick="closeValidationResult()"
+                class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-200/80 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-200 transition cursor-pointer">
+                <i data-lucide="scan-line" class="w-3.5 h-3.5 text-emerald-500"></i>
+                <span>Scan / Cek Aset Lain</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+      lucide.createIcons();
+    }
+
+    function extractAssetCode(rawText) {
+      const text = String(rawText || '').trim();
+      if (!text) return '';
+      try {
+        if (/^https?:\/\//i.test(text)) {
+          const urlObj = new URL(text);
+          const paramCode = urlObj.searchParams.get('code');
+          if (paramCode) return decodeURIComponent(paramCode).trim();
+        }
+      } catch (e) {}
+      return text;
+    }
+
+    async function validateCodeNow(rawText) {
+      const cleanCode = extractAssetCode(rawText);
+      if (!cleanCode) return;
+
+      const scannerPanel = document.getElementById('scanner-panel');
+      const area = document.getElementById('validation-result-area');
+
+      if (scannerPanel) scannerPanel.classList.add('hidden');
+      area.classList.remove('hidden');
+
+      window.history.replaceState({}, '', `/assets/validate?code=${encodeURIComponent(cleanCode)}`);
+
+      area.innerHTML = `
+        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-10 text-center space-y-2.5 shadow-sm">
+          <div class="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
+          <p class="text-xs text-slate-500 dark:text-slate-400">Memvalidasi kode <span class="font-mono font-semibold text-slate-700 dark:text-slate-200">${escapeHtml(cleanCode)}</span>...</p>
+        </div>
+      `;
+
+      try {
+        const resp = await fetch(`/api/assets/validate?code=${encodeURIComponent(cleanCode)}`);
+        const data = await resp.json();
+        renderValidationResult(data);
+      } catch (err) {
+        area.innerHTML = `
+          <div class="bg-rose-500/10 border border-rose-500/30 rounded-2xl p-5 text-center space-y-3">
+            <p class="text-xs text-rose-500">Gagal menghubungi server validasi.</p>
+            <button type="button" onclick="closeValidationResult()" class="px-4 py-2 rounded-xl bg-slate-800 text-white text-xs font-semibold cursor-pointer">Kembali</button>
+          </div>
+        `;
+      }
+    }
+
+    function handleManualSubmit(e) {
+      e.preventDefault();
+      const code = document.getElementById('input-asset-code')?.value;
+      validateCodeNow(code);
+    }
+
+    async function startQrScanner() {
+      if (isScanning) return;
+      if (typeof Html5Qrcode === 'undefined') {
+        alert('Library kamera QR belum termuat. Periksa koneksi internet Anda.');
+        return;
+      }
+
+      const wrapper = document.getElementById('scanner-wrapper');
+      const btnStart = document.getElementById('btn-start-scan');
+      const btnStop = document.getElementById('btn-stop-scan');
+
+      wrapper.classList.remove('hidden');
+      btnStart.classList.add('hidden');
+      btnStop.classList.remove('hidden');
+
+      html5QrCode = new Html5Qrcode('qr-reader');
+      try {
+        await html5QrCode.start(
+          { facingMode: 'environment' },
+          { fps: 10, qrbox: { width: 210, height: 210 } },
+          async (decodedText) => {
+            await stopQrScanner();
+            validateCodeNow(decodedText);
+          }
+        );
+        isScanning = true;
+      } catch (err) {
+        wrapper.classList.add('hidden');
+        btnStart.classList.remove('hidden');
+        btnStop.classList.add('hidden');
+        alert('Tidak dapat mengakses kamera. Pastikan izin kamera diizinkan dan dibuka melalui HTTPS.');
+      }
+    }
+
+    async function stopQrScanner() {
+      const wrapper = document.getElementById('scanner-wrapper');
+      const btnStart = document.getElementById('btn-start-scan');
+      const btnStop = document.getElementById('btn-stop-scan');
+
+      if (html5QrCode && isScanning) {
+        try {
+          await html5QrCode.stop();
+          html5QrCode.clear();
+        } catch (e) {}
+      }
+      isScanning = false;
+      wrapper.classList.add('hidden');
+      btnStart.classList.remove('hidden');
+      btnStop.classList.add('hidden');
+    }
+
+    function toggleTheme() {
+      const htmlEl = document.documentElement;
+      if (htmlEl.classList.contains('dark')) {
+        htmlEl.classList.remove('dark');
+        localStorage.setItem('theme', 'light');
+      } else {
+        htmlEl.classList.add('dark');
+        localStorage.setItem('theme', 'dark');
+      }
+    }
+
+    lucide.createIcons();
+    window.addEventListener('DOMContentLoaded', () => {
+      if (window.__INITIAL_VALIDATION__) {
+        renderValidationResult(window.__INITIAL_VALIDATION__);
+      }
+      requestAnimationFrame(() => {
+        document.documentElement.classList.remove('preload');
+      });
+    });
+  </script>
+</body>
+</html>

@@ -45,22 +45,15 @@ function verifySessionToken(token) {
   return parseInt(userId, 10);
 }
 
-// Middleware utama autentikasi & pembangun helper permission
-function requireAuth(req, res, next) {
+// Helper internal untuk membangun objek user & permission dari session cookie
+function resolveUserFromCookie(req) {
   const cookies = parseCookies(req.headers.cookie);
   const userId = verifySessionToken(cookies.netasset_session);
-
-  if (!userId) {
-    return res.redirect('/login');
-  }
+  if (!userId) return null;
 
   const user = db.prepare('SELECT id, full_name, username, role, all_branches, allowed_menus, is_active FROM users WHERE id = ?').get(userId);
-  if (!user || user.is_active !== 1) {
-    res.clearCookie('netasset_session');
-    return res.redirect('/login');
-  }
+  if (!user || user.is_active !== 1) return null;
 
-  // Parse daftar menu yang diizinkan
   let parsedMenus = [];
   try {
     parsedMenus = JSON.parse(user.allowed_menus || '[]');
@@ -69,19 +62,15 @@ function requireAuth(req, res, next) {
   }
   user.menus = parsedMenus;
 
-  // Ambil daftar branch_id jika bukan administrator dan bukan all_branches
   const branchRows = db.prepare('SELECT branch_id FROM user_branches WHERE user_id = ?').all(user.id);
   user.allowed_branch_ids = branchRows.map(r => Number(r.branch_id));
 
-  // Grup menu yang digabung ke dalam 1 hak akses 'assets'
   const assetGroupMenus = ['assets', 'device-types', 'brands', 'device-models', 'manufactures'];
 
-  // Helper pengecekan akses menu
   const hasMenuAccess = (menuKey) => {
     if (user.role === 'administrator') return true;
     if (user.menus.includes(menuKey)) return true;
 
-    // Jika menuKey termasuk grup Master Assets, cukup punya akses 'assets' (atau salah satu sub-menu lama)
     if (assetGroupMenus.includes(menuKey)) {
       return assetGroupMenus.some(k => user.menus.includes(k));
     }
@@ -89,21 +78,17 @@ function requireAuth(req, res, next) {
     return false;
   };
 
-  // Helper terpusat untuk mengecek izin menu maupun aksi CRUD
   const can = (permission) => {
     if (user.role === 'administrator') return true;
 
-    // 1. Cek akses menu berdasarkan checkbox allowed_menus user
     if (permission.startsWith('menu.')) {
       const menuKey = permission.replace('menu.', '');
       return hasMenuAccess(menuKey);
     }
 
-    // 2. Cek izin tulis / operasional (viewer murni read-only)
     if (user.role === 'viewer') return false;
 
     if (user.role === 'branch_user') {
-      // Seluruh operasi tulis Assets, Mutasi, Service, Device Types, Brand & Model jadi 1 hak akses
       if (['asset.write', 'device_type.write', 'brand.write', 'model.write', 'manufacture.write'].includes(permission)) {
         return hasMenuAccess('assets');
       }
@@ -122,18 +107,53 @@ function requireAuth(req, res, next) {
     return false;
   };
 
-  // Helper validasi apakah user berhak atas branchId tertentu (Anti-IDOR)
   const canAccessBranch = (branchId) => {
     if (user.role === 'administrator' || user.all_branches === 1) return true;
     return user.allowed_branch_ids.includes(Number(branchId));
   };
 
-  req.user = user;
-  req.can = can;
-  req.canAccessBranch = canAccessBranch;
+  return { user, can, canAccessBranch };
+}
 
-  res.locals.currentUser = user;
-  res.locals.can = can;
+// Middleware utama autentikasi (Wajib login, redirect ke /login jika belum login)
+function requireAuth(req, res, next) {
+  const resolved = resolveUserFromCookie(req);
+
+  if (!resolved) {
+    res.clearCookie('netasset_session');
+    return res.redirect('/login');
+  }
+
+  req.user = resolved.user;
+  req.can = resolved.can;
+  req.canAccessBranch = resolved.canAccessBranch;
+
+  res.locals.currentUser = resolved.user;
+  res.locals.can = resolved.can;
+
+  next();
+}
+
+// Middleware autentikasi opsional untuk halaman publik (misal /assets/validate)
+function optionalAuth(req, res, next) {
+  const resolved = resolveUserFromCookie(req);
+
+  if (!resolved) {
+    req.user = null;
+    req.can = () => false;
+    req.canAccessBranch = () => false;
+
+    res.locals.currentUser = null;
+    res.locals.can = () => false;
+    return next();
+  }
+
+  req.user = resolved.user;
+  req.can = resolved.can;
+  req.canAccessBranch = resolved.canAccessBranch;
+
+  res.locals.currentUser = resolved.user;
+  res.locals.can = resolved.can;
 
   next();
 }
@@ -180,6 +200,7 @@ module.exports = {
   verifyPassword,
   createSessionToken,
   requireAuth,
+  optionalAuth,
   requireMenu,
   requirePermission,
   requireAdmin

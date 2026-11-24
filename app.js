@@ -1,7 +1,7 @@
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
-const { requireAuth } = require('./middlewares/authMiddleware');
+const { requireAuth, optionalAuth } = require('./middlewares/authMiddleware');
 const branchContext = require('./middlewares/branchContext');
 
 const uploadDir = path.join(__dirname, 'public', 'uploads');
@@ -17,6 +17,7 @@ const userRoutes = require('./routes/userRoutes');
 const auditLogRoutes = require('./routes/auditLogRoutes');
 const manufactureRoutes = require('./routes/manufactureRoutes');
 const assetRoutes = require('./routes/assetRoutes');
+const assetController = require('./controllers/assetController');
 
 const app = express();
 const PORT = 3500;
@@ -31,8 +32,10 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// 1. Public Routes (Login & Logout — Tanpa requireAuth)
+// 1. Public Routes (Login, Logout & Validasi QR Aset — Tanpa paksa login)
 app.use('/', authRoutes);
+app.get('/assets/validate', optionalAuth, assetController.validateAssetPage);
+app.get('/api/assets/validate', optionalAuth, assetController.apiValidateAsset);
 
 // 2. Global Auth, Fixed Session Expiry Check & Branch Context Middleware
 app.use(requireAuth);

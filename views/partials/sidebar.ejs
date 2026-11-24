@@ -78,6 +78,11 @@
         <span>Network Devices</span>
       </a>
     <% } %>
+    <a href="/assets/validate"
+      class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition <%= activeMenu === 'asset-validate' ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' %>">
+      <i data-lucide="scan-line" class="w-4 h-4 shrink-0"></i>
+      <span>Validasi QR Aset</span>
+    </a>
 
     <% if (can('menu.assets')) { %>
       <div class="px-3 pt-4 pb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
