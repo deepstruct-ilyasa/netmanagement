@@ -1,14 +1,5 @@
-<footer class="mt-auto border-t border-slate-200 dark:border-slate-800 py-3.5 px-6 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-500">
+<footer class="mt-auto border-t border-slate-200 dark:border-slate-800 py-3.5 px-6 flex flex-col sm:flex-row items-center justify-center gap-2 text-xs text-slate-500">
       <span>Network Management & Network Infrastructure</span>
-
-      <!-- Indikator Live Countdown Session (Fixed / Non-Reset) -->
-      <div id="session-timer-badge"
-        class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 font-mono text-[11px] text-slate-600 dark:text-slate-300 transition-colors"
-        title="Sisa waktu sesi aktif sejak login">
-        <i data-lucide="clock" class="w-3.5 h-3.5 text-emerald-500" id="session-timer-icon"></i>
-        <span>Auto Logout:</span>
-        <strong id="session-countdown-display" class="font-semibold text-emerald-600 dark:text-emerald-400">--:--</strong>
-      </div>
     </footer>
   </div> <!-- Tutup Wrapper Konten Kanan -->
 
@@ -78,82 +69,7 @@
         document.body.classList.remove('overflow-hidden');
       }
     }
-
-    // =========================================================
-    // REAL FIXED SESSION COUNTDOWN (TIDAK TERPENGARUH APAPUN)
-    // =========================================================
-    (function () {
-      const SESSION_LIMIT_MS = Number(<%= typeof sessionTimeoutMs !== 'undefined' ? sessionTimeoutMs : 0 %>);
-      const SERVER_EXPIRES_AT = Number(<%= typeof sessionExpiresAt !== 'undefined' ? sessionExpiresAt : 0 %>);
-      if (!SERVER_EXPIRES_AT || SERVER_EXPIRES_AT <= 0) return;
-
-      const displayEl = document.getElementById('session-countdown-display');
-      const badgeEl = document.getElementById('session-timer-badge');
-      const iconEl = document.getElementById('session-timer-icon');
-      let isLoggingOut = false;
-
-      function getRealExpiresAt() {
-        const match = document.cookie.match(/(?:^|;\s*)session_expires_at=(\d+)/);
-        return match ? parseInt(match[1], 10) : SERVER_EXPIRES_AT;
-      }
-
-      function formatDuration(ms) {
-        const totalSeconds = Math.max(0, Math.ceil(ms / 1000));
-        const hours = Math.floor(totalSeconds / 3600);
-        const minutes = Math.floor((totalSeconds % 3600) / 60);
-        const seconds = totalSeconds % 60;
-
-        const pad = (n) => String(n).padStart(2, '0');
-        return hours > 0
-          ? `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`
-          : `${pad(minutes)}:${pad(seconds)}`;
-      }
-
-      function triggerAutoLogout() {
-        if (isLoggingOut) return;
-        isLoggingOut = true;
-        document.cookie = 'session_expires_at=; Max-Age=0; path=/';
-        window.location.href = '/logout';
-      }
-
-      function updateCountdown() {
-        const expiresAt = getRealExpiresAt();
-        const remainingMs = expiresAt - Date.now();
-
-        if (remainingMs <= 0) {
-          if (displayEl) displayEl.textContent = '00:00';
-          triggerAutoLogout();
-          return;
-        }
-
-        if (displayEl) {
-          displayEl.textContent = formatDuration(remainingMs);
-        }
-
-        if (badgeEl && displayEl && iconEl) {
-          const warningThreshold = Math.min(60000, SESSION_LIMIT_MS * 0.25);
-          const dangerThreshold = Math.min(15000, SESSION_LIMIT_MS * 0.1);
-
-          if (remainingMs <= dangerThreshold) {
-            badgeEl.className = 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-rose-500/15 border border-rose-500/40 font-mono text-[11px] text-rose-400 animate-pulse transition-colors';
-            displayEl.className = 'font-bold text-rose-400';
-            iconEl.className = 'w-3.5 h-3.5 text-rose-400';
-          } else if (remainingMs <= warningThreshold) {
-            badgeEl.className = 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-amber-500/15 border border-amber-500/30 font-mono text-[11px] text-amber-300 transition-colors';
-            displayEl.className = 'font-semibold text-amber-400';
-            iconEl.className = 'w-3.5 h-3.5 text-amber-400';
-          } else {
-            badgeEl.className = 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 font-mono text-[11px] text-slate-600 dark:text-slate-300 transition-colors';
-            displayEl.className = 'font-semibold text-emerald-600 dark:text-emerald-400';
-            iconEl.className = 'w-3.5 h-3.5 text-emerald-500';
-          }
-        }
-      }
-
-      updateCountdown();
-      setInterval(updateCountdown, 1000);
-    })();
-
+    
     lucide.createIcons();
     window.addEventListener('DOMContentLoaded', () => {
       requestAnimationFrame(() => {
