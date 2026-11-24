@@ -1,94 +1,207 @@
 <!DOCTYPE html>
-<html lang="id" class="dark">
+<html lang="id" class="dark preload">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title><%= title %></title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title><%= typeof title !== 'undefined' ? title : 'Login — SIMAJAR' %></title>
+  <link rel="icon" type="image/png" href="/img/favicon.png">
   <script src="https://unpkg.com/lucide@latest"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
-    tailwind.config = { darkMode: 'class' };
+    tailwind.config = {
+      darkMode: 'class'
+    };
+
+    // Terapkan tema tersimpan sebelum halaman di-render (anti kedip)
     if (localStorage.getItem('theme') === 'light') {
       document.documentElement.classList.remove('dark');
     } else {
       document.documentElement.classList.add('dark');
     }
   </script>
-</head>
-<body class="bg-slate-100 dark:bg-slate-950 text-slate-800 dark:text-slate-100 min-h-screen flex items-center justify-center p-4 font-sans transition-colors duration-200">
+  <style>
+    /* Matikan transisi CSS sesaat ketika halaman baru dibuka agar tidak berkedip */
+    html.preload * {
+      transition: none !important;
+    }
 
-  <div class="w-full max-w-md space-y-6">
-    <!-- Logo & Judul -->
-    <div class="text-center space-y-2">
-      <div class="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-500 mb-1">
-        <i data-lucide="network" class="w-6 h-6"></i>
+    .bg-grid-pattern {
+      background-image: radial-gradient(rgba(16, 185, 129, 0.14) 1px, transparent 1px);
+      background-size: 24px 24px;
+    }
+    .dark .bg-grid-pattern {
+      background-image: radial-gradient(rgba(16, 185, 129, 0.1) 1px, transparent 1px);
+      background-size: 24px 24px;
+    }
+  </style>
+</head>
+<body class="bg-slate-100 dark:bg-slate-950 text-slate-800 dark:text-slate-100 min-h-dvh flex items-center justify-center px-4 pt-[calc(1.5rem+env(safe-area-inset-top,0px))] pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] sm:px-6 font-sans transition-colors duration-200 relative overflow-x-hidden bg-grid-pattern">
+
+  <!-- Dekorasi Ambient Glow -->
+  <div aria-hidden="true" class="pointer-events-none fixed inset-0 overflow-hidden">
+    <div class="absolute -top-32 -left-32 w-80 h-80 rounded-full bg-emerald-500/15 dark:bg-emerald-500/10 blur-3xl"></div>
+    <div class="absolute -bottom-32 -right-32 w-80 h-80 rounded-full bg-sky-500/15 dark:bg-sky-500/10 blur-3xl"></div>
+  </div>
+
+  <!-- Tombol Toggle Tema Terang / Gelap (Sama seperti di Header Dashboard) -->
+  <div class="fixed top-[calc(1rem+env(safe-area-inset-top,0px))] right-4 sm:right-6 z-20">
+    <button type="button" id="theme-toggle" onclick="toggleTheme()"
+      class="p-2 rounded-lg bg-white/90 dark:bg-slate-800/80 hover:bg-slate-200/80 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 backdrop-blur shadow-sm focus:outline-none transition cursor-pointer"
+      title="Ganti Tema Terang / Gelap" aria-label="Ganti Tema Terang / Gelap">
+      <!-- Ikon Matahari (Muncul saat Dark Mode untuk beralih ke Terang) -->
+      <svg id="icon-sun" class="w-5 h-5 text-amber-400 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
+      </svg>
+      <!-- Ikon Bulan (Muncul saat Light Mode untuk beralih ke Gelap) -->
+      <svg id="icon-moon" class="w-5 h-5 text-slate-700 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
+      </svg>
+    </button>
+  </div>
+
+  <!-- Container Utama -->
+  <div class="relative z-10 w-full max-w-md space-y-6 my-auto">
+
+    <!-- Logo & Branding -->
+    <div class="text-center">
+      <div class="inline-flex items-center justify-center w-16 h-16">
+        <img
+          src="/img/favicon.png"
+          alt="SIMAJAR"
+          class="w-full h-full object-contain"
+          onerror="this.classList.add('hidden'); this.nextElementSibling.classList.remove('hidden');"
+        />
+        <i data-lucide="network" class="hidden w-12 h-12 text-emerald-500"></i>
       </div>
-      <h1 class="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-        NetAsset <span class="text-emerald-500">Hospital</span>
-      </h1>
-      <p class="text-xs text-slate-500 dark:text-slate-400">
-        IT Infrastructure & Multi-Branch Network Asset Management
-      </p>
+
+      <div>
+        <h1 class="text-2xl sm:text-[28px] font-extrabold tracking-wider text-slate-900 dark:text-white">
+          SIMA<span class="text-emerald-500">JAR</span>
+        </h1>
+        <p class="text-xs font-medium text-slate-600 dark:text-slate-300 mt-1">
+          Sistem Informasi Manajemen Aset Jaringan
+        </p>
+      </div>
     </div>
 
     <!-- Card Form Login -->
-    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 sm:p-8 shadow-xl space-y-5">
-      <div>
-        <h2 class="text-base font-semibold text-slate-900 dark:text-white">Masuk ke Sistem</h2>
-        <p class="text-xs text-slate-500 dark:text-slate-400">Silakan masukkan kredensial akun IT Anda.</p>
+    <div class="bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200/90 dark:border-slate-800 rounded-2xl p-6 sm:p-8 shadow-xl shadow-slate-900/5 dark:shadow-black/40 space-y-5">
+      <div class="flex items-start justify-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-4">
+        <div>
+          <h2 class="text-base text-center font-semibold text-slate-900 dark:text-white">Masuk ke Sistem</h2>
+          <p class="text-xs text-center text-slate-500 dark:text-slate-400 mt-0.5">Silakan masukkan kredensial akun Anda.</p>
+        </div>
       </div>
 
-      <% if (errorMsg) { %>
-        <div class="bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-300 px-3.5 py-2.5 rounded-xl text-xs flex items-center gap-2">
+      <% if (typeof errorMsg !== 'undefined' && errorMsg) { %>
+        <div class="bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-300 px-3.5 py-2.5 rounded-xl text-xs flex items-center gap-2.5">
           <i data-lucide="alert-circle" class="w-4 h-4 shrink-0 text-rose-500"></i>
           <span><%= errorMsg %></span>
         </div>
       <% } %>
 
-      <form action="/login" method="POST" class="space-y-4 text-sm">
+      <form id="login-form" action="/login" method="POST" class="space-y-4 text-sm">
         <div>
           <label for="username" class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">Username</label>
-          <div class="relative">
-            <i data-lucide="user" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
+          <div class="relative group">
+            <i data-lucide="user" class="w-4 h-4 text-slate-400 group-focus-within:text-emerald-500 absolute left-3.5 top-1/2 -translate-y-1/2 transition-colors"></i>
             <input type="text" id="username" name="username" required autofocus autocomplete="username"
-              placeholder="admin"
-              class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl pl-10 pr-3.5 py-2.5 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-emerald-500 transition">
+              placeholder="Masukkan username"
+              class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700/90 rounded-xl pl-10 pr-3.5 py-2.5 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition">
           </div>
         </div>
 
         <div>
           <label for="password" class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">Password</label>
-          <div class="relative">
-            <i data-lucide="lock" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
+          <div class="relative group">
+            <i data-lucide="lock" class="w-4 h-4 text-slate-400 group-focus-within:text-emerald-500 absolute left-3.5 top-1/2 -translate-y-1/2 transition-colors"></i>
             <input type="password" id="password" name="password" required autocomplete="current-password"
               placeholder="••••••••"
-              class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl pl-10 pr-10 py-2.5 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-emerald-500 transition">
+              class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700/90 rounded-xl pl-10 pr-10 py-2.5 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition">
             <button type="button" onclick="togglePasswordVisibility()" title="Tampilkan / Sembunyikan Password"
-              class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer">
-              <i id="eye-icon" data-lucide="eye" class="w-4 h-4"></i>
+              class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 absolute right-3 top-1/2 -translate-y-1/2 p-1 cursor-pointer transition-colors">
+              <span id="eye-show-wrap"><i data-lucide="eye" class="w-4 h-4"></i></span>
+              <span id="eye-hide-wrap" class="hidden"><i data-lucide="eye-off" class="w-4 h-4"></i></span>
             </button>
           </div>
         </div>
 
-        <button type="submit"
-          class="w-full py-2.5 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white dark:text-slate-950 font-semibold text-sm transition shadow-sm flex items-center justify-center gap-2 cursor-pointer mt-2">
+        <button type="submit" id="login-submit-btn"
+          class="w-full py-2.5 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-600 active:scale-[0.99] text-white dark:text-slate-950 font-semibold text-sm transition shadow-md shadow-emerald-500/20 flex items-center justify-center gap-2 cursor-pointer mt-2">
           <i data-lucide="log-in" class="w-4 h-4"></i>
-          <span>Login</span>
+          <span id="login-submit-text">Masuk</span>
         </button>
       </form>
     </div>
 
-    <p class="text-center text-[11px] text-slate-400 dark:text-slate-500">
-      Network Management & Network Infrastructure
-    </p>
+    <!-- Footer -->
+    <div class="text-center space-y-1">
+      <p class="text-[11px] font-medium text-slate-500 dark:text-slate-400">
+        SIMAJAR — Sistem Informasi Manajemen Aset Jaringan
+      </p>
+      <p class="text-[10px] text-slate-400 dark:text-slate-500">
+        &copy; <%= new Date().getFullYear() %> Network Management & Infrastructure
+      </p>
+    </div>
   </div>
 
   <script>
-    lucide.createIcons();
+    // Sinkronkan Ikon Tema saat halaman dimuat (identik dengan header/footer dashboard)
+    function updateThemeIcons() {
+      const isDark = document.documentElement.classList.contains('dark');
+      const sunIcon = document.getElementById('icon-sun');
+      const moonIcon = document.getElementById('icon-moon');
+      if (sunIcon && moonIcon) {
+        if (isDark) {
+          sunIcon.classList.remove('hidden');
+          moonIcon.classList.add('hidden');
+        } else {
+          sunIcon.classList.add('hidden');
+          moonIcon.classList.remove('hidden');
+        }
+      }
+    }
+    updateThemeIcons();
+
+    function toggleTheme() {
+      const htmlEl = document.documentElement;
+      if (htmlEl.classList.contains('dark')) {
+        htmlEl.classList.remove('dark');
+        localStorage.setItem('theme', 'light');
+      } else {
+        htmlEl.classList.add('dark');
+        localStorage.setItem('theme', 'dark');
+      }
+      updateThemeIcons();
+    }
+
     function togglePasswordVisibility() {
       const pwdInput = document.getElementById('password');
-      pwdInput.type = pwdInput.type === 'password' ? 'text' : 'password';
+      const showWrap = document.getElementById('eye-show-wrap');
+      const hideWrap = document.getElementById('eye-hide-wrap');
+      const isHidden = pwdInput.type === 'password';
+
+      pwdInput.type = isHidden ? 'text' : 'password';
+      showWrap.classList.toggle('hidden', isHidden);
+      hideWrap.classList.toggle('hidden', !isHidden);
     }
+
+    document.getElementById('login-form')?.addEventListener('submit', function () {
+      const btn = document.getElementById('login-submit-btn');
+      const txt = document.getElementById('login-submit-text');
+      if (btn && txt) {
+        btn.disabled = true;
+        btn.classList.add('opacity-80', 'cursor-not-allowed');
+        txt.textContent = 'Memverifikasi...';
+      }
+    });
+
+    lucide.createIcons();
+    window.addEventListener('DOMContentLoaded', () => {
+      requestAnimationFrame(() => {
+        document.documentElement.classList.remove('preload');
+      });
+    });
   </script>
 </body>
 </html>

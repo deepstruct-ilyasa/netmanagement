@@ -4,7 +4,7 @@ const { logAudit } = require('../utils/auditLogger');
 
 exports.showLogin = (req, res) => {
   res.render('login', {
-    title: 'Login - NetAsset Hospital',
+    title: 'Login - SIMAJAR',
     errorMsg: req.query.error || null
   });
 };
