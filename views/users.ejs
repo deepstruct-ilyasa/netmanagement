@@ -1,31 +1,7 @@
 <%- include('partials/header', { pageTitle: 'Manajemen Pengguna & Hak Akses' }) %>
 
 <main class="p-4 sm:p-6 flex-1 w-full space-y-5">
-
-  <% if (errorMsg) { %>
-    <div id="alert-error" class="bg-rose-500/15 border border-rose-500/40 text-rose-400 px-4 py-3 rounded-xl flex items-center justify-between text-sm">
-      <div class="flex items-center gap-2.5">
-        <i data-lucide="alert-circle" class="w-5 h-5 shrink-0"></i>
-        <span><%= errorMsg %></span>
-      </div>
-      <button onclick="document.getElementById('alert-error').remove()" class="p-1 hover:text-white cursor-pointer">
-        <i data-lucide="x" class="w-4 h-4"></i>
-      </button>
-    </div>
-  <% } %>
-
-  <% if (successMsg) { %>
-    <div id="alert-success" class="bg-emerald-500/15 border border-emerald-500/40 text-emerald-400 px-4 py-3 rounded-xl flex items-center justify-between text-sm">
-      <div class="flex items-center gap-2.5">
-        <i data-lucide="check-circle-2" class="w-5 h-5 shrink-0"></i>
-        <span><%= successMsg %></span>
-      </div>
-      <button onclick="document.getElementById('alert-success').remove()" class="p-1 hover:text-white cursor-pointer">
-        <i data-lucide="x" class="w-4 h-4"></i>
-      </button>
-    </div>
-  <% } %>
-
+  
   <!-- Header Bar -->
   <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-800 border border-slate-700 p-4 rounded-xl">
     <div>
@@ -127,7 +103,9 @@
                   </button>
                   <% if (String(u.id) !== String(currentUser.id)) { %>
                     <button type="button" title="Hapus User"
-                      onclick="openDeleteUserModal('<%= u.id %>', '<%= u.full_name %>')"
+                      data-id="<%= u.id %>"
+                      data-name="<%= u.full_name %>"
+                      onclick="confirmDeleteUser(this)"
                       class="p-2 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 transition cursor-pointer">
                       <i data-lucide="trash-2" class="w-4 h-4"></i>
                     </button>
@@ -143,6 +121,9 @@
 </main>
 
 <% if (can('user.write')) { %>
+<!-- Form Tersembunyi untuk Submit Hapus User via Global Confirm Modal -->
+<form id="delete-user-form" method="POST" class="hidden"></form>
+
 <!-- MODAL TAMBAH USER -->
 <div id="modal-add-user" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4">
   <div onclick="closeModal('modal-add-user')" class="fixed inset-0 bg-slate-950/75 backdrop-blur-sm"></div>
@@ -351,21 +332,6 @@
   </div>
 </div>
 
-<!-- MODAL HAPUS USER -->
-<div id="modal-delete-user" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4">
-  <div onclick="closeModal('modal-delete-user')" class="fixed inset-0 bg-slate-950/75 backdrop-blur-sm"></div>
-  <div class="relative bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-md p-6 shadow-2xl z-10 space-y-4">
-    <h3 class="text-lg font-semibold text-white">Hapus Akun User?</h3>
-    <p class="text-sm text-slate-300">
-      Apakah Anda yakin ingin menghapus user <span id="delete-user-name" class="font-bold text-rose-400"></span>?
-    </p>
-    <form id="delete-user-form" method="POST" class="pt-2 flex justify-end gap-3 text-sm">
-      <button type="button" onclick="closeModal('modal-delete-user')" class="px-4 py-2 rounded-lg bg-slate-700 text-slate-200 cursor-pointer">Batal</button>
-      <button type="submit" class="px-4 py-2 rounded-lg bg-rose-500 hover:bg-rose-600 text-white font-semibold cursor-pointer">Ya, Hapus</button>
-    </form>
-  </div>
-</div>
-
 <script>
   function toggleBranchList(prefix) {
     const scope = document.getElementById(`${prefix}_branch_scope`).value;
@@ -433,12 +399,35 @@
     openModal('modal-edit-user');
   }
 
-  function openDeleteUserModal(id, name) {
-    document.getElementById('delete-user-name').textContent = name;
-    document.getElementById('delete-user-form').action = `/users/${id}/delete`;
-    openModal('modal-delete-user');
+  function confirmDeleteUser(btn) {
+    const id = btn.getAttribute('data-id');
+    const name = btn.getAttribute('data-name');
+    showAppConfirm({
+      title: 'Hapus Akun User?',
+      message: `Apakah Anda yakin ingin menghapus user ${name}? Tindakan ini tidak dapat dibatalkan.`,
+      type: 'danger',
+      confirmText: 'Ya, Hapus',
+      onConfirm: () => {
+        const form = document.getElementById('delete-user-form');
+        form.action = `/users/${id}/delete`;
+        form.submit();
+      }
+    });
   }
 </script>
 <% } %>
 
 <%- include('partials/footer') %>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const serverError = <%- JSON.stringify(typeof errorMsg !== 'undefined' ? errorMsg : null) %>;
+    const serverSuccess = <%- JSON.stringify(typeof successMsg !== 'undefined' ? successMsg : null) %>;
+
+    if (serverError) {
+      showAppAlert('error', 'Terjadi Kesalahan', serverError);
+    } else if (serverSuccess) {
+      showAppAlert('success', 'Berhasil', serverSuccess);
+    }
+  });
+</script>

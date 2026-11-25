@@ -3,6 +3,54 @@
     </footer>
   </div> <!-- Tutup Wrapper Konten Kanan -->
 
+  <!-- ======================================================================= -->
+  <!-- GLOBAL FEEDBACK & CONFIRMATION MODALS (DIGUNAKAN DI SELURUH HALAMAN)    -->
+  <!-- ======================================================================= -->
+
+  <!-- 1. Modal Notifikasi (Sukses / Error / Warning / Info) -->
+  <div id="global-feedback-modal" class="no-print fixed inset-0 z-[90] hidden flex items-center justify-center p-4">
+    <div onclick="closeGlobalFeedbackModal()" class="fixed inset-0 bg-slate-950/75 backdrop-blur-sm"></div>
+    <div class="relative bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl w-full max-w-sm p-6 text-center space-y-4 shadow-2xl z-10">
+      <div id="global-feedback-icon" class="w-12 h-12 rounded-2xl mx-auto flex items-center justify-center bg-emerald-500/15 text-emerald-500 dark:text-emerald-400 border border-emerald-500/30">
+        <i data-lucide="check-circle-2" class="w-6 h-6"></i>
+      </div>
+      <div class="space-y-1.5">
+        <h3 id="global-feedback-title" class="text-base font-bold text-slate-900 dark:text-white">Berhasil</h3>
+        <p id="global-feedback-message" class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed"></p>
+      </div>
+      <div id="global-feedback-actions" class="flex flex-col gap-2 pt-1">
+        <button type="button" onclick="closeGlobalFeedbackModal()"
+          class="w-full py-2.5 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold text-xs transition cursor-pointer">
+          OK, Mengerti
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. Modal Konfirmasi Aksi (Pengganti window.confirm) -->
+  <div id="global-confirm-modal" class="no-print fixed inset-0 z-[90] hidden flex items-center justify-center p-4">
+    <div onclick="closeGlobalConfirmModal()" class="fixed inset-0 bg-slate-950/75 backdrop-blur-sm"></div>
+    <div class="relative bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl w-full max-w-sm p-6 text-center space-y-4 shadow-2xl z-10">
+      <div id="global-confirm-icon" class="w-12 h-12 rounded-2xl mx-auto flex items-center justify-center bg-amber-500/15 text-amber-500 dark:text-amber-400 border border-amber-500/30">
+        <i data-lucide="help-circle" class="w-6 h-6"></i>
+      </div>
+      <div class="space-y-1.5">
+        <h3 id="global-confirm-title" class="text-base font-bold text-slate-900 dark:text-white">Konfirmasi</h3>
+        <p id="global-confirm-message" class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed"></p>
+      </div>
+      <div class="grid grid-cols-2 gap-2.5 pt-1">
+        <button type="button" onclick="closeGlobalConfirmModal()"
+          class="py-2.5 px-4 rounded-xl bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-200 font-semibold text-xs transition cursor-pointer">
+          Batal
+        </button>
+        <button type="button" id="global-confirm-ok-btn"
+          class="py-2.5 px-4 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs transition cursor-pointer">
+          Ya, Lanjutkan
+        </button>
+      </div>
+    </div>
+  </div>
+
   <script>
     // Sinkronkan Ikon Tema saat halaman dimuat
     function updateThemeIcons() {
@@ -66,14 +114,163 @@
       const modal = document.getElementById(modalId);
       if (modal) {
         modal.classList.add('hidden');
-        document.body.classList.remove('overflow-hidden');
+        // Lepas overflow-hidden hanya jika tidak ada modal lain yang masih terbuka
+        const anyOpen = document.querySelectorAll('[id^="modal-"]:not(.hidden), #global-feedback-modal:not(.hidden), #global-confirm-modal:not(.hidden)').length > 0;
+        if (!anyOpen) {
+          document.body.classList.remove('overflow-hidden');
+        }
       }
     }
-    
+
+    // =========================================================================
+    // HELPER GLOBAL POPUP NOTIFIKASI & KONFIRMASI
+    // =========================================================================
+    let _globalFeedbackOnClose = null;
+    let _globalConfirmCallback = null;
+
+    window.showAppAlert = function (type, title, message, options = {}) {
+      const modal = document.getElementById('global-feedback-modal');
+      const iconBox = document.getElementById('global-feedback-icon');
+      const titleEl = document.getElementById('global-feedback-title');
+      const msgEl = document.getElementById('global-feedback-message');
+      const actionsEl = document.getElementById('global-feedback-actions');
+
+      if (!modal) return;
+
+      _globalFeedbackOnClose = typeof options.onClose === 'function' ? options.onClose : null;
+      titleEl.textContent = title || 'Informasi';
+      msgEl.textContent = message || '';
+
+      let btnClass = 'bg-emerald-500 hover:bg-emerald-600 text-slate-950';
+      if (type === 'error') {
+        iconBox.className = 'w-12 h-12 rounded-2xl mx-auto flex items-center justify-center bg-rose-500/15 text-rose-500 dark:text-rose-400 border border-rose-500/30';
+        iconBox.innerHTML = '<i data-lucide="alert-circle" class="w-6 h-6"></i>';
+        btnClass = 'bg-rose-500 hover:bg-rose-600 text-white';
+      } else if (type === 'warning') {
+        iconBox.className = 'w-12 h-12 rounded-2xl mx-auto flex items-center justify-center bg-amber-500/15 text-amber-500 dark:text-amber-400 border border-amber-500/30';
+        iconBox.innerHTML = '<i data-lucide="alert-triangle" class="w-6 h-6"></i>';
+        btnClass = 'bg-amber-500 hover:bg-amber-600 text-slate-950';
+      } else if (type === 'info') {
+        iconBox.className = 'w-12 h-12 rounded-2xl mx-auto flex items-center justify-center bg-sky-500/15 text-sky-500 dark:text-sky-400 border border-sky-500/30';
+        iconBox.innerHTML = '<i data-lucide="info" class="w-6 h-6"></i>';
+        btnClass = 'bg-sky-500 hover:bg-sky-600 text-slate-950';
+      } else {
+        iconBox.className = 'w-12 h-12 rounded-2xl mx-auto flex items-center justify-center bg-emerald-500/15 text-emerald-500 dark:text-emerald-400 border border-emerald-500/30';
+        iconBox.innerHTML = '<i data-lucide="check-circle-2" class="w-6 h-6"></i>';
+      }
+
+      const buttonText = options.buttonText || 'OK, Mengerti';
+      const extraHtml = options.extraHtml || '';
+
+      actionsEl.innerHTML = `
+        ${extraHtml}
+        <button type="button" onclick="closeGlobalFeedbackModal()"
+          class="w-full py-2.5 px-4 rounded-xl ${btnClass} font-bold text-xs transition cursor-pointer">
+          ${buttonText}
+        </button>
+      `;
+
+      openModal('global-feedback-modal');
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+    };
+
+    window.closeGlobalFeedbackModal = function () {
+      closeModal('global-feedback-modal');
+      if (_globalFeedbackOnClose) {
+        const cb = _globalFeedbackOnClose;
+        _globalFeedbackOnClose = null;
+        cb();
+      }
+    };
+
+    window.showAppConfirm = function (opts = {}) {
+      const modal = document.getElementById('global-confirm-modal');
+      const iconBox = document.getElementById('global-confirm-icon');
+      const titleEl = document.getElementById('global-confirm-title');
+      const msgEl = document.getElementById('global-confirm-message');
+      const okBtn = document.getElementById('global-confirm-ok-btn');
+
+      if (!modal) return;
+
+      const type = opts.type || 'warning';
+      titleEl.textContent = opts.title || 'Konfirmasi Tindakan';
+      msgEl.textContent = opts.message || 'Apakah Anda yakin ingin melanjutkan?';
+      okBtn.textContent = opts.confirmText || 'Ya, Lanjutkan';
+      _globalConfirmCallback = typeof opts.onConfirm === 'function' ? opts.onConfirm : null;
+
+      if (type === 'danger') {
+        iconBox.className = 'w-12 h-12 rounded-2xl mx-auto flex items-center justify-center bg-rose-500/15 text-rose-500 dark:text-rose-400 border border-rose-500/30';
+        iconBox.innerHTML = '<i data-lucide="trash-2" class="w-6 h-6"></i>';
+        okBtn.className = 'py-2.5 px-4 rounded-xl bg-rose-500 hover:bg-rose-600 text-white font-bold text-xs transition cursor-pointer';
+      } else if (type === 'success') {
+        iconBox.className = 'w-12 h-12 rounded-2xl mx-auto flex items-center justify-center bg-emerald-500/15 text-emerald-500 dark:text-emerald-400 border border-emerald-500/30';
+        iconBox.innerHTML = '<i data-lucide="check-circle-2" class="w-6 h-6"></i>';
+        okBtn.className = 'py-2.5 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold text-xs transition cursor-pointer';
+      } else if (type === 'info') {
+        iconBox.className = 'w-12 h-12 rounded-2xl mx-auto flex items-center justify-center bg-sky-500/15 text-sky-500 dark:text-sky-400 border border-sky-500/30';
+        iconBox.innerHTML = '<i data-lucide="info" class="w-6 h-6"></i>';
+        okBtn.className = 'py-2.5 px-4 rounded-xl bg-sky-500 hover:bg-sky-600 text-slate-950 font-bold text-xs transition cursor-pointer';
+      } else {
+        iconBox.className = 'w-12 h-12 rounded-2xl mx-auto flex items-center justify-center bg-amber-500/15 text-amber-500 dark:text-amber-400 border border-amber-500/30';
+        iconBox.innerHTML = '<i data-lucide="alert-triangle" class="w-6 h-6"></i>';
+        okBtn.className = 'py-2.5 px-4 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs transition cursor-pointer';
+      }
+
+      okBtn.onclick = function () {
+        const cb = _globalConfirmCallback;
+        closeGlobalConfirmModal();
+        if (cb) cb();
+      };
+
+      openModal('global-confirm-modal');
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+    };
+
+    window.closeGlobalConfirmModal = function () {
+      _globalConfirmCallback = null;
+      closeModal('global-confirm-modal');
+    };
+
     lucide.createIcons();
+
     window.addEventListener('DOMContentLoaded', () => {
       requestAnimationFrame(() => {
         document.documentElement.classList.remove('preload');
+      });
+
+      // Deteksi otomatis query string (?success=... / ?error=... / ?msg=... / ?err=...)
+      const params = new URLSearchParams(window.location.search);
+      const errText = params.get('error') || params.get('err');
+      const okText = params.get('success') || params.get('msg');
+
+      if (errText) {
+        showAppAlert('error', 'Terjadi Kesalahan', errText);
+        ['error', 'err'].forEach(k => params.delete(k));
+        const cleanSearch = params.toString();
+        window.history.replaceState({}, '', window.location.pathname + (cleanSearch ? '?' + cleanSearch : ''));
+      } else if (okText) {
+        showAppAlert('success', 'Berhasil', okText);
+        ['success', 'msg'].forEach(k => params.delete(k));
+        const cleanSearch = params.toString();
+        window.history.replaceState({}, '', window.location.pathname + (cleanSearch ? '?' + cleanSearch : ''));
+      }
+
+      // Intercept otomatis semua form yang memiliki atribut data-confirm="..."
+      document.querySelectorAll('form[data-confirm]').forEach(form => {
+        form.addEventListener('submit', function (e) {
+          if (form.dataset.confirmed === 'true') return;
+          e.preventDefault();
+          showAppConfirm({
+            title: form.dataset.confirmTitle || 'Konfirmasi Tindakan',
+            message: form.dataset.confirm,
+            type: form.dataset.confirmType || 'danger',
+            confirmText: form.dataset.confirmBtn || 'Ya, Lanjutkan',
+            onConfirm: () => {
+              form.dataset.confirmed = 'true';
+              form.submit();
+            }
+          });
+        });
       });
     });
   </script>

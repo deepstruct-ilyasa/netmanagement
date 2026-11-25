@@ -2,30 +2,6 @@
 
 <main class="p-4 sm:p-6 flex-1 w-full space-y-5">
 
-  <% if (typeof errorMsg !== 'undefined' && errorMsg) { %>
-    <div id="alert-error" class="bg-rose-500/15 border border-rose-500/40 text-rose-400 px-4 py-3 rounded-xl flex items-center justify-between text-sm">
-      <div class="flex items-center gap-2.5">
-        <i data-lucide="alert-circle" class="w-5 h-5 shrink-0"></i>
-        <span><%= errorMsg %></span>
-      </div>
-      <button onclick="document.getElementById('alert-error').remove()" class="p-1 hover:text-white cursor-pointer">
-        <i data-lucide="x" class="w-4 h-4"></i>
-      </button>
-    </div>
-  <% } %>
-
-  <% if (typeof successMsg !== 'undefined' && successMsg) { %>
-    <div id="alert-success" class="bg-emerald-500/15 border border-emerald-500/40 text-emerald-400 px-4 py-3 rounded-xl flex items-center justify-between text-sm">
-      <div class="flex items-center gap-2.5">
-        <i data-lucide="check-circle-2" class="w-5 h-5 shrink-0"></i>
-        <span><%= successMsg %></span>
-      </div>
-      <button onclick="document.getElementById('alert-success').remove()" class="p-1 hover:text-white cursor-pointer">
-        <i data-lucide="x" class="w-4 h-4"></i>
-      </button>
-    </div>
-  <% } %>
-
   <!-- Header Bar -->
   <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-800 border border-slate-700 p-4 rounded-xl">
     <div>
@@ -167,6 +143,9 @@
 </main>
 
 <% if (can('device_type.write')) { %>
+<!-- Form Tersembunyi untuk Submit Hapus Jenis Perangkat via Global Confirm Modal -->
+<form id="delete-type-form" method="POST" class="hidden"></form>
+
 <!-- MODAL TAMBAH DEVICE TYPE -->
 <div id="modal-add-type" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4">
   <div onclick="closeModal('modal-add-type')" class="fixed inset-0 bg-slate-950/75 backdrop-blur-sm"></div>
@@ -229,21 +208,6 @@
         <button type="button" onclick="closeModal('modal-edit-type')" class="px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-200 cursor-pointer">Batal</button>
         <button type="submit" class="px-4 py-2 rounded-lg bg-sky-500 hover:bg-sky-600 text-slate-950 font-semibold cursor-pointer">Update</button>
       </div>
-    </form>
-  </div>
-</div>
-
-<!-- MODAL HAPUS DEVICE TYPE -->
-<div id="modal-delete-type" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4">
-  <div onclick="closeModal('modal-delete-type')" class="fixed inset-0 bg-slate-950/75 backdrop-blur-sm"></div>
-  <div class="relative bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-md p-6 shadow-2xl z-10 space-y-4">
-    <h3 class="text-lg font-semibold text-white">Hapus Jenis Perangkat?</h3>
-    <p class="text-sm text-slate-300">
-      Apakah Anda yakin ingin menghapus jenis perangkat <span id="delete-type-name" class="font-bold text-rose-400"></span>?
-    </p>
-    <form id="delete-type-form" method="POST" class="pt-2 flex justify-end gap-2 text-sm">
-      <button type="button" onclick="closeModal('modal-delete-type')" class="px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-200 cursor-pointer">Batal</button>
-      <button type="submit" class="px-4 py-2 rounded-lg bg-rose-500 hover:bg-rose-600 text-white font-semibold cursor-pointer">Ya, Hapus</button>
     </form>
   </div>
 </div>
@@ -421,14 +385,31 @@
   }
 
   function openDeleteTypeModal(id, name) {
-    document.getElementById('delete-type-name').textContent = name;
-    document.getElementById('delete-type-form').action = `/device-types/${id}/delete`;
-    openModal('modal-delete-type');
+    showAppConfirm({
+      title: 'Hapus Jenis Perangkat?',
+      message: `Apakah Anda yakin ingin menghapus jenis perangkat ${name}?`,
+      type: 'danger',
+      confirmText: 'Ya, Hapus',
+      onConfirm: () => {
+        const form = document.getElementById('delete-type-form');
+        form.action = `/device-types/${id}/delete`;
+        form.submit();
+      }
+    });
   }
 
   document.addEventListener('DOMContentLoaded', () => {
     loadDtState();
     renderDtTable();
+
+    const serverError = <%- JSON.stringify(typeof errorMsg !== 'undefined' ? errorMsg : null) %>;
+    const serverSuccess = <%- JSON.stringify(typeof successMsg !== 'undefined' ? successMsg : null) %>;
+
+    if (serverError) {
+      showAppAlert('error', 'Terjadi Kesalahan', serverError);
+    } else if (serverSuccess) {
+      showAppAlert('success', 'Berhasil', serverSuccess);
+    }
   });
 </script>
 
