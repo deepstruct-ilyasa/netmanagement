@@ -5,14 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title><%= typeof title !== 'undefined' ? title : 'SIMAJAR — Sistem Informasi Manajemen Aset Jaringan' %></title>
   <link rel="icon" type="image/png" href="/img/favicon.png">
-  <script src="https://unpkg.com/lucide@latest"></script>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+  <link rel="stylesheet" href="/css/output.css">
+  <script src="/js/lucide.min.js"></script>
+  <script src="/js/html5-qrcode.min.js"></script>
+  <script src="/js/vis-network.min.js"></script>
   <script>
-    tailwind.config = {
-      darkMode: 'class'
-    };
-
     // Terapkan tema tersimpan sebelum halaman di-render (anti kedip)
     if (localStorage.getItem('theme') === 'light') {
       document.documentElement.classList.remove('dark');

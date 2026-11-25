@@ -115,7 +115,7 @@ function getAuditItemsAndStats(auditId) {
   return { items, stats };
 }
 
-// 1. GET /assets/audits - Daftar Sesi Audit
+// 1. GET /audits - Daftar Sesi Audit
 exports.listAudits = (req, res) => {
   const isAdmin = req.user.role === 'administrator';
 
@@ -185,7 +185,7 @@ exports.listAudits = (req, res) => {
     });
   }
 
-  res.render('assets/audits', {
+  res.render('audits/audits', {
     title: 'Audit Aset (Stock Opname) — SIMAJAR',
     pageTitle: 'Audit Aset & Stock Opname',
     activeMenu: 'asset-audits',
@@ -199,18 +199,18 @@ exports.listAudits = (req, res) => {
   });
 };
 
-// 2. POST /assets/audits - Buat Sesi Audit Baru (Khusus Administrator)
+// 2. POST /audits - Buat Sesi Audit Baru (Khusus Administrator)
 exports.createAudit = (req, res) => {
   const { title, branch_id, audit_code, notes, assignee_ids } = req.body;
   const branchId = Number(branch_id);
 
   if (!title || !branchId) {
-    return res.redirect('/assets/audits?err=' + encodeURIComponent('Judul audit dan cabang target wajib diisi.'));
+    return res.redirect('/audits?err=' + encodeURIComponent('Judul audit dan cabang target wajib diisi.'));
   }
 
   const branch = db.prepare('SELECT id, branch_code, branch_name FROM branches WHERE id = ?').get(branchId);
   if (!branch) {
-    return res.redirect('/assets/audits?err=' + encodeURIComponent('Cabang tidak ditemukan.'));
+    return res.redirect('/audits?err=' + encodeURIComponent('Cabang tidak ditemukan.'));
   }
 
   const normalizedAssignees = Array.isArray(assignee_ids)
@@ -218,7 +218,7 @@ exports.createAudit = (req, res) => {
     : (assignee_ids ? [Number(assignee_ids)].filter(Boolean) : []);
 
   if (normalizedAssignees.length === 0) {
-    return res.redirect('/assets/audits?err=' + encodeURIComponent('Pilih minimal 1 user auditor yang ditugaskan.'));
+    return res.redirect('/audits?err=' + encodeURIComponent('Pilih minimal 1 user auditor yang ditugaskan.'));
   }
 
   const customCode = audit_code ? String(audit_code).trim().toUpperCase() : '';
@@ -226,7 +226,7 @@ exports.createAudit = (req, res) => {
 
   const duplicate = db.prepare('SELECT id FROM asset_audits WHERE UPPER(audit_code) = UPPER(?)').get(finalAuditCode);
   if (duplicate) {
-    return res.redirect('/assets/audits?err=' + encodeURIComponent(`Kode audit "${finalAuditCode}" sudah terdaftar. Silakan gunakan kode lain.`));
+    return res.redirect('/audits?err=' + encodeURIComponent(`Kode audit "${finalAuditCode}" sudah terdaftar. Silakan gunakan kode lain.`));
   }
 
   const tx = db.transaction(() => {
@@ -269,10 +269,10 @@ exports.createAudit = (req, res) => {
   });
 
   const newAuditId = tx();
-  return res.redirect(`/assets/audits/${newAuditId}?msg=` + encodeURIComponent('Sesi audit berhasil dibuat dan siap dipindai.'));
+  return res.redirect(`/audits/${newAuditId}?msg=` + encodeURIComponent('Sesi audit berhasil dibuat dan siap dipindai.'));
 };
 
-// 3. POST /assets/audits/:id/assignees - Update Penugasan Auditor (Khusus Administrator)
+// 3. POST /audits/:id/assignees - Update Penugasan Auditor (Khusus Administrator)
 exports.updateAssignees = (req, res) => {
   const auditId = Number(req.params.id);
   const { assignee_ids } = req.body;
@@ -282,7 +282,7 @@ exports.updateAssignees = (req, res) => {
     : (assignee_ids ? [Number(assignee_ids)].filter(Boolean) : []);
 
   if (normalized.length === 0) {
-    return res.redirect(`/assets/audits/${auditId}?err=` + encodeURIComponent('Minimal 1 auditor harus ditugaskan.'));
+    return res.redirect(`/audits/${auditId}?err=` + encodeURIComponent('Minimal 1 auditor harus ditugaskan.'));
   }
 
   const tx = db.transaction(() => {
@@ -292,10 +292,10 @@ exports.updateAssignees = (req, res) => {
   });
   tx();
 
-  return res.redirect(`/assets/audits/${auditId}?msg=` + encodeURIComponent('Daftar auditor berhasil diperbarui.'));
+  return res.redirect(`/audits/${auditId}?msg=` + encodeURIComponent('Daftar auditor berhasil diperbarui.'));
 };
 
-// 4. GET /assets/audits/:id - Detail Sesi Audit (Eksekusi Scan + Laporan)
+// 4. GET /audits/:id - Detail Sesi Audit (Eksekusi Scan + Laporan)
 exports.detailAudit = (req, res) => {
   const auditId = Number(req.params.id);
   if (!canAccessAuditSession(req.user, auditId)) {
@@ -352,7 +352,7 @@ exports.detailAudit = (req, res) => {
 
   const settings = getOrgSettings();
 
-  res.render('assets/audit-detail', {
+  res.render('audits/audit-detail', {
     title: `${audit.audit_code} — Audit Aset SIMAJAR`,
     pageTitle: `Audit: ${audit.audit_code}`,
     activeMenu: 'asset-audits',
@@ -371,7 +371,7 @@ exports.detailAudit = (req, res) => {
   });
 };
 
-// 5. POST /api/assets/audits/:id/scan - Eksekusi Scan QR / Input Kode di Lapangan (AJAX Tanpa Reload Halaman)
+// 5. POST /api/audits/:id/scan - Eksekusi Scan QR / Input Kode di Lapangan (AJAX Tanpa Reload Halaman)
 exports.scanAuditAsset = (req, res) => {
   const auditId = Number(req.params.id);
   if (!canAccessAuditSession(req.user, auditId)) {
@@ -476,7 +476,7 @@ exports.scanAuditAsset = (req, res) => {
   });
 };
 
-// 6. POST /assets/audits/:id/unregistered - Catat Barang Ada di Lapangan Tapi Belum Terdaftar
+// 6. POST /audits/:id/unregistered - Catat Barang Ada di Lapangan Tapi Belum Terdaftar
 exports.addUnregisteredFinding = (req, res) => {
   const auditId = Number(req.params.id);
   if (!canAccessAuditSession(req.user, auditId)) {
@@ -489,7 +489,7 @@ exports.addUnregisteredFinding = (req, res) => {
 
   const audit = db.prepare('SELECT * FROM asset_audits WHERE id = ?').get(auditId);
   if (!audit || audit.status !== 'in_progress') {
-    return res.redirect(`/assets/audits/${auditId}?err=` + encodeURIComponent('Sesi audit tidak aktif atau sudah ditutup.'));
+    return res.redirect(`/audits/${auditId}?err=` + encodeURIComponent('Sesi audit tidak aktif atau sudah ditutup.'));
   }
 
   const {
@@ -503,7 +503,7 @@ exports.addUnregisteredFinding = (req, res) => {
   } = req.body;
 
   if (!unregistered_name || !String(unregistered_name).trim()) {
-    return res.redirect(`/assets/audits/${auditId}?err=` + encodeURIComponent('Nama / deskripsi perangkat wajib diisi.'));
+    return res.redirect(`/audits/${auditId}?err=` + encodeURIComponent('Nama / deskripsi perangkat wajib diisi.'));
   }
 
   const photoPath = req.file ? `/uploads/${req.file.filename}` : null;
@@ -529,15 +529,15 @@ exports.addUnregisteredFinding = (req, res) => {
     req.user.id
   );
 
-  return res.redirect(`/assets/audits/${auditId}?msg=` + encodeURIComponent('Temuan barang belum terdaftar berhasil dicatat.'));
+  return res.redirect(`/audits/${auditId}?msg=` + encodeURIComponent('Temuan barang belum terdaftar berhasil dicatat.'));
 };
 
-// 7. POST /assets/audits/:id/close - Selesaikan Audit (Khusus Administrator)
+// 7. POST /audits/:id/close - Selesaikan Audit (Khusus Administrator)
 exports.closeAudit = (req, res) => {
   const auditId = Number(req.params.id);
   const audit = db.prepare('SELECT * FROM asset_audits WHERE id = ?').get(auditId);
   if (!audit) {
-    return res.redirect('/assets/audits?err=' + encodeURIComponent('Sesi audit tidak ditemukan.'));
+    return res.redirect('/audits?err=' + encodeURIComponent('Sesi audit tidak ditemukan.'));
   }
 
   const tx = db.transaction(() => {
@@ -555,18 +555,18 @@ exports.closeAudit = (req, res) => {
   });
   tx();
 
-  return res.redirect(`/assets/audits/${auditId}?msg=` + encodeURIComponent('Sesi audit telah diselesaikan dan dikunci.'));
+  return res.redirect(`/audits/${auditId}?msg=` + encodeURIComponent('Sesi audit telah diselesaikan dan dikunci.'));
 };
 
-// 8. POST /assets/audits/:id/reconcile - Sinkronkan Temuan ke Master Aset (Khusus Administrator)
+// 8. POST /audits/:id/reconcile - Sinkronkan Temuan ke Master Aset (Khusus Administrator)
 exports.reconcileAudit = (req, res) => {
   const auditId = Number(req.params.id);
   const audit = db.prepare('SELECT * FROM asset_audits WHERE id = ?').get(auditId);
   if (!audit || audit.status !== 'closed') {
-    return res.redirect(`/assets/audits/${auditId}?err=` + encodeURIComponent('Sesi audit harus berstatus Closed sebelum direkonsiliasi.'));
+    return res.redirect(`/audits/${auditId}?err=` + encodeURIComponent('Sesi audit harus berstatus Closed sebelum direkonsiliasi.'));
   }
   if (audit.is_reconciled === 1) {
-    return res.redirect(`/assets/audits/${auditId}?err=` + encodeURIComponent('Sesi audit ini sudah pernah direkonsiliasi.'));
+    return res.redirect(`/audits/${auditId}?err=` + encodeURIComponent('Sesi audit ini sudah pernah direkonsiliasi.'));
   }
 
   const tx = db.transaction(() => {
@@ -605,10 +605,10 @@ exports.reconcileAudit = (req, res) => {
   });
   tx();
 
-  return res.redirect(`/assets/audits/${auditId}?msg=` + encodeURIComponent('Hasil temuan audit berhasil disinkronkan ke Master Aset.'));
+  return res.redirect(`/audits/${auditId}?msg=` + encodeURIComponent('Hasil temuan audit berhasil disinkronkan ke Master Aset.'));
 };
 
-// 9. GET /assets/audits/:id/export - Export Laporan Audit ke CSV (Excel)
+// 9. GET /audits/:id/export - Export Laporan Audit ke CSV (Excel)
 exports.exportAuditCsv = (req, res) => {
   const auditId = Number(req.params.id);
   if (!canAccessAuditSession(req.user, auditId)) {
@@ -685,7 +685,7 @@ exports.exportAuditCsv = (req, res) => {
   return res.send(csvContent);
 };
 
-// 10. POST /assets/audits/:id/items/:itemId/register - Daftarkan Temuan Unregistered ke Master Aset
+// 10. POST /audits/:id/items/:itemId/register - Daftarkan Temuan Unregistered ke Master Aset
 exports.registerUnregisteredItem = (req, res) => {
   const auditId = Number(req.params.id);
   const itemId = Number(req.params.itemId);
@@ -698,7 +698,7 @@ exports.registerUnregisteredItem = (req, res) => {
   `).get(auditId);
 
   if (!audit) {
-    return res.redirect('/assets/audits?err=' + encodeURIComponent('Sesi audit tidak ditemukan.'));
+    return res.redirect('/audits?err=' + encodeURIComponent('Sesi audit tidak ditemukan.'));
   }
 
   const item = db.prepare(`
@@ -707,7 +707,7 @@ exports.registerUnregisteredItem = (req, res) => {
   `).get(itemId, auditId);
 
   if (!item) {
-    return res.redirect(`/assets/audits/${auditId}?err=` + encodeURIComponent('Item temuan tidak ditemukan atau sudah terdaftar.'));
+    return res.redirect(`/audits/${auditId}?err=` + encodeURIComponent('Item temuan tidak ditemukan atau sudah terdaftar.'));
   }
 
   const {
@@ -742,7 +742,7 @@ exports.registerUnregisteredItem = (req, res) => {
 
   const dupCode = db.prepare('SELECT id FROM assets WHERE UPPER(asset_code) = UPPER(?)').get(finalAssetCode);
   if (dupCode) {
-    return res.redirect(`/assets/audits/${auditId}?err=` + encodeURIComponent(`Kode inventaris "${finalAssetCode}" sudah digunakan aset lain.`));
+    return res.redirect(`/audits/${auditId}?err=` + encodeURIComponent(`Kode inventaris "${finalAssetCode}" sudah digunakan aset lain.`));
   }
 
   const actualCond = String(condition || item.actual_condition || 'baik').trim().toLowerCase();
@@ -804,5 +804,5 @@ exports.registerUnregisteredItem = (req, res) => {
   });
 
   tx();
-  return res.redirect(`/assets/audits/${auditId}?msg=` + encodeURIComponent(`Perangkat berhasil didaftarkan ke Master Aset dengan kode ${finalAssetCode}.`));
+  return res.redirect(`/audits/${auditId}?msg=` + encodeURIComponent(`Perangkat berhasil didaftarkan ke Master Aset dengan kode ${finalAssetCode}.`));
 };

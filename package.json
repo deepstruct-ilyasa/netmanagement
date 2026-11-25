@@ -5,12 +5,15 @@
   "main": "app.js",
   "scripts": {
     "start": "node app.js",
-    "dev": "nodemon app.js"
+    "css:watch": "npx tailwindcss -i ./src/css/input.css -o ./public/css/output.css --watch",
+    "css:build": "npx tailwindcss -i ./src/css/input.css -o ./public/css/output.css --minify",
+    "dev": "concurrently -n \"CSS,APP\" -c \"cyan,green\" \"npm run css:watch\" \"nodemon app.js\""
   },
   "nodemonConfig": {
     "ignore": [
       "database/*",
-      "public/uploads/*"
+      "public/uploads/*",
+      "public/css/*"
     ]
   },
   "keywords": [],
@@ -24,6 +27,8 @@
     "multer": "^2.5.0"
   },
   "devDependencies": {
-    "nodemon": "^3.1.14"
+    "concurrently": "^10.0.7",
+    "nodemon": "^3.1.14",
+    "tailwindcss": "^3.4.19"
   }
 }

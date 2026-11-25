@@ -2,30 +2,6 @@
 
 <main class="p-4 sm:p-6 flex-1 w-full space-y-5">
 
-  <% if (typeof errorMsg !== 'undefined' && errorMsg) { %>
-    <div id="alert-error" class="bg-rose-500/15 border border-rose-500/40 text-rose-400 px-4 py-3 rounded-xl flex items-center justify-between text-sm">
-      <div class="flex items-center gap-2.5">
-        <i data-lucide="alert-circle" class="w-5 h-5 shrink-0"></i>
-        <span><%= errorMsg %></span>
-      </div>
-      <button onclick="document.getElementById('alert-error').remove()" class="p-1 hover:text-white cursor-pointer">
-        <i data-lucide="x" class="w-4 h-4"></i>
-      </button>
-    </div>
-  <% } %>
-
-  <% if (typeof successMsg !== 'undefined' && successMsg) { %>
-    <div id="alert-success" class="bg-emerald-500/15 border border-emerald-500/40 text-emerald-400 px-4 py-3 rounded-xl flex items-center justify-between text-sm">
-      <div class="flex items-center gap-2.5">
-        <i data-lucide="check-circle-2" class="w-5 h-5 shrink-0"></i>
-        <span><%= successMsg %></span>
-      </div>
-      <button onclick="document.getElementById('alert-success').remove()" class="p-1 hover:text-white cursor-pointer">
-        <i data-lucide="x" class="w-4 h-4"></i>
-      </button>
-    </div>
-  <% } %>
-
   <!-- Header Bar -->
   <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-800 border border-slate-700 p-4 rounded-xl">
     <div>
@@ -34,11 +10,11 @@
     </div>
     <div class="flex flex-wrap items-center gap-2">
       <!-- Tombol Cetak Massal (Muncul otomatis saat ada checkbox dicentang) -->
-      <div id="bulk-print-toolbar" class="hidden items-center gap-1.5 text-slate-950 bg-amber-400 hover:bg-amber-800 border border-amber-500/40 px-2.5 py-2.5 rounded-lg">
+      <div id="bulk-print-toolbar" class="hidden items-center gap-1.5 text-slate-950 bg-amber-400 hover:bg-amber-500 border border-amber-500/40 px-2.5 py-2.5 rounded-lg transition">
         <button type="button" onclick="openBulkQrLabelModal()"
           class="inline-flex items-center justify-center gap-1.5 font-semibold text-xs rounded-md transition shadow-sm cursor-pointer">
           <i data-lucide="printer" class="w-3.5 h-3.5"></i>
-          <span>Cetak Label</span>
+          <span>Cetak Label (<span id="bulk-selected-count">0</span>)</span>
         </button>
       </div>
 
@@ -320,7 +296,7 @@
           <div class="bg-sky-500/10 border border-sky-500/35 rounded-xl p-3 space-y-1 text-xs">
             <div class="flex items-center justify-between gap-2">
               <span class="font-bold text-sky-400 uppercase text-[11px]">Referensi Temuan Audit (<%= auditPrefillItem.audit_code %>)</span>
-              <a href="/assets/audits/<%= auditPrefillItem.audit_id %>" class="text-[11px] text-slate-300 hover:text-white underline">Kembali ke Audit</a>
+              <a href="/audits/<%= auditPrefillItem.audit_id %>" class="text-[11px] text-slate-300 hover:text-white underline">Kembali ke Audit</a>
             </div>
             <p class="text-slate-200 font-semibold">
               <%= auditPrefillItem.unregistered_name %>
@@ -850,10 +826,31 @@
   const allAssetModels = <%- JSON.stringify(typeof models !== 'undefined' ? models : []) %>;
   const ORG_NAME_FOR_STICKER = <%- JSON.stringify(settings.organization_name || 'IT ASSET') %>;
   const AUDIT_PREFILL_ITEM = <%- JSON.stringify(typeof auditPrefillItem !== 'undefined' ? auditPrefillItem : null) %>;
+  const INITIAL_ERROR_MSG = <%- JSON.stringify(typeof errorMsg !== 'undefined' ? errorMsg : '') %>;
+  const INITIAL_SUCCESS_MSG = <%- JSON.stringify(typeof successMsg !== 'undefined' ? successMsg : '') %>;
 
   const selectedAssetsMap = new Map();
   let preparedStickersList = [];
   let currentEditingAssetId = null;
+
+  function triggerFlashPopupModal() {
+    if (typeof window.showAppAlert !== 'function') return;
+
+    if (INITIAL_ERROR_MSG) {
+      window.showAppAlert('error', INITIAL_ERROR_MSG, 'Gagal Memproses Aset');
+    } else if (INITIAL_SUCCESS_MSG) {
+      window.showAppAlert('success', INITIAL_SUCCESS_MSG, 'Berhasil');
+    }
+
+    if ((INITIAL_ERROR_MSG || INITIAL_SUCCESS_MSG) && window.history && window.history.replaceState) {
+      const cleanUrl = new URL(window.location.href);
+      cleanUrl.searchParams.delete('error');
+      cleanUrl.searchParams.delete('err');
+      cleanUrl.searchParams.delete('success');
+      cleanUrl.searchParams.delete('msg');
+      window.history.replaceState({}, document.title, cleanUrl.pathname + cleanUrl.search);
+    }
+  }
 
   function autoSelectPrefillTaxonomy() {
     if (!AUDIT_PREFILL_ITEM) return;
@@ -906,6 +903,7 @@
     loadAssetState();
     renderAssetsTable();
     autoSelectPrefillTaxonomy();
+    triggerFlashPopupModal();
   });
 
   // =========================================================
@@ -1567,7 +1565,12 @@
 
   function openBulkQrLabelModal() {
     const list = Array.from(selectedAssetsMap.values());
-    if (list.length === 0) return;
+    if (list.length === 0) {
+      if (typeof window.showAppAlert === 'function') {
+        window.showAppAlert('warning', 'Pilih minimal 1 perangkat menggunakan checkbox terlebih dahulu sebelum mencetak label.', 'Belum Ada Aset Dipilih');
+      }
+      return;
+    }
     prepareAndOpenQrModal(list, true);
   }
 
@@ -1638,12 +1641,6 @@
     `);
     win.document.close();
   }
-
-  document.addEventListener('DOMContentLoaded', () => {
-    onAssetDeviceTypeChange('add_asset');
-    loadAssetState();
-    renderAssetsTable();
-  });
 </script>
 
 <%- include('../partials/footer') %>

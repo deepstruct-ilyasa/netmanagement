@@ -1,6 +1,4 @@
 <%- include('../partials/header') %>
-<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-
 <style>
   #audit-qr-reader { border: none !important; }
   #audit-qr-reader video { border-radius: 0.75rem; width: 100% !important; object-fit: cover; }
@@ -83,7 +81,7 @@
   }
 </style>
 
-<main class="p-4 flex-1 w-full max-w-8xl mx-auto space-y-5">
+<main class="p-4 flex-1 w-full mx-auto space-y-5">
 
   <!-- ===================================================================== -->
   <!-- BAGIAN 1: DOKUMEN RESMI BERITA ACARA (KHUSUS PRINT / SAVE AS PDF)      -->
@@ -320,7 +318,7 @@
       <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div class="space-y-1">
           <div class="flex flex-wrap items-center gap-2">
-            <a href="/assets/audits" class="inline-flex items-center gap-1 text-xs text-slate-400 hover:text-white mr-1">
+            <a href="/audits" class="inline-flex items-center gap-1 text-xs text-slate-400 hover:text-white mr-1">
               <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i> Kembali
             </a>
             <span class="font-mono text-xs font-bold px-2.5 py-0.5 rounded-md bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
@@ -354,7 +352,7 @@
             </button>
           <% } %>
 
-          <a href="/assets/audits/<%= audit.id %>/export"
+          <a href="/audits/<%= audit.id %>/export"
             class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-700/80 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition">
             <i data-lucide="file-spreadsheet" class="w-3.5 h-3.5 text-sky-400"></i>
             <span>Export CSV</span>
@@ -367,7 +365,7 @@
           </button>
 
           <% if (isAdmin && audit.status === 'in_progress') { %>
-            <form id="form-close-audit" action="/assets/audits/<%= audit.id %>/close" method="POST">
+            <form id="form-close-audit" action="/audits/<%= audit.id %>/close" method="POST">
               <button type="button" onclick="openActionConfirmModal('close')"
                 class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-bold transition cursor-pointer">
                 <i data-lucide="lock" class="w-3.5 h-3.5"></i>
@@ -377,7 +375,7 @@
           <% } %>
 
           <% if (isAdmin && audit.status === 'closed' && audit.is_reconciled === 0) { %>
-            <form id="form-reconcile-audit" action="/assets/audits/<%= audit.id %>/reconcile" method="POST">
+            <form id="form-reconcile-audit" action="/audits/<%= audit.id %>/reconcile" method="POST">
               <button type="button" onclick="openActionConfirmModal('reconcile')"
                 class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-slate-950 text-xs font-bold transition cursor-pointer">
                 <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
@@ -715,7 +713,7 @@
         </button>
       </div>
 
-      <form action="/assets/audits/<%= audit.id %>/unregistered" method="POST" enctype="multipart/form-data" class="p-5 overflow-y-auto space-y-3.5 text-xs">
+      <form action="/audits/<%= audit.id %>/unregistered" method="POST" enctype="multipart/form-data" class="p-5 overflow-y-auto space-y-3.5 text-xs">
         <div>
           <label class="block font-medium text-slate-300 mb-1">Nama / Deskripsi Perangkat <span class="text-rose-400">*</span></label>
           <input type="text" name="unregistered_name" required placeholder="Misal: Switch 8 Port TP-Link Ruang Poli"
@@ -788,7 +786,7 @@
         <h3 class="text-sm font-bold text-white">Kelola Auditor Ditugaskan</h3>
         <button type="button" onclick="closeModal('modal-assignees')" class="text-slate-400 hover:text-white cursor-pointer"><i data-lucide="x" class="w-4 h-4"></i></button>
       </div>
-      <form action="/assets/audits/<%= audit.id %>/assignees" method="POST" class="p-5 overflow-y-auto space-y-4 text-xs">
+      <form action="/audits/<%= audit.id %>/assignees" method="POST" class="p-5 overflow-y-auto space-y-4 text-xs">
         <div class="space-y-2 max-h-60 overflow-y-auto">
           <% const assignedIds = new Set(assignees.map(a => a.id)); %>
           <% allUsers.forEach(u => { %>
@@ -950,7 +948,7 @@
     const form = document.getElementById('form-register-unregistered');
     if (!form) return;
 
-    form.action = `/assets/audits/${AUDIT_ID}/items/${item.id}/register`;
+    form.action = `/audits/${AUDIT_ID}/items/${item.id}/register`;
     document.getElementById('reg-ref-summary').textContent =
       `${item.name} ${item.brand_model ? '(' + item.brand_model + ')' : ''} — Lokasi: ${item.location || '-'}`;
     document.getElementById('reg-sn-input').value = item.sn || '';
@@ -1226,7 +1224,7 @@
     if (btnMob) { btnMob.disabled = true; btnMob.textContent = 'Memproses...'; }
 
     try {
-      const resp = await fetch(`/api/assets/audits/${AUDIT_ID}/scan`, {
+      const resp = await fetch(`/api/audits/${AUDIT_ID}/scan`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ code, actual_condition: actualCondition, notes })

@@ -111,7 +111,7 @@
               <span class="text-[11px] text-slate-500">Dibuat oleh <%= au.creator_name || 'Admin' %></span>
             <% } %>
 
-            <a href="/assets/audits/<%= au.id %>"
+            <a href="/audits/<%= au.id %>"
               class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl <%= isClosed ? 'bg-sky-500/15 hover:bg-sky-500/25 text-sky-400 border border-sky-500/30' : 'bg-emerald-500 hover:bg-emerald-600 text-slate-950' %> font-semibold text-xs transition">
               <i data-lucide="<%= isClosed ? 'file-text' : 'scan-line' %>" class="w-3.5 h-3.5"></i>
               <span><%= isClosed ? 'Lihat Laporan' : 'Mulai / Lanjut Scan' %></span>
@@ -157,7 +157,7 @@
         </button>
       </div>
 
-      <form action="/assets/audits" method="POST" class="p-5 overflow-y-auto space-y-4 text-xs">
+      <form action="/audits" method="POST" class="p-5 overflow-y-auto space-y-4 text-xs">
         <div>
           <label class="block font-medium text-slate-300 mb-1.5">Nama / Judul Sesi Audit <span class="text-rose-400">*</span></label>
           <input type="text" name="title" required placeholder="Contoh: Stock Opname Aset Jaringan Q4 2026"
