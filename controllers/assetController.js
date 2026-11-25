@@ -18,7 +18,6 @@ function deleteFileIfExists(publicRelativePath) {
 function renamePhotoWithAssetCode(uploadedFile, assetCode, suffixType) {
   if (!uploadedFile) return null;
 
-  // Bersihkan karakter '/' atau simbol ilegal pada kode inventaris agar aman jadi nama file
   const safeCode = String(assetCode || 'ASSET')
     .trim()
     .toUpperCase()
@@ -35,6 +34,30 @@ function renamePhotoWithAssetCode(uploadedFile, assetCode, suffixType) {
     return '/uploads/' + newFilename;
   } catch (e) {
     return '/uploads/' + uploadedFile.filename;
+  }
+}
+
+function copyAuditEvidencePhoto(existingPublicPath, assetCode) {
+  if (!existingPublicPath) return null;
+  const cleanRel = existingPublicPath.startsWith('/') ? existingPublicPath.slice(1) : existingPublicPath;
+  const srcPath = path.join(__dirname, '..', 'public', cleanRel);
+  if (!fs.existsSync(srcPath)) return existingPublicPath;
+
+  const safeCode = String(assetCode || 'ASSET')
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9_-]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+
+  const ext = path.extname(srcPath).toLowerCase() || '.jpg';
+  const newFilename = `${safeCode}_FISIK_${Date.now()}${ext}`;
+  const destPath = path.join(path.dirname(srcPath), newFilename);
+
+  try {
+    fs.copyFileSync(srcPath, destPath);
+    return '/uploads/' + newFilename;
+  } catch (e) {
+    return existingPublicPath;
   }
 }
 
@@ -95,9 +118,32 @@ exports.listAssets = (req, res) => {
   const models = db.prepare(`SELECT * FROM device_models ORDER BY model_name ASC`).all();
   const settings = getAssetSettings();
 
-  const previewBranchId = selectedBranchId !== 'all' && selectedBranchId !== 'none'
-    ? selectedBranchId
-    : (branches[0] ? branches[0].id : 1);
+  // Cek jika ada permintaan pendaftaran dari temuan audit unregistered (?register_audit_item=ID)
+  let auditPrefillItem = null;
+  if (req.query.register_audit_item) {
+    const auditItemId = Number(req.query.register_audit_item);
+    if (auditItemId) {
+      auditPrefillItem = db.prepare(`
+        SELECT
+          i.*,
+          au.id AS audit_id,
+          au.audit_code,
+          au.branch_id AS audit_branch_id,
+          b.branch_code AS audit_branch_code,
+          b.branch_name AS audit_branch_name
+        FROM asset_audit_items i
+        JOIN asset_audits au ON i.audit_id = au.id
+        LEFT JOIN branches b ON au.branch_id = b.id
+        WHERE i.id = ? AND i.finding_type = 'unregistered'
+      `).get(auditItemId) || null;
+    }
+  }
+
+  const previewBranchId = auditPrefillItem
+    ? auditPrefillItem.audit_branch_id
+    : (selectedBranchId !== 'all' && selectedBranchId !== 'none'
+      ? selectedBranchId
+      : (branches[0] ? branches[0].id : 1));
   const sampleAssetCode = generateNextAssetCode(previewBranchId);
 
   res.render('assets/assets', {
@@ -113,6 +159,7 @@ exports.listAssets = (req, res) => {
     models,
     settings,
     sampleAssetCode,
+    auditPrefillItem,
     successMsg: req.query.success || null,
     errorMsg: req.query.error || null
   });
@@ -191,7 +238,7 @@ exports.detailAsset = (req, res) => {
   });
 };
 
-// 3. POST /assets - Tambah Aset Baru
+// 3. POST /assets - Tambah Aset Baru (Termasuk Promosi dari Temuan Audit Unregistered)
 exports.createAsset = (req, res) => {
   try {
     const {
@@ -209,11 +256,26 @@ exports.createAsset = (req, res) => {
       warranty_end,
       vendor_name,
       purchase_price,
-      notes
+      notes,
+      from_audit_item_id
     } = req.body;
 
+    const auditItemId = from_audit_item_id ? Number(from_audit_item_id) : null;
+    const auditItem = auditItemId
+      ? db.prepare(`
+          SELECT i.*, au.id AS audit_id, au.audit_code
+          FROM asset_audit_items i
+          JOIN asset_audits au ON i.audit_id = au.id
+          WHERE i.id = ? AND i.finding_type = 'unregistered'
+        `).get(auditItemId)
+      : null;
+
+    const errorRedirectBase = auditItem
+      ? `/assets?register_audit_item=${auditItem.id}&error=`
+      : '/assets?error=';
+
     if (!branch_id || !device_type_id) {
-      return res.redirect('/assets?error=Cabang+dan+Jenis+Perangkat+wajib+diisi');
+      return res.redirect(`${errorRedirectBase}${encodeURIComponent('Cabang dan Jenis Perangkat wajib diisi')}`);
     }
 
     if (!req.canAccessBranch(branch_id)) {
@@ -230,21 +292,25 @@ exports.createAsset = (req, res) => {
 
     const existingCode = db.prepare(`SELECT id FROM assets WHERE asset_code = ?`).get(finalAssetCode);
     if (existingCode) {
-      return res.redirect(`/assets?error=Kode+aset+${encodeURIComponent(finalAssetCode)}+sudah+terdaftar`);
+      return res.redirect(`${errorRedirectBase}${encodeURIComponent(`Kode aset ${finalAssetCode} sudah terdaftar`)}`);
     }
 
     const cleanSN = serial_number && serial_number.trim() !== '' ? serial_number.trim() : null;
     if (cleanSN) {
       const existingSN = db.prepare(`SELECT id FROM assets WHERE serial_number = ?`).get(cleanSN);
       if (existingSN) {
-        return res.redirect(`/assets?error=Serial+Number+${encodeURIComponent(cleanSN)}+sudah+terdaftar+pada+aset+lain`);
+        return res.redirect(`${errorRedirectBase}${encodeURIComponent(`Serial Number ${cleanSN} sudah terdaftar pada aset lain`)}`);
       }
     }
 
-    // Penamaan file foto berdasarkan Kode Inventaris
-    const physicalPhoto = req.files?.['physical_photo']
+    // Penamaan file foto berdasarkan Kode Inventaris (jika tidak upload baru, pakai foto bukti audit jika ada)
+    let physicalPhoto = req.files?.['physical_photo']
       ? renamePhotoWithAssetCode(req.files['physical_photo'][0], finalAssetCode, 'FISIK')
       : null;
+    if (!physicalPhoto && auditItem && auditItem.photo_evidence) {
+      physicalPhoto = copyAuditEvidencePhoto(auditItem.photo_evidence, finalAssetCode);
+    }
+
     const snPhoto = req.files?.['sn_photo']
       ? renamePhotoWithAssetCode(req.files['sn_photo'][0], finalAssetCode, 'SN')
       : null;
@@ -279,18 +345,52 @@ exports.createAsset = (req, res) => {
         notes ? notes.trim() : null
       );
 
+      const newAssetId = info.lastInsertRowid;
+
       db.prepare(`
         INSERT INTO asset_movements (
           asset_id, movement_type, to_branch_id, to_location, moved_by, notes
         ) VALUES (?, 'MASUK_GUDANG', ?, 'Gudang / Inventaris Cabang', ?, ?)
       `).run(
-        info.lastInsertRowid,
+        newAssetId,
         branch_id,
         req.user.full_name,
-        `Registrasi aset baru (${finalAssetCode})`
+        auditItem
+          ? `Registrasi aset dari temuan Audit ${auditItem.audit_code} (${finalAssetCode})`
+          : `Registrasi aset baru (${finalAssetCode})`
       );
 
-      return info.lastInsertRowid;
+      // Jika berasal dari temuan audit unregistered, tautkan ke asset_audit_items
+      if (auditItem) {
+        const isDamaged = finalStatus === 'broken' || finalCondition === 'damaged' || finalCondition === 'fair';
+        const auditCondLabel = finalCondition === 'damaged'
+          ? 'rusak_berat'
+          : (finalCondition === 'fair' ? 'rusak_ringan' : 'baik');
+        const nextFindingType = isDamaged ? 'condition_mismatch' : 'matched';
+
+        db.prepare(`
+          UPDATE asset_audit_items
+          SET asset_id = ?,
+              expected_branch_id = ?,
+              expected_status = ?,
+              expected_condition = ?,
+              actual_condition = ?,
+              finding_type = ?,
+              notes = ?
+          WHERE id = ?
+        `).run(
+          newAssetId,
+          branch_id,
+          finalStatus,
+          auditCondLabel,
+          auditCondLabel,
+          nextFindingType,
+          notes ? notes.trim() : auditItem.notes,
+          auditItem.id
+        );
+      }
+
+      return newAssetId;
     });
 
     const newId = insertTx();
@@ -300,8 +400,17 @@ exports.createAsset = (req, res) => {
       action: 'CREATE',
       entityType: 'asset',
       entityId: newId,
-      description: `Menambahkan aset baru: ${finalAssetCode} (SN: ${cleanSN || '-'})`
+      description: auditItem
+        ? `Mendaftarkan temuan audit ${auditItem.audit_code} menjadi aset baru: ${finalAssetCode} (SN: ${cleanSN || '-'})`
+        : `Menambahkan aset baru: ${finalAssetCode} (SN: ${cleanSN || '-'})`
     });
+
+    if (auditItem) {
+      return res.redirect(
+        `/assets/audits/${auditItem.audit_id}?msg=` +
+        encodeURIComponent(`Temuan audit berhasil didaftarkan ke Master Aset dengan kode ${finalAssetCode}.`)
+      );
+    }
 
     res.redirect(`/assets?success=Aset+${encodeURIComponent(finalAssetCode)}+berhasil+ditambahkan`);
   } catch (err) {
@@ -480,7 +589,7 @@ exports.updateAsset = (req, res) => {
 exports.deleteAssetPhoto = (req, res) => {
   try {
     const assetId = req.params.id;
-    const { photo_type } = req.body; // 'physical' atau 'sn'
+    const { photo_type } = req.body;
 
     const asset = db.prepare(`SELECT * FROM assets WHERE id = ?`).get(assetId);
     if (!asset) {

@@ -216,6 +216,58 @@ db.exec(`
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
     FOREIGN KEY (branch_id) REFERENCES branches(id) ON DELETE SET NULL
   );
+
+  -- 14. Audit Aset Table
+  CREATE TABLE IF NOT EXISTS asset_audits (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    audit_code TEXT UNIQUE NOT NULL,
+    title TEXT NOT NULL,
+    branch_id INTEGER NOT NULL,
+    status TEXT NOT NULL DEFAULT 'in_progress', -- 'in_progress' | 'closed'
+    notes TEXT,
+    is_reconciled INTEGER NOT NULL DEFAULT 0,
+    created_by INTEGER,
+    started_at TEXT DEFAULT (datetime('now', 'localtime')),
+    completed_at TEXT,
+    FOREIGN KEY (branch_id) REFERENCES branches(id),
+    FOREIGN KEY (created_by) REFERENCES users(id)
+  );
+
+  -- 15. Audit Aset User Table
+  CREATE TABLE IF NOT EXISTS asset_audit_assignees (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    audit_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    assigned_at TEXT DEFAULT (datetime('now', 'localtime')),
+    UNIQUE(audit_id, user_id),
+    FOREIGN KEY (audit_id) REFERENCES asset_audits(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  );
+
+  -- 16. Audit Aset Item Table
+  CREATE TABLE IF NOT EXISTS asset_audit_items (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    audit_id INTEGER NOT NULL,
+    asset_id INTEGER,
+    expected_branch_id INTEGER,
+    found_branch_id INTEGER,
+    expected_status TEXT,
+    expected_condition TEXT,
+    actual_condition TEXT,
+    finding_type TEXT NOT NULL DEFAULT 'pending', -- 'pending' | 'matched' | 'condition_mismatch' | 'misplaced' | 'missing' | 'unregistered'
+    unregistered_name TEXT,
+    unregistered_type TEXT,
+    unregistered_brand_model TEXT,
+    unregistered_sn TEXT,
+    unregistered_location TEXT,
+    photo_evidence TEXT,
+    notes TEXT,
+    scanned_by INTEGER,
+    scanned_at TEXT,
+    FOREIGN KEY (audit_id) REFERENCES asset_audits(id) ON DELETE CASCADE,
+    FOREIGN KEY (asset_id) REFERENCES assets(id) ON DELETE SET NULL,
+    FOREIGN KEY (scanned_by) REFERENCES users(id) ON DELETE SET NULL
+  );
 `);
 
 // Seed Default Settings (Zero-Hardcode Asset Code Format)

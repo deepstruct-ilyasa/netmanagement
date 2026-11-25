@@ -1,0 +1,356 @@
+<%- include('../partials/header') %>
+
+<main class="p-4 sm:p-6 flex-1 w-full max-w-8xl mx-auto space-y-5">
+
+  <!-- Header Aksi -->
+  <div class="bg-slate-800/80 border border-slate-700 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div>
+      <h2 class="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+        <i data-lucide="clipboard-check" class="w-5 h-5 text-emerald-400"></i>
+        <span>Daftar Sesi Stock Opname</span>
+      </h2>
+      <p class="text-xs text-slate-400 mt-1">
+        <%= isAdmin ? 'Kelola jadwal audit fisik aset per cabang dan tugaskan auditor lintas cabang.' : 'Daftar sesi audit fisik aset yang ditugaskan kepada Anda.' %>
+      </p>
+    </div>
+
+    <% if (isAdmin) { %>
+      <button type="button" onclick="openModal('modal-create-audit')"
+        class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-semibold text-xs sm:text-sm shadow-md shadow-emerald-500/15 transition cursor-pointer shrink-0">
+        <i data-lucide="plus" class="w-4 h-4"></i>
+        <span>Tambah Sesi Audit</span>
+      </button>
+    <% } %>
+  </div>
+
+  <!-- Daftar Kartu Sesi Audit -->
+  <% if (!audits || audits.length === 0) { %>
+    <div class="bg-slate-800/60 border border-dashed border-slate-700 rounded-2xl p-10 text-center space-y-3">
+      <div class="w-12 h-12 rounded-2xl bg-slate-700/60 text-slate-400 flex items-center justify-center mx-auto">
+        <i data-lucide="clipboard-list" class="w-6 h-6"></i>
+      </div>
+      <h3 class="text-sm font-semibold text-white">Belum Ada Sesi Audit</h3>
+      <p class="text-xs text-slate-400 max-w-md mx-auto">
+        <%= isAdmin ? 'Klik tombol "Tambah Sesi Audit" di atas untuk memulai jadwal stock opname cabang.' : 'Anda belum memiliki penugasan sesi audit aktif saat ini.' %>
+      </p>
+    </div>
+  <% } else { %>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <% audits.forEach(au => { 
+        const pct = au.total_target > 0 ? Math.min(100, Math.round((au.total_checked / au.total_target) * 100)) : 0;
+        const isClosed = au.status === 'closed';
+      %>
+        <div class="bg-slate-800/80 border border-slate-700 hover:border-emerald-500/40 rounded-2xl p-5 flex flex-col justify-between gap-4 transition shadow-sm">
+          <div class="space-y-3">
+            <!-- Kode & Status -->
+            <div class="flex items-start justify-between gap-2">
+              <div>
+                <span class="font-mono text-xs font-bold text-emerald-400"><%= au.audit_code %></span>
+                <h3 class="text-sm sm:text-base font-bold text-white mt-0.5"><%= au.title %></h3>
+              </div>
+              <% if (isClosed) { %>
+                <span class="px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase bg-slate-700 text-slate-300 border border-slate-600 shrink-0">
+                  Selesai (Closed)
+                </span>
+              <% } else { %>
+                <span class="px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 inline-flex items-center gap-1.5 shrink-0">
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                  Berjalan
+                </span>
+              <% } %>
+            </div>
+
+            <!-- Info Cabang & Tanggal -->
+            <div class="grid grid-cols-2 gap-2 text-xs bg-slate-900/60 border border-slate-700/60 rounded-xl p-3">
+              <div>
+                <span class="text-[10px] text-slate-400 block">Cabang Target</span>
+                <span class="font-semibold text-slate-200">[<%= au.branch_code %>] <%= au.branch_name %></span>
+              </div>
+              <div>
+                <span class="text-[10px] text-slate-400 block">Tanggal Mulai</span>
+                <span class="font-medium text-slate-300"><%= au.started_at || '-' %></span>
+              </div>
+            </div>
+
+            <!-- Progress Pencapaian -->
+            <div class="space-y-1.5">
+              <div class="flex items-center justify-between text-xs">
+                <span class="text-slate-400">Progres Pengecekan</span>
+                <span class="font-semibold text-white"><%= au.total_checked %> / <%= au.total_target %> Aset (<%= pct %>%)</span>
+              </div>
+              <div class="w-full h-2 rounded-full bg-slate-900 overflow-hidden border border-slate-700/60">
+                <div class="h-full rounded-full <%= isClosed ? 'bg-sky-500' : 'bg-emerald-500' %> transition-all duration-300" style="width: <%= pct %>%"></div>
+              </div>
+            </div>
+
+            <!-- Auditor yang Ditugaskan -->
+            <div>
+              <span class="text-[10px] uppercase tracking-wider text-slate-400 block mb-1.5">Auditor Ditugaskan:</span>
+              <div class="flex flex-wrap gap-1.5">
+                <% if (au.assignees && au.assignees.length > 0) { %>
+                  <% au.assignees.forEach(asg => { %>
+                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-700/70 text-slate-200 text-[11px] border border-slate-600/60">
+                      <i data-lucide="user-check" class="w-3 h-3 text-emerald-400"></i>
+                      <span><%= asg.full_name %></span>
+                    </span>
+                  <% }) %>
+                <% } else { %>
+                  <span class="text-[11px] text-slate-500">-</span>
+                <% } %>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tombol Aksi -->
+          <div class="pt-3 border-t border-slate-700/70 flex items-center justify-between gap-2">
+            <% if (au.is_reconciled === 1) { %>
+              <span class="inline-flex items-center gap-1 text-[11px] text-sky-400 font-medium">
+                <i data-lucide="check-check" class="w-3.5 h-3.5"></i> Tersinkronisasi
+              </span>
+            <% } else { %>
+              <span class="text-[11px] text-slate-500">Dibuat oleh <%= au.creator_name || 'Admin' %></span>
+            <% } %>
+
+            <a href="/assets/audits/<%= au.id %>"
+              class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl <%= isClosed ? 'bg-sky-500/15 hover:bg-sky-500/25 text-sky-400 border border-sky-500/30' : 'bg-emerald-500 hover:bg-emerald-600 text-slate-950' %> font-semibold text-xs transition">
+              <i data-lucide="<%= isClosed ? 'file-text' : 'scan-line' %>" class="w-3.5 h-3.5"></i>
+              <span><%= isClosed ? 'Lihat Laporan' : 'Mulai / Lanjut Scan' %></span>
+            </a>
+          </div>
+        </div>
+      <% }) %>
+    </div>
+  <% } %>
+
+</main>
+
+<!-- Modal Notifikasi Popup (URL Bersih) -->
+<div id="modal-feedback-popup" class="fixed inset-0 z-[70] hidden flex items-center justify-center p-4">
+  <div onclick="closeFeedbackPopup()" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm"></div>
+  <div class="relative bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-sm p-6 text-center space-y-4 shadow-2xl z-10">
+    <div id="feedback-popup-icon" class="w-12 h-12 rounded-2xl mx-auto flex items-center justify-center bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+      <i data-lucide="check-circle-2" class="w-6 h-6"></i>
+    </div>
+    <div class="space-y-1.5">
+      <h3 id="feedback-popup-title" class="text-base font-bold text-white">Berhasil</h3>
+      <p id="feedback-popup-message" class="text-xs text-slate-300 leading-relaxed"></p>
+    </div>
+    <button type="button" id="feedback-popup-btn" onclick="closeFeedbackPopup()"
+      class="w-full py-2.5 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold text-xs transition cursor-pointer">
+      OK, Mengerti
+    </button>
+  </div>
+</div>
+
+<!-- Modal Tambah Sesi Audit (Khusus Administrator) -->
+<% if (isAdmin) { %>
+  <div id="modal-create-audit" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4">
+    <div onclick="closeModal('modal-create-audit')" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm"></div>
+    <div class="relative bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-lg max-h-[90dvh] flex flex-col shadow-2xl z-10 overflow-hidden">
+      <div class="px-5 py-4 border-b border-slate-700 flex items-center justify-between shrink-0">
+        <h3 class="text-base font-bold text-white flex items-center gap-2">
+          <i data-lucide="clipboard-plus" class="w-5 h-5 text-emerald-400"></i>
+          <span>Buat Sesi Audit Aset Baru</span>
+        </h3>
+        <button type="button" onclick="closeModal('modal-create-audit')" class="text-slate-400 hover:text-white p-1 cursor-pointer">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <form action="/assets/audits" method="POST" class="p-5 overflow-y-auto space-y-4 text-xs">
+        <div>
+          <label class="block font-medium text-slate-300 mb-1.5">Nama / Judul Sesi Audit <span class="text-rose-400">*</span></label>
+          <input type="text" name="title" required placeholder="Contoh: Stock Opname Aset Jaringan Q4 2026"
+            class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:border-emerald-500">
+        </div>
+
+        <div>
+          <label class="block font-medium text-slate-300 mb-1.5">Cabang Target Audit <span class="text-rose-400">*</span></label>
+          <select name="branch_id" id="audit-branch-select" onchange="onAuditBranchChange()" required
+            class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:border-emerald-500">
+            <option value="">-- Pilih Cabang --</option>
+            <% branches.forEach(b => { %>
+              <option value="<%= b.id %>">[<%= b.branch_code %>] <%= b.branch_name %></option>
+            <% }) %>
+          </select>
+          <p class="text-[11px] text-slate-400 mt-1">
+            Otomatis menandai user yang khusus bertugas di cabang terpilih (tanpa akses cabang lain).
+          </p>
+        </div>
+
+        <div>
+          <div class="flex items-center justify-between mb-1.5">
+            <label class="font-medium text-slate-300">Kode Audit <span class="text-slate-400 font-normal">(Bebas diedit)</span></label>
+            <button type="button" onclick="resetAuditCodeToDefault()" class="text-[11px] text-emerald-400 hover:underline cursor-pointer">
+              Reset ke Default
+            </button>
+          </div>
+          <input type="text" name="audit_code" id="audit-code-field"
+            placeholder="Otomatis terisi saat cabang dipilih atau ketik format bebas..."
+            class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white font-mono uppercase focus:outline-none focus:border-emerald-500">
+        </div>
+
+        <div>
+          <div class="flex items-center justify-between mb-1.5">
+            <label class="font-medium text-slate-300">Tugaskan User / Auditor <span class="text-rose-400">*</span></label>
+            <span id="auto-assigned-hint" class="text-[11px] text-emerald-400 hidden"></span>
+          </div>
+          <div class="bg-slate-900 border border-slate-700 rounded-xl p-3 max-h-44 overflow-y-auto space-y-2">
+            <% users.forEach(u => { %>
+              <label class="flex items-center justify-between gap-2 p-1.5 rounded-lg hover:bg-slate-800/80 cursor-pointer">
+                <div class="flex items-center gap-2.5 min-w-0">
+                  <input type="checkbox"
+                    name="assignee_ids"
+                    value="<%= u.id %>"
+                    data-role="<%= u.role %>"
+                    data-all-branches="<%= u.all_branches ? '1' : '0' %>"
+                    data-branch-ids="<%= (u.branch_ids || []).join(',') %>"
+                    class="audit-assignee-checkbox w-4 h-4 rounded border-slate-600 text-emerald-500 focus:ring-emerald-500">
+                  <div class="truncate">
+                    <span class="font-semibold text-slate-200 block truncate"><%= u.full_name %></span>
+                    <span class="text-[10px] text-slate-400">@<%= u.username %></span>
+                  </div>
+                </div>
+                <span class="px-2 py-0.5 rounded text-[10px] uppercase font-semibold bg-slate-800 text-slate-400 border border-slate-700 shrink-0">
+                  <%= u.role %>
+                </span>
+              </label>
+            <% }) %>
+          </div>
+        </div>
+
+        <div>
+          <label class="block font-medium text-slate-300 mb-1.5">Catatan / Instruksi Audit</label>
+          <textarea name="notes" rows="2" placeholder="Catatan tambahan untuk tim auditor..."
+            class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-white focus:outline-none focus:border-emerald-500"></textarea>
+        </div>
+
+        <div class="pt-3 border-t border-slate-700 flex items-center justify-end gap-2">
+          <button type="button" onclick="closeModal('modal-create-audit')"
+            class="px-4 py-2 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-200 font-semibold cursor-pointer">Batal</button>
+          <button type="submit"
+            class="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-semibold cursor-pointer">
+            Buat &amp; Mulai Audit
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+<% } %>
+
+<script>
+  function showFeedbackPopup(type, title, message) {
+    const modal = document.getElementById('modal-feedback-popup');
+    const iconBox = document.getElementById('feedback-popup-icon');
+    const titleEl = document.getElementById('feedback-popup-title');
+    const msgEl = document.getElementById('feedback-popup-message');
+    const btnEl = document.getElementById('feedback-popup-btn');
+
+    titleEl.textContent = title;
+    msgEl.textContent = message;
+
+    if (type === 'error') {
+      iconBox.className = 'w-12 h-12 rounded-2xl mx-auto flex items-center justify-center bg-rose-500/15 text-rose-400 border border-rose-500/30';
+      iconBox.innerHTML = '<i data-lucide="alert-circle" class="w-6 h-6"></i>';
+      btnEl.className = 'w-full py-2.5 px-4 rounded-xl bg-rose-500 hover:bg-rose-600 text-white font-bold text-xs transition cursor-pointer';
+    } else {
+      iconBox.className = 'w-12 h-12 rounded-2xl mx-auto flex items-center justify-center bg-emerald-500/15 text-emerald-400 border border-emerald-500/30';
+      iconBox.innerHTML = '<i data-lucide="check-circle-2" class="w-6 h-6"></i>';
+      btnEl.className = 'w-full py-2.5 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold text-xs transition cursor-pointer';
+    }
+
+    modal.classList.remove('hidden');
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+  }
+
+  function closeFeedbackPopup() {
+    document.getElementById('modal-feedback-popup')?.classList.add('hidden');
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const serverMsg = <%- JSON.stringify(msg || '') %>;
+    const serverErr = <%- JSON.stringify(err || '') %>;
+
+    if (serverErr) {
+      showFeedbackPopup('error', 'Terjadi Kesalahan', serverErr);
+      window.history.replaceState({}, '', window.location.pathname);
+    } else if (serverMsg) {
+      showFeedbackPopup('success', 'Berhasil', serverMsg);
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  });
+
+  <% if (isAdmin) { %>
+    const SUGGESTED_AUDIT_CODES = <%- JSON.stringify(suggestedCodes || {}) %>;
+    let auditCodeManuallyEdited = false;
+
+    document.getElementById('audit-code-field')?.addEventListener('input', () => {
+      auditCodeManuallyEdited = true;
+    });
+
+    function suggestAuditCode() {
+      const branchId = document.getElementById('audit-branch-select')?.value;
+      const codeInput = document.getElementById('audit-code-field');
+      if (!codeInput) return;
+
+      if (!branchId) {
+        if (!auditCodeManuallyEdited) codeInput.value = '';
+        return;
+      }
+
+      if (!auditCodeManuallyEdited || !codeInput.value.trim()) {
+        codeInput.value = SUGGESTED_AUDIT_CODES[branchId] || '';
+      }
+    }
+
+    function autoSelectExclusiveBranchUsers() {
+      const selectedBranchId = String(document.getElementById('audit-branch-select')?.value || '').trim();
+      const checkboxes = document.querySelectorAll('.audit-assignee-checkbox');
+      const hintEl = document.getElementById('auto-assigned-hint');
+      let autoCount = 0;
+
+      checkboxes.forEach(cb => {
+        if (!selectedBranchId) {
+          cb.checked = false;
+          return;
+        }
+
+        const role = cb.getAttribute('data-role') || '';
+        const allBranches = cb.getAttribute('data-all-branches') === '1';
+        const rawBranchIds = cb.getAttribute('data-branch-ids') || '';
+        const branchIds = rawBranchIds ? rawBranchIds.split(',').map(s => s.trim()).filter(Boolean) : [];
+
+        const isExclusiveToBranch = (
+          role !== 'administrator' &&
+          !allBranches &&
+          branchIds.length === 1 &&
+          branchIds[0] === selectedBranchId
+        );
+
+        cb.checked = isExclusiveToBranch;
+        if (isExclusiveToBranch) autoCount += 1;
+      });
+
+      if (hintEl) {
+        if (selectedBranchId && autoCount > 0) {
+          hintEl.textContent = `${autoCount} user khusus cabang terpilih otomatis ditandai`;
+          hintEl.classList.remove('hidden');
+        } else {
+          hintEl.classList.add('hidden');
+        }
+      }
+    }
+
+    function onAuditBranchChange() {
+      suggestAuditCode();
+      autoSelectExclusiveBranchUsers();
+    }
+
+    function resetAuditCodeToDefault() {
+      auditCodeManuallyEdited = false;
+      suggestAuditCode();
+    }
+  <% } %>
+</script>
+
+<%- include('../partials/footer') %>

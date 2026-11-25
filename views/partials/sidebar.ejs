@@ -139,6 +139,24 @@
       </div>
     <% } %>
 
+    <% if (typeof can === 'function' && can('menu.asset-audits')) { %>
+      <div class="px-3 pt-4 pb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+        Audit & Stock Opname
+      </div>
+      <a href="/assets/audits"
+        class="flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl text-sm font-medium transition <%= (typeof activeMenu !== 'undefined' && activeMenu === 'asset-audits') ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' %>">
+        <span class="flex items-center gap-3 min-w-0">
+          <i data-lucide="clipboard-check" class="w-4 h-4 shrink-0"></i>
+          <span class="truncate">Audit & Stock Opname</span>
+        </span>
+        <% if (currentUser && currentUser.role !== 'administrator' && typeof activeAuditTaskCount !== 'undefined' && activeAuditTaskCount > 0) { %>
+          <span class="px-1.5 py-0.5 text-[10px] font-bold rounded-md bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+            <%= activeAuditTaskCount %>
+          </span>
+        <% } %>
+      </a>
+    <% } %>
+
     <% if (can('menu.audit-logs') || can('menu.users') || can('menu.branches')) { %>
       <div class="px-3 pt-4 pb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
         Governance & System

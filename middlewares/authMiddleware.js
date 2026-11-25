@@ -65,10 +65,31 @@ function resolveUserFromCookie(req) {
   const branchRows = db.prepare('SELECT branch_id FROM user_branches WHERE user_id = ?').all(user.id);
   user.allowed_branch_ids = branchRows.map(r => Number(r.branch_id));
 
+  // Cek jumlah penugasan sesi audit (lintas cabang) dari Administrator
+  let assignedAuditCount = 0;
+  try {
+    const auditRow = db.prepare(`
+      SELECT COUNT(*) AS cnt
+      FROM asset_audit_assignees aa
+      JOIN asset_audits a ON aa.audit_id = a.id
+      WHERE aa.user_id = ?
+    `).get(user.id);
+    assignedAuditCount = auditRow ? auditRow.cnt : 0;
+  } catch (e) {
+    assignedAuditCount = 0;
+  }
+  user.assigned_audit_count = assignedAuditCount;
+
   const assetGroupMenus = ['assets', 'device-types', 'brands', 'device-models', 'manufactures'];
 
   const hasMenuAccess = (menuKey) => {
     if (user.role === 'administrator') return true;
+
+    // Akses menu Audit Aset murni ditentukan oleh penugasan sesi audit dari Administrator
+    if (menuKey === 'asset-audits') {
+      return assignedAuditCount > 0;
+    }
+
     if (user.menus.includes(menuKey)) return true;
 
     if (assetGroupMenus.includes(menuKey)) {
@@ -130,6 +151,9 @@ function requireAuth(req, res, next) {
 
   res.locals.currentUser = resolved.user;
   res.locals.can = resolved.can;
+  res.locals.activeMenu = '';
+  res.locals.hasAuditAccess = resolved.can('menu.asset-audits');
+  res.locals.activeAuditTaskCount = resolved.user.assigned_audit_count || 0;
 
   next();
 }
@@ -145,6 +169,9 @@ function optionalAuth(req, res, next) {
 
     res.locals.currentUser = null;
     res.locals.can = () => false;
+    res.locals.activeMenu = '';
+    res.locals.hasAuditAccess = false;
+    res.locals.activeAuditTaskCount = 0;
     return next();
   }
 
@@ -154,6 +181,9 @@ function optionalAuth(req, res, next) {
 
   res.locals.currentUser = resolved.user;
   res.locals.can = resolved.can;
+  res.locals.activeMenu = '';
+  res.locals.hasAuditAccess = resolved.can('menu.asset-audits');
+  res.locals.activeAuditTaskCount = resolved.user.assigned_audit_count || 0;
 
   next();
 }
@@ -164,6 +194,7 @@ function requireMenu(menuKey) {
     if (!req.can || !req.can(`menu.${menuKey}`)) {
       return res.status(403).render('forbidden', {
         title: '403 Akses Ditolak',
+        activeMenu: '',
         message: 'Anda tidak memiliki hak akses untuk membuka halaman atau menu ini.'
       });
     }
@@ -177,6 +208,7 @@ function requirePermission(permission) {
     if (!req.can || !req.can(permission)) {
       return res.status(403).render('forbidden', {
         title: '403 Akses Ditolak',
+        activeMenu: '',
         message: 'Role Anda (Read-Only / Terbatas) tidak diizinkan melakukan perubahan data.'
       });
     }
@@ -189,6 +221,7 @@ function requireAdmin(req, res, next) {
   if (!req.user || req.user.role !== 'administrator') {
     return res.status(403).render('forbidden', {
       title: '403 Akses Ditolak',
+      activeMenu: '',
       message: 'Halaman ini hanya dapat diakses oleh Administrator.'
     });
   }

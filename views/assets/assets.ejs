@@ -303,7 +303,11 @@
   <div onclick="closeModal('modal-add-asset')" class="fixed inset-0 bg-slate-950/75 backdrop-blur-sm"></div>
   <div class="relative bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl z-10 overflow-hidden">
     <div class="px-4 sm:px-6 py-3.5 border-b border-slate-700 flex items-center justify-between shrink-0">
-      <h3 class="text-sm sm:text-base font-semibold text-emerald-400">+ Registrasi Aset Perangkat Baru</h3>
+      <h3 class="text-sm sm:text-base font-semibold text-emerald-400">
+        <%= (typeof auditPrefillItem !== 'undefined' && auditPrefillItem)
+          ? '+ Daftarkan Temuan Audit ke Master Aset'
+          : '+ Registrasi Aset Perangkat Baru' %>
+      </h3>
       <button type="button" onclick="closeModal('modal-add-asset')" class="text-slate-400 hover:text-white p-1 cursor-pointer">
         <i data-lucide="x" class="w-5 h-5"></i>
       </button>
@@ -311,6 +315,26 @@
 
     <form action="/assets" method="POST" enctype="multipart/form-data" class="flex flex-col flex-1 min-h-0 text-xs sm:text-sm">
       <div class="p-4 sm:p-6 overflow-y-auto space-y-3.5 flex-1">
+        <% if (typeof auditPrefillItem !== 'undefined' && auditPrefillItem) { %>
+          <input type="hidden" name="from_audit_item_id" value="<%= auditPrefillItem.id %>">
+          <div class="bg-sky-500/10 border border-sky-500/35 rounded-xl p-3 space-y-1 text-xs">
+            <div class="flex items-center justify-between gap-2">
+              <span class="font-bold text-sky-400 uppercase text-[11px]">Referensi Temuan Audit (<%= auditPrefillItem.audit_code %>)</span>
+              <a href="/assets/audits/<%= auditPrefillItem.audit_id %>" class="text-[11px] text-slate-300 hover:text-white underline">Kembali ke Audit</a>
+            </div>
+            <p class="text-slate-200 font-semibold">
+              <%= auditPrefillItem.unregistered_name %>
+              <% if (auditPrefillItem.unregistered_brand_model) { %>
+                <span class="text-slate-400 font-normal">(<%= auditPrefillItem.unregistered_brand_model %>)</span>
+              <% } %>
+            </p>
+            <p class="text-[11px] text-slate-400">
+              Jenis Lapangan: <strong class="text-slate-300"><%= auditPrefillItem.unregistered_type || '-' %></strong>
+              &bull; Lokasi: <strong class="text-slate-300"><%= auditPrefillItem.unregistered_location || '-' %></strong>
+            </p>
+          </div>
+        <% } %>
+
         <!-- Mode Penomoran Kode Aset -->
         <div class="bg-slate-900/70 border border-slate-700 rounded-xl p-3 space-y-2">
           <label class="block text-slate-300 font-medium text-xs">Nomor / Kode Aset</label>
@@ -332,9 +356,10 @@
         <div class="grid grid-cols-2 gap-2.5 sm:gap-3">
           <div>
             <label class="block text-slate-300 text-xs mb-1">Cabang Pemilik *</label>
-            <select name="branch_id" required class="w-full bg-slate-900 border border-slate-600 rounded-lg px-2.5 sm:px-3 py-2 text-white text-xs focus:outline-none focus:border-emerald-400">
+            <% const prefillBranchId = (typeof auditPrefillItem !== 'undefined' && auditPrefillItem) ? auditPrefillItem.audit_branch_id : selectedBranchId; %>
+            <select name="branch_id" id="add_asset_branch_id" required class="w-full bg-slate-900 border border-slate-600 rounded-lg px-2.5 sm:px-3 py-2 text-white text-xs focus:outline-none focus:border-emerald-400">
               <% branches.forEach(b => { %>
-                <option value="<%= b.id %>" <%= String(selectedBranchId) === String(b.id) ? 'selected' : '' %>>
+                <option value="<%= b.id %>" <%= String(prefillBranchId) === String(b.id) ? 'selected' : '' %>>
                   [<%= b.branch_code %>] <%= b.branch_name %>
                 </option>
               <% }) %>
@@ -378,7 +403,10 @@
         <div class="grid grid-cols-2 gap-2.5 sm:gap-3">
           <div>
             <label class="block text-slate-300 text-xs mb-1">Serial Number (SN)</label>
-            <input type="text" name="serial_number" placeholder="Contoh: H2308123456" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-2.5 sm:px-3 py-2 text-white text-xs font-mono focus:outline-none focus:border-emerald-400">
+            <input type="text" name="serial_number" id="add_asset_sn"
+              value="<%= (typeof auditPrefillItem !== 'undefined' && auditPrefillItem && auditPrefillItem.unregistered_sn) ? auditPrefillItem.unregistered_sn : '' %>"
+              placeholder="Contoh: H2308123456"
+              class="w-full bg-slate-900 border border-slate-600 rounded-lg px-2.5 sm:px-3 py-2 text-white text-xs font-mono focus:outline-none focus:border-emerald-400">
           </div>
           <div>
             <label class="block text-slate-300 text-xs mb-1">MAC Address Utama</label>
@@ -386,21 +414,33 @@
           </div>
         </div>
 
+        <%
+          const prefillAuditCond = (typeof auditPrefillItem !== 'undefined' && auditPrefillItem)
+            ? String(auditPrefillItem.actual_condition || '').toLowerCase()
+            : '';
+          const mappedStatus = ['rusak_berat', 'broken'].includes(prefillAuditCond)
+            ? 'broken'
+            : (prefillAuditCond === 'rusak_ringan' ? 'maintenance' : 'spare');
+          const mappedCondition = ['rusak_berat', 'broken'].includes(prefillAuditCond)
+            ? 'damaged'
+            : (prefillAuditCond === 'rusak_ringan' ? 'fair' : 'good');
+        %>
+
         <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-3">
           <div>
             <label class="block text-slate-300 text-xs mb-1">Status Awal</label>
-            <select name="status" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-2.5 sm:px-3 py-2 text-white text-xs focus:outline-none focus:border-emerald-400">
-              <option value="spare" selected>Spare (Gudang IT)</option>
-              <option value="maintenance">Service / RMA</option>
-              <option value="broken">Rusak</option>
+            <select name="status" id="add_asset_status" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-2.5 sm:px-3 py-2 text-white text-xs focus:outline-none focus:border-emerald-400">
+              <option value="spare" <%= mappedStatus === 'spare' ? 'selected' : '' %>>Spare (Gudang IT)</option>
+              <option value="maintenance" <%= mappedStatus === 'maintenance' ? 'selected' : '' %>>Service / RMA</option>
+              <option value="broken" <%= mappedStatus === 'broken' ? 'selected' : '' %>>Rusak</option>
             </select>
           </div>
           <div>
             <label class="block text-slate-300 text-xs mb-1">Kondisi Fisik</label>
-            <select name="condition" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-2.5 sm:px-3 py-2 text-white text-xs focus:outline-none focus:border-emerald-400">
-              <option value="good" selected>Baik (Good)</option>
-              <option value="fair">Kurang Baik (Fair)</option>
-              <option value="damaged">Rusak (Damaged)</option>
+            <select name="condition" id="add_asset_condition" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-2.5 sm:px-3 py-2 text-white text-xs focus:outline-none focus:border-emerald-400">
+              <option value="good" <%= mappedCondition === 'good' ? 'selected' : '' %>>Baik (Good)</option>
+              <option value="fair" <%= mappedCondition === 'fair' ? 'selected' : '' %>>Kurang Baik (Fair)</option>
+              <option value="damaged" <%= mappedCondition === 'damaged' ? 'selected' : '' %>>Rusak (Damaged)</option>
             </select>
           </div>
           <div class="col-span-2 sm:col-span-1">
@@ -425,8 +465,16 @@
         </div>
 
         <div class="grid grid-cols-2 gap-2.5 sm:gap-3">
-          <div>
-            <label class="block text-slate-300 text-xs mb-1">Foto Fisik Perangkat</label>
+          <div class="space-y-1.5">
+            <label class="block text-slate-300 text-xs">Foto Fisik Perangkat</label>
+            <% if (typeof auditPrefillItem !== 'undefined' && auditPrefillItem && auditPrefillItem.photo_evidence) { %>
+              <div class="flex items-center gap-2 bg-slate-900/80 border border-sky-500/30 rounded-lg p-1.5">
+                <a href="<%= auditPrefillItem.photo_evidence %>" target="_blank" class="shrink-0 rounded overflow-hidden border border-slate-600">
+                  <img src="<%= auditPrefillItem.photo_evidence %>" alt="Bukti Audit" class="w-12 h-9 object-cover">
+                </a>
+                <span class="text-[10px] text-sky-300 leading-tight">Foto bukti audit otomatis dipakai (atau pilih file baru untuk mengganti).</span>
+              </div>
+            <% } %>
             <input type="file" name="physical_photo" accept="image/*" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-2 py-1.5 text-slate-300 text-[11px] file:mr-2 file:py-0.5 file:px-2 file:rounded file:border-0 file:text-[11px] file:bg-slate-700 file:text-slate-200">
           </div>
           <div>
@@ -435,9 +483,22 @@
           </div>
         </div>
 
+        <%
+          let prefillNotes = '';
+          if (typeof auditPrefillItem !== 'undefined' && auditPrefillItem) {
+            const parts = [
+              auditPrefillItem.unregistered_name ? `Temuan: ${auditPrefillItem.unregistered_name}` : '',
+              auditPrefillItem.unregistered_location ? `Lokasi: ${auditPrefillItem.unregistered_location}` : '',
+              auditPrefillItem.notes || ''
+            ].filter(Boolean);
+            prefillNotes = parts.join(' | ');
+          }
+        %>
+
         <div>
           <label class="block text-slate-300 text-xs mb-1">Catatan Kelengkapan</label>
-          <textarea name="notes" rows="2" placeholder="Contoh: Lengkap adaptor 24V, kupingan rackmount, dan dus" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-emerald-400"></textarea>
+          <textarea name="notes" rows="2" placeholder="Contoh: Lengkap adaptor 24V, kupingan rackmount, dan dus"
+            class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-emerald-400"><%= prefillNotes %></textarea>
         </div>
       </div>
 
@@ -788,10 +849,64 @@
   const allAssetBrands = <%- JSON.stringify(typeof brands !== 'undefined' ? brands : []) %>;
   const allAssetModels = <%- JSON.stringify(typeof models !== 'undefined' ? models : []) %>;
   const ORG_NAME_FOR_STICKER = <%- JSON.stringify(settings.organization_name || 'IT ASSET') %>;
+  const AUDIT_PREFILL_ITEM = <%- JSON.stringify(typeof auditPrefillItem !== 'undefined' ? auditPrefillItem : null) %>;
 
   const selectedAssetsMap = new Map();
   let preparedStickersList = [];
   let currentEditingAssetId = null;
+
+  function autoSelectPrefillTaxonomy() {
+    if (!AUDIT_PREFILL_ITEM) return;
+
+    const rawType = String(AUDIT_PREFILL_ITEM.unregistered_type || '').trim().toLowerCase();
+    const rawBrandModel = `${AUDIT_PREFILL_ITEM.unregistered_brand_model || ''} ${AUDIT_PREFILL_ITEM.unregistered_name || ''}`.toLowerCase();
+
+    const typeSelect = document.getElementById('add_asset_type_id');
+    if (typeSelect && rawType) {
+      const matchedTypeOpt = Array.from(typeSelect.options).find(opt =>
+        opt.value && opt.textContent.trim().toLowerCase().includes(rawType)
+      );
+      if (matchedTypeOpt) {
+        typeSelect.value = matchedTypeOpt.value;
+      }
+    }
+
+    let matchedBrandId = '';
+    if (rawBrandModel) {
+      const foundBrand = allAssetBrands.find(b =>
+        rawBrandModel.includes(String(b.brand_name || '').trim().toLowerCase())
+      );
+      if (foundBrand) {
+        matchedBrandId = String(foundBrand.id);
+        if (typeSelect && !typeSelect.value) {
+          const modelWithBrand = allAssetModels.find(m => String(m.brand_id) === matchedBrandId);
+          if (modelWithBrand) typeSelect.value = String(modelWithBrand.device_type_id);
+        }
+      }
+    }
+
+    let matchedModelId = '';
+    if (rawBrandModel) {
+      const foundModel = allAssetModels.find(m =>
+        rawBrandModel.includes(String(m.model_name || '').trim().toLowerCase())
+      );
+      if (foundModel) {
+        matchedModelId = String(foundModel.id);
+        if (!matchedBrandId) matchedBrandId = String(foundModel.brand_id);
+        if (typeSelect && !typeSelect.value) typeSelect.value = String(foundModel.device_type_id);
+      }
+    }
+
+    onAssetDeviceTypeChange('add_asset', matchedBrandId, matchedModelId);
+    openModal('modal-add-asset');
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    onAssetDeviceTypeChange('add_asset');
+    loadAssetState();
+    renderAssetsTable();
+    autoSelectPrefillTaxonomy();
+  });
 
   // =========================================================
   // CASCADING KETAT: JENIS PERANGKAT -> BRAND -> MODEL

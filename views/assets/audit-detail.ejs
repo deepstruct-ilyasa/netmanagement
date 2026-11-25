@@ -1,0 +1,1269 @@
+<%- include('../partials/header') %>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+
+<style>
+  #audit-qr-reader { border: none !important; }
+  #audit-qr-reader video { border-radius: 0.75rem; width: 100% !important; object-fit: cover; }
+  #audit-qr-reader__scan_region img { display: none !important; }
+
+  /* Mode Cetak Resmi Berita Acara (Print / PDF) */
+  @media print {
+    @page {
+      size: A4 portrait;
+      margin: 15mm 15mm 18mm 15mm;
+    }
+
+    body {
+      background: #ffffff !important;
+      color: #000000 !important;
+      font-family: "Times New Roman", Times, Georgia, serif !important;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+
+    #sidebar, header, footer, .no-print, .screen-only {
+      display: none !important;
+    }
+
+    main {
+      padding: 0 !important;
+      margin: 0 !important;
+      max-width: 100% !important;
+      display: block !important;
+    }
+
+    .print-only {
+      display: block !important;
+    }
+
+    .print-table {
+      width: 100% !important;
+      border-collapse: collapse !important;
+      font-size: 10.5px !important;
+      color: #000000 !important;
+    }
+
+    .print-table th,
+    .print-table td {
+      border: 1px solid #1e293b !important;
+      padding: 6px 8px !important;
+      color: #000000 !important;
+      background: #ffffff !important;
+      vertical-align: top !important;
+    }
+
+    .print-table th {
+      background-color: #e2e8f0 !important;
+      font-weight: 700 !important;
+      text-transform: uppercase !important;
+      font-size: 10px !important;
+      text-align: center !important;
+      vertical-align: middle !important;
+    }
+
+    .print-table tr {
+      page-break-inside: avoid !important;
+      break-inside: avoid !important;
+    }
+
+    /* Khusus Tabel Lampiran II: Batasi lebar kolom Kondisi agar catatan panjang turun ke bawah */
+    .print-lampiran-table th:nth-child(5),
+    .print-lampiran-table td:nth-child(5) {
+      width: 155px !important;
+      max-width: 155px !important;
+      overflow-wrap: anywhere !important;
+      word-break: break-word !important;
+    }
+
+    .print-signature-block {
+      page-break-inside: avoid !important;
+      break-inside: avoid !important;
+      margin-top: 24px !important;
+    }
+  }
+</style>
+
+<main class="p-4 flex-1 w-full max-w-8xl mx-auto space-y-5">
+
+  <!-- ===================================================================== -->
+  <!-- BAGIAN 1: DOKUMEN RESMI BERITA ACARA (KHUSUS PRINT / SAVE AS PDF)      -->
+  <!-- ===================================================================== -->
+  <div class="hidden print-only text-black">
+    <!-- Judul & Nomor Berita Acara -->
+    <div class="mb-5">
+      <h1 class="text-xs text-center font-bold uppercase tracking-wide">
+        BERITA ACARA<br>
+        PEMERIKSAAN FISIK (STOCK OPNAME) ASET JARINGAN
+      </h1>
+      <p class="text-[10px] text-center font-semibold mt-1">
+        Nomor: <%= audit.audit_code %>
+      </p>
+    </div>
+
+    <!-- Narasi Pembuka Formal -->
+    <div class="text-xs leading-relaxed text-justify mb-4 space-y-2">
+      <p>
+        Pada hari ini, telah dilaksanakan kegiatan pemeriksaan fisik (<em>Stock Opname</em>) pada inventaris perangkat infrastruktur jaringan dengan rincian berikut:
+      </p>
+      <table class="w-full text-xs my-2" style="border: none !important;">
+        <tr>
+          <td style="border: none !important; width: 140px; padding: 2px 0;">Nama Kegiatan</td>
+          <td style="border: none !important; width: 12px; padding: 2px 0;">:</td>
+          <td style="border: none !important; padding: 2px 0;"><%= audit.title %></td>
+        </tr>
+        <tr>
+          <td style="border: none !important; padding: 2px 0;">Cabang</td>
+          <td style="border: none !important; padding: 2px 0;">:</td>
+          <td style="border: none !important; padding: 2px 0;"><%= audit.branch_name %></td>
+        </tr>
+        <tr>
+          <td style="border: none !important; padding: 2px 0; vertical-align: top;">Waktu Pelaksanaan</td>
+          <td style="border: none !important; padding: 2px 0; vertical-align: top;">:</td>
+          <td style="border: none !important; padding: 2px 0; vertical-align: top;">
+            <%= audit.started_at || '-' %><br>
+            s/d<br>
+            <%= audit.completed_at || 'Sedang Berlangsung' %>
+          </td>
+        </tr>
+        <tr>
+          <td style="border: none !important; padding: 2px 0;">Status Dokumen</td>
+          <td style="border: none !important; padding: 2px 0;">:</td>
+          <td style="border: none !important; padding: 2px 0;">
+            <%= audit.status === 'closed' ? 'Selesai (Closed)' : 'Dalam Proses (In Progress)' %>
+          </td>
+        </tr>
+        <tr>
+          <td style="border: none !important; padding: 2px 0; vertical-align: top;">Petugas / Auditor</td>
+          <td style="border: none !important; padding: 2px 0; vertical-align: top;">:</td>
+          <td style="border: none !important; padding: 2px 0; vertical-align: top;">
+            <% if (assignees && assignees.length > 1) { %>
+              <ol class="list-decimal list-inside m-0 p-0">
+                <% assignees.forEach(a => { %>
+                  <li><%= a.full_name %></li>
+                <% }) %>
+              </ol>
+            <% } else { %>
+              <%= (assignees && assignees.length === 1) ? assignees[0].full_name : '-' %>
+            <% } %>
+          </td>
+        </tr>
+      </table>
+      <p>
+        Berdasarkan hasil pencocokan antara data tercatat pada sistem inventaris (SIMAJAR) dengan kondisi fisik di lapangan, diperoleh rekapitulasi hasil sebagai berikut:
+      </p>
+    </div>
+
+    <!-- I. Tabel Rekapitulasi Resmi -->
+    <div class="mb-4">
+      <div class="text-xs font-bold uppercase mb-1.5">I. Rekapitulasi Hasil Pemeriksaan</div>
+      <table class="print-table">
+        <thead>
+          <tr>
+            <th style="width: 36px;">No</th>
+            <th>Kategori Pemeriksaan</th>
+            <th style="width: 90px;">Jumlah</th>
+            <th>Keterangan</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="text-align: center;">1</td>
+            <td>Total Aset Terdaftar</td>
+            <td style="text-align: center; font-weight: bold;"><span id="print-stat-total"><%= stats.totalTarget %></span> Unit</td>
+            <td>Seluruh aset yang tercatat pada cabang <%= audit.branch_name %></td>
+          </tr>
+          <tr>
+            <td style="text-align: center;">2</td>
+            <td>Sesuai — dengan Tingkat Akurasi: <strong><span id="print-stat-accuracy"><%= stats.accuracyPercent %></span>%</strong></td>
+            <td style="text-align: center; font-weight: bold;"><span id="print-stat-matched"><%= stats.matched %></span> Unit</td>
+            <td>Fisik perangkat sesuai dengan data pada sistem &amp; kondisi baik</td>
+          </tr>
+          <tr>
+            <td style="text-align: center;">3</td>
+            <td>Perubahan Kondisi Fisik (Rusak / Bermasalah)</td>
+            <td style="text-align: center; font-weight: bold;"><span id="print-stat-mismatch"><%= stats.condition_mismatch %></span> Unit</td>
+            <td>Perangkat sesuai dengan data aset, namun mengalami penurunan fungsi/kerusakan fisik</td>
+          </tr>
+          <tr>
+            <td style="text-align: center;">4</td>
+            <td>Perbedaan Lokasi / Salah Cabang</td>
+            <td style="text-align: center; font-weight: bold;"><span id="print-stat-misplaced"><%= stats.misplaced %></span> Unit</td>
+            <td>Fisik perangkat ditemukan di cabang ini, namun tercatat milik cabang lain atau pada lokasi yang tidak sesuai dengan yang terdaftar.</td>
+          </tr>
+          <tr>
+            <td style="text-align: center;">5</td>
+            <td><%= audit.status === 'closed' ? 'Tidak Ditemukan' : 'Belum Terverifikasi (Pending)' %></td>
+            <td style="text-align: center; font-weight: bold;"><span id="print-stat-remaining"><%= audit.status === 'closed' ? stats.missing : stats.pending %></span> Unit</td>
+            <td><%= audit.status === 'closed' ? 'Tidak ditemukan di lokasi hingga batas akhir pemeriksaan' : 'Belum dilakukan pengecekan' %></td>
+          </tr>
+          <tr>
+            <td style="text-align: center;">6</td>
+            <td>Temuan Fisik Belum Terdaftar</td>
+            <td style="text-align: center; font-weight: bold;"><span id="print-stat-unregistered"><%= stats.unregistered %></span> Unit</td>
+            <td>Perangkat fisik ditemukan di lapangan namun belum tercatat pada Master Aset</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- II. Tabel Lampiran Rincian Kertas Kerja (Terpisah dari Tampilan Web) -->
+    <div class="mt-4 mb-2">
+      <div class="text-xs font-bold uppercase mb-1.5">II. Lampiran Rincian Kertas Kerja &amp; Temuan Lapangan</div>
+      <table class="print-table print-lampiran-table">
+        <thead>
+          <tr>
+            <th style="width: 30px;">No</th>
+            <th>Kode / Identitas Perangkat</th>
+            <th>SN / Jenis Perangkat</th>
+            <th style="width: 85px;">Status</th>
+            <th>Kondisi</th>
+          </tr>
+        </thead>
+        <tbody id="print-items-tbody">
+          <% items.forEach((it, idx) => { 
+            const isUnreg = it.finding_type === 'unregistered';
+            const labelMap = {
+              pending: 'PENDING',
+              matched: 'SESUAI',
+              condition_mismatch: 'KONDISI BERUBAH',
+              misplaced: 'SALAH CABANG',
+              unregistered: 'BELUM TERDAFTAR',
+              missing: 'TIDAK DITEMUKAN'
+            };
+          %>
+            <tr>
+              <td style="text-align: center;"><%= idx + 1 %></td>
+              <td>
+                <% if (isUnreg) { %>
+                  <div><strong>[TEMUAN FISIK BARU]</strong></div>
+                  <div><strong><%= it.unregistered_name %></strong></div>
+                  <div><%= it.unregistered_brand_model || '-' %></div>
+                <% } else { %>
+                  <div><strong><%= it.asset_code %></strong></div>
+                  <div><strong><%= [it.brand_name, it.model_name].filter(Boolean).join(' ') || '-' %></strong></div>
+                <% } %>
+              </td>
+              <td>
+                <div>SN: <%= isUnreg ? (it.unregistered_sn || '-') : (it.serial_number || '-') %></div>
+                <div style="margin-top: 2px;">Jenis: <%= isUnreg ? (it.unregistered_type || '-') : (it.type_name || '-') %></div>
+              </td>
+              <td><strong><%= labelMap[it.finding_type] || it.finding_type %></strong></td>
+              <td>
+                <div style="text-transform: uppercase;"><strong><%= it.actual_condition || it.expected_condition || '-' %></strong></div>
+                <% if (it.notes) { %>
+                  <div style="margin-top: 2px;"><%= it.notes %></div>
+                <% } %>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- III. Penutup & Blok Tanda Tangan Resmi -->
+    <div class="print-signature-block">
+      <% if (audit.notes) { %>
+        <div class="text-xs mb-3 border border-black p-2.5">
+          <strong>Catatan / Keterangan Tambahan Audit:</strong><br>
+          <span><%= audit.notes %></span>
+        </div>
+      <% } %>
+
+      <p class="text-xs leading-relaxed text-justify mb-6">
+        Demikian Berita Acara hasil pemeriksaan fisik (<em>Stock Opname</em>) aset jaringan pada unit/cabang <strong><%= audit.branch_name %></strong> ini dibuat dengan sebenar-benarnya berdasarkan kondisi faktual di lapangan, untuk dipergunakan sebagai bahan evaluasi, pemutakhiran data inventaris, serta pertanggungjawaban administrasi sebagaimana mestinya.
+      </p>
+
+      <div class="text-right text-xs mb-4">
+        <span>Ditetapkan di: <strong><%= audit.branch_name %></strong></span><br>
+        <span>Tanggal: <strong><%= new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' }) %></strong></span>
+      </div>
+
+      <div class="grid grid-cols-3 gap-6 text-center text-xs pt-2">
+        <div>
+          <p class="font-semibold">Pelaksana,</p>
+          <p class="text-[11px]">Auditor</p>
+          <div class="h-20"></div>
+          <% if (assignees && assignees.length > 1) { %>
+            <ol class="list-decimal list-inside text-left inline-block space-y-0.5">
+              <% assignees.forEach(a => { %>
+                <li><%= a.full_name %></li>
+              <% }) %>
+            </ol>
+          <% } else { %>
+            <p class="font-bold underline"><%= (assignees && assignees.length === 1) ? assignees[0].full_name : 'Tim Auditor' %></p>
+          <% } %>
+        </div>
+        <div>
+          <p class="font-semibold">Diperiksa Oleh,</p>
+          <p class="text-[11px]">Koordinator</p>
+          <div class="h-20"></div>
+          <p class="font-bold underline">........................................</p>
+        </div>
+        <div>
+          <p class="font-semibold">Mengetahui,</p>
+          <p class="text-[11px]">Pimpinan Cabang</p>
+          <div class="h-20"></div>
+          <p class="font-bold underline">........................................</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ===================================================================== -->
+  <!-- BAGIAN 2: TAMPILAN WEB INTERAKTIF (KHUSUS LAYAR / SCREEN-ONLY)        -->
+  <!-- ===================================================================== -->
+  <div class="screen-only space-y-5">
+
+    <!-- Header Sesi Audit & Tombol Aksi -->
+    <div class="bg-slate-800/80 border border-slate-700 rounded-2xl p-4 sm:p-5 space-y-4">
+      <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <div class="space-y-1">
+          <div class="flex flex-wrap items-center gap-2">
+            <a href="/assets/audits" class="inline-flex items-center gap-1 text-xs text-slate-400 hover:text-white mr-1">
+              <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i> Kembali
+            </a>
+            <span class="font-mono text-xs font-bold px-2.5 py-0.5 rounded-md bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+              <%= audit.audit_code %>
+            </span>
+            <% if (audit.status === 'closed') { %>
+              <span class="px-2.5 py-0.5 rounded-md text-[11px] font-bold uppercase bg-slate-700 text-slate-200 border border-slate-600">
+                CLOSED
+              </span>
+            <% } else { %>
+              <span class="px-2.5 py-0.5 rounded-md text-[11px] font-bold uppercase bg-amber-500/15 text-amber-400 border border-amber-500/30">
+                IN PROGRESS
+              </span>
+            <% } %>
+          </div>
+          <h2 class="text-base sm:text-xl font-bold text-white"><%= audit.title %></h2>
+          <p class="text-xs text-slate-400">
+            Cabang Target: <strong class="text-slate-200">[<%= audit.branch_code %>] <%= audit.branch_name %></strong>
+            &bull; Mulai: <%= audit.started_at || '-' %>
+            <% if (audit.completed_at) { %> &bull; Selesai: <%= audit.completed_at %><% } %>
+          </p>
+        </div>
+
+        <!-- Tombol Aksi Header -->
+        <div class="flex flex-wrap items-center gap-2">
+          <% if (isAdmin) { %>
+            <button type="button" onclick="openModal('modal-assignees')"
+              class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-700/80 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition cursor-pointer">
+              <i data-lucide="users" class="w-3.5 h-3.5 text-emerald-400"></i>
+              <span>Auditor (<%= assignees.length %>)</span>
+            </button>
+          <% } %>
+
+          <a href="/assets/audits/<%= audit.id %>/export"
+            class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-700/80 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition">
+            <i data-lucide="file-spreadsheet" class="w-3.5 h-3.5 text-sky-400"></i>
+            <span>Export CSV</span>
+          </a>
+
+          <button type="button" onclick="window.print()"
+            class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-700/80 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition cursor-pointer">
+            <i data-lucide="printer" class="w-3.5 h-3.5 text-amber-400"></i>
+            <span>Berita Acara</span>
+          </button>
+
+          <% if (isAdmin && audit.status === 'in_progress') { %>
+            <form id="form-close-audit" action="/assets/audits/<%= audit.id %>/close" method="POST">
+              <button type="button" onclick="openActionConfirmModal('close')"
+                class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-bold transition cursor-pointer">
+                <i data-lucide="lock" class="w-3.5 h-3.5"></i>
+                <span>Selesaikan Audit</span>
+              </button>
+            </form>
+          <% } %>
+
+          <% if (isAdmin && audit.status === 'closed' && audit.is_reconciled === 0) { %>
+            <form id="form-reconcile-audit" action="/assets/audits/<%= audit.id %>/reconcile" method="POST">
+              <button type="button" onclick="openActionConfirmModal('reconcile')"
+                class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-slate-950 text-xs font-bold transition cursor-pointer">
+                <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+                <span>Rekonsiliasi ke Master Aset</span>
+              </button>
+            </form>
+          <% } else if (audit.is_reconciled === 1) { %>
+            <span class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-sky-500/15 text-sky-400 border border-sky-500/30 text-xs font-semibold">
+              <i data-lucide="check-check" class="w-3.5 h-3.5"></i>
+              <span>Sudah Direkonsiliasi</span>
+            </span>
+          <% } %>
+        </div>
+      </div>
+    </div>
+
+    <!-- PANEL EKSEKUSI LAPANGAN (Hanya tampil saat status In Progress) -->
+    <% if (audit.status === 'in_progress') { %>
+      <div class="bg-slate-800/90 border border-emerald-500/35 rounded-2xl p-4 sm:p-5 shadow-md space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-700 pb-3.5">
+          <div>
+            <h3 class="text-sm sm:text-base font-bold text-white flex items-center gap-2">
+              <i data-lucide="scan-line" class="w-4 h-4 text-emerald-400"></i>
+              <span>Eksekusi Pengecekan Lapangan</span>
+            </h3>
+            <p class="text-xs text-slate-400 mt-0.5">
+              Scan stiker QR perangkat atau input manual Kode Inventaris / Serial Number.
+            </p>
+          </div>
+
+          <button type="button" onclick="openModal('modal-unregistered')"
+            class="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-sky-500/15 hover:bg-sky-500/25 text-sky-400 border border-sky-500/30 font-semibold text-xs transition cursor-pointer shrink-0">
+            <i data-lucide="plus-circle" class="w-4 h-4"></i>
+            <span>Catat Barang Belum Terdaftar</span>
+          </button>
+        </div>
+
+        <!-- Viewport Kamera QR -->
+        <div id="audit-scanner-wrapper" class="hidden space-y-2">
+          <div class="max-w-sm mx-auto rounded-xl overflow-hidden border-2 border-emerald-500/60 bg-slate-950">
+            <div id="audit-qr-reader" class="w-full"></div>
+          </div>
+          <p class="text-center text-[11px] text-emerald-400 animate-pulse">Arahkan kamera ke stiker QR perangkat...</p>
+        </div>
+
+        <!-- Form Scan & Kondisi Aktual -->
+        <form id="audit-scan-form" onsubmit="submitAuditScan(event)" class="grid grid-cols-2 sm:grid-cols-12 gap-3 text-xs items-end">
+          <div class="col-span-2 sm:col-span-5">
+            <label class="block text-slate-300 font-medium mb-1">Kode Inventaris / Serial Number</label>
+            <div class="flex items-stretch gap-2">
+              <input type="text" id="audit-code-input" required autocomplete="off" placeholder="Kode Inventaris / Serial Number"
+                class="min-w-0 flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white font-mono focus:outline-none focus:border-emerald-500">
+              <button type="button" id="btn-audit-cam-start" onclick="startAuditCamera()" title="Buka Kamera"
+                class="w-11 shrink-0 inline-flex items-center justify-center rounded-xl bg-emerald-500 hover:bg-emerald-600 text-slate-950 transition cursor-pointer">
+                <i data-lucide="camera" class="w-5 h-5"></i>
+              </button>
+              <button type="button" id="btn-audit-cam-stop" onclick="stopAuditCamera()" title="Tutup Kamera"
+                class="hidden w-11 shrink-0 inline-flex items-center justify-center rounded-xl bg-rose-500/20 text-rose-400 border border-rose-500/30 transition cursor-pointer">
+                <i data-lucide="camera-off" class="w-5 h-5"></i>
+              </button>
+            </div>
+          </div>
+
+          <div class="col-span-1 sm:col-span-3">
+            <label class="block text-slate-300 font-medium mb-1">Kondisi Fisik Aktual</label>
+            <select id="audit-condition-input"
+              class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-emerald-500">
+              <option value="baik">Baik / Normal</option>
+              <option value="rusak_ringan">Rusak Ringan</option>
+              <option value="rusak_berat">Rusak Berat / Mati</option>
+            </select>
+          </div>
+
+          <div class="col-span-1 sm:col-span-4">
+            <label class="block text-slate-300 font-medium mb-1">Catatan Temuan (Opsional)</label>
+            <div class="flex flex-col sm:flex-row items-stretch gap-2">
+              <input type="text" id="audit-notes-input" placeholder="Misal: Terdapat kerusakan pada perangkat"
+                class="min-w-0 flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-emerald-500">
+              <button type="submit" id="btn-audit-submit-desktop"
+                class="hidden sm:inline-flex items-center justify-center px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold transition cursor-pointer shrink-0">
+                Catat
+              </button>
+            </div>
+          </div>
+
+          <div class="col-span-2 sm:hidden">
+            <button type="submit" id="btn-audit-submit-mobile"
+              class="w-full py-2.5 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold transition cursor-pointer">
+              Catat
+            </button>
+          </div>
+        </form>
+      </div>
+    <% } %>
+
+    <!-- Kartu Ringkasan Eksekutif & Statistik -->
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+      <button type="button" onclick="filterAuditTable('all')" class="text-left bg-slate-800/80 border border-slate-700 hover:border-slate-500 rounded-xl p-3.5 transition cursor-pointer">
+        <span class="text-[10px] uppercase tracking-wider text-slate-400 block">Akurasi Target</span>
+        <span id="stat-accuracy-percent" class="text-xl font-extrabold text-white mt-0.5 block"><%= stats.accuracyPercent %>%</span>
+        <span id="stat-matched-ratio" class="text-[11px] text-slate-400"><%= stats.matched %>/<%= stats.totalTarget %> Sesuai</span>
+      </button>
+
+      <button type="button" onclick="filterAuditTable('matched')" class="text-left bg-slate-800/80 border border-emerald-500/30 hover:border-emerald-400 rounded-xl p-3.5 transition cursor-pointer">
+        <span class="text-[10px] uppercase tracking-wider text-emerald-400 block">Sesuai (Matched)</span>
+        <span id="stat-matched-count" class="text-xl font-extrabold text-emerald-400 mt-0.5 block"><%= stats.matched %></span>
+        <span class="text-[11px] text-slate-400">Fisik &amp; lokasi cocok</span>
+      </button>
+
+      <button type="button" onclick="filterAuditTable('condition_mismatch')" class="text-left bg-slate-800/80 border border-amber-500/30 hover:border-amber-400 rounded-xl p-3.5 transition cursor-pointer">
+        <span class="text-[10px] uppercase tracking-wider text-amber-400 block">Kondisi Berubah</span>
+        <span id="stat-mismatch-count" class="text-xl font-extrabold text-amber-400 mt-0.5 block"><%= stats.condition_mismatch %></span>
+        <span class="text-[11px] text-slate-400">Rusak / Bermasalah</span>
+      </button>
+
+      <button type="button" onclick="filterAuditTable('misplaced')" class="text-left bg-slate-800/80 border border-purple-500/30 hover:border-purple-400 rounded-xl p-3.5 transition cursor-pointer">
+        <span class="text-[10px] uppercase tracking-wider text-purple-400 block">Salah Cabang</span>
+        <span id="stat-misplaced-count" class="text-xl font-extrabold text-purple-400 mt-0.5 block"><%= stats.misplaced %></span>
+        <span class="text-[11px] text-slate-400">Milik cabang lain</span>
+      </button>
+
+      <button type="button" onclick="filterAuditTable('unregistered')" class="text-left bg-slate-800/80 border border-sky-500/30 hover:border-sky-400 rounded-xl p-3.5 transition cursor-pointer">
+        <span class="text-[10px] uppercase tracking-wider text-sky-400 block">Belum Terdaftar</span>
+        <span id="stat-unregistered-count" class="text-xl font-extrabold text-sky-400 mt-0.5 block"><%= stats.unregistered %></span>
+        <span class="text-[11px] text-slate-400">Fisik tanpa data aset</span>
+      </button>
+
+      <button type="button" onclick="filterAuditTable('pending_or_missing')" class="text-left bg-slate-800/80 border border-rose-500/30 hover:border-rose-400 rounded-xl p-3.5 transition cursor-pointer">
+        <span class="text-[10px] uppercase tracking-wider text-rose-400 block">
+          <%= audit.status === 'closed' ? 'Tidak Ditemukan' : 'Belum Dicek' %>
+        </span>
+        <span id="stat-remaining-count" class="text-xl font-extrabold text-rose-400 mt-0.5 block">
+          <%= audit.status === 'closed' ? stats.missing : stats.pending %>
+        </span>
+        <span class="text-[11px] text-slate-400">Target tersisa</span>
+      </button>
+    </div>
+
+    <!-- Tabel Kertas Kerja Tampilan Web (9 Kolom Terpisah) -->
+    <div class="bg-slate-800/80 border border-slate-700 rounded-2xl overflow-hidden">
+      <div class="px-4 sm:px-5 py-3.5 border-b border-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <h3 class="text-sm font-bold text-white">Rincian Proses Stock Opname (<span id="audit-items-total-label"><%= items.length %></span> Item)</h3>
+        <div class="flex flex-wrap gap-1.5 text-[11px]">
+          <button type="button" onclick="filterAuditTable('all')" class="px-2.5 py-1 rounded-lg bg-slate-700 hover:bg-slate-600 text-white cursor-pointer">Semua</button>
+          <button type="button" onclick="filterAuditTable('matched')" class="px-2.5 py-1 rounded-lg bg-emerald-500/15 text-emerald-400 cursor-pointer">Sesuai</button>
+          <button type="button" onclick="filterAuditTable('condition_mismatch')" class="px-2.5 py-1 rounded-lg bg-amber-500/15 text-amber-400 cursor-pointer">Rusak</button>
+          <button type="button" onclick="filterAuditTable('misplaced')" class="px-2.5 py-1 rounded-lg bg-purple-500/15 text-purple-400 cursor-pointer">Salah Cabang</button>
+          <button type="button" onclick="filterAuditTable('unregistered')" class="px-2.5 py-1 rounded-lg bg-sky-500/15 text-sky-400 cursor-pointer">Belum Terdaftar</button>
+          <button type="button" onclick="filterAuditTable('pending_or_missing')" class="px-2.5 py-1 rounded-lg bg-rose-500/15 text-rose-400 cursor-pointer">Belum/Hilang</button>
+        </div>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs">
+          <thead class="bg-slate-900/70 text-slate-400 uppercase text-[10px] border-b border-slate-700">
+            <tr>
+              <th class="px-3.5 py-3 whitespace-nowrap">Kode Aset</th>
+              <th class="px-3.5 py-3 whitespace-nowrap">Merk / Model</th>
+              <th class="px-3.5 py-3 whitespace-nowrap">Jenis</th>
+              <th class="px-3.5 py-3 whitespace-nowrap">SN</th>
+              <th class="px-3.5 py-3 whitespace-nowrap">Lokasi</th>
+              <th class="px-3.5 py-3 whitespace-nowrap">Status</th>
+              <th class="px-3.5 py-3 whitespace-nowrap">Kondisi</th>
+              <th class="px-3.5 py-3">Catatan</th>
+              <th class="px-3.5 py-3 whitespace-nowrap">Petugas</th>
+            </tr>
+          </thead>
+          <tbody id="audit-items-tbody" class="divide-y divide-slate-700/70">
+            <% items.forEach(it => { 
+              const isUnreg = it.finding_type === 'unregistered';
+              const badgeMap = {
+                pending: 'bg-slate-700 text-slate-300 border-slate-600',
+                matched: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
+                condition_mismatch: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
+                misplaced: 'bg-purple-500/15 text-purple-400 border-purple-500/30',
+                unregistered: 'bg-sky-500/15 text-sky-400 border-sky-500/30',
+                missing: 'bg-rose-500/15 text-rose-400 border-rose-500/30'
+              };
+              const labelMap = {
+                pending: 'PENDING',
+                matched: 'SESUAI',
+                condition_mismatch: 'KONDISI BERUBAH',
+                misplaced: 'SALAH CABANG',
+                unregistered: 'BELUM TERDAFTAR',
+                missing: 'TIDAK DITEMUKAN'
+              };
+            %>
+              <tr class="audit-row hover:bg-slate-700/30" data-finding="<%= it.finding_type %>">
+                <!-- 1. Kode Aset -->
+                <td class="px-3.5 py-3 whitespace-nowrap">
+                  <% if (isUnreg) { %>
+                    <span class="font-mono text-[11px] font-bold text-sky-400">[BELUM TERDAFTAR]</span>
+                  <% } else { %>
+                    <span class="font-mono font-bold text-emerald-400"><%= it.asset_code %></span>
+                  <% } %>
+                </td>
+
+                <!-- 2. Merk / Model -->
+                <td class="px-3.5 py-3">
+                  <span class="font-semibold text-white">
+                    <%= isUnreg ? (it.unregistered_name || '-') : ([it.brand_name, it.model_name].filter(Boolean).join(' ') || '-') %>
+                  </span>
+                  <% if (isUnreg && it.unregistered_brand_model) { %>
+                    <span class="text-[11px] text-slate-400 block"><%= it.unregistered_brand_model %></span>
+                  <% } %>
+                </td>
+
+                <!-- 3. Jenis -->
+                <td class="px-3.5 py-3 whitespace-nowrap text-slate-300">
+                  <%= isUnreg ? (it.unregistered_type || '-') : (it.type_name || '-') %>
+                </td>
+
+                <!-- 4. SN -->
+                <td class="px-3.5 py-3 whitespace-nowrap font-mono text-slate-200">
+                  <%= isUnreg ? (it.unregistered_sn || '-') : (it.serial_number || '-') %>
+                </td>
+
+                <!-- 5. Lokasi -->
+                <td class="px-3.5 py-3 text-[11px] text-slate-300">
+                  <% if (isUnreg) { %>
+                    <%= it.unregistered_location || '-' %>
+                  <% } else if (it.finding_type === 'misplaced') { %>
+                    Asal: <strong class="text-purple-400"><%= it.expected_branch_code %></strong> &rarr; Ketemu di <strong><%= it.found_branch_code %></strong>
+                  <% } else { %>
+                    <%= it.linked_hostname ? `${it.linked_hostname} (${it.linked_location || '-'})` : `Cabang ${it.expected_branch_code || '-'}` %>
+                  <% } %>
+                </td>
+
+                <!-- 6. Status + Tombol Daftarkan ke Master (Khusus Admin & Unregistered) -->
+                <td class="px-3.5 py-3 whitespace-nowrap">
+                  <div class="flex flex-col items-start gap-1.5">
+                    <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase border <%= badgeMap[it.finding_type] || badgeMap.pending %>">
+                      <%= labelMap[it.finding_type] || it.finding_type %>
+                    </span>
+                    <% if (isUnreg && isAdmin) { %>
+                      <a href="/assets?register_audit_item=<%= it.id %>"
+                        class="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-sky-500 hover:bg-sky-600 text-slate-950 font-bold text-[10px] transition">
+                        <i data-lucide="plus-circle" class="w-3 h-3"></i>
+                        <span>Daftarkan ke Master</span>
+                      </a>
+                    <% } %>
+                  </div>
+                </td>
+
+                <!-- 7. Kondisi -->
+                <td class="px-3.5 py-3 whitespace-nowrap">
+                  <span class="uppercase font-semibold text-slate-200"><%= it.actual_condition || it.expected_condition || '-' %></span>
+                </td>
+
+                <!-- 8. Catatan -->
+                <td class="px-3.5 py-3 min-w-[160px] max-w-[240px] break-words [overflow-wrap:anywhere] text-[11px] text-slate-300">
+                  <span><%= it.notes || '-' %></span>
+                  <% if (it.photo_evidence) { %>
+                    <a href="<%= it.photo_evidence %>" target="_blank" class="inline-flex items-center gap-1 text-[11px] text-sky-400 hover:underline mt-1 block">
+                      <i data-lucide="image" class="w-3 h-3"></i> Lihat Foto Bukti
+                    </a>
+                  <% } %>
+                </td>
+
+                <!-- 9. Petugas -->
+                <td class="px-3.5 py-3 whitespace-nowrap text-[11px] text-slate-400">
+                  <% if (it.scanner_name) { %>
+                    <span class="text-slate-200 font-medium block"><%= it.scanner_name %></span>
+                    <span><%= it.scanned_at || '' %></span>
+                  <% } else { %>
+                    <span>-</span>
+                  <% } %>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- Modal Notifikasi Popup (URL Bersih) -->
+<div id="modal-feedback-popup" class="no-print fixed inset-0 z-[70] hidden flex items-center justify-center p-4">
+  <div onclick="closeFeedbackPopup()" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm"></div>
+  <div class="relative bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-sm p-6 text-center space-y-4 shadow-2xl z-10">
+    <div id="feedback-popup-icon" class="w-12 h-12 rounded-2xl mx-auto flex items-center justify-center bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+      <i data-lucide="check-circle-2" class="w-6 h-6"></i>
+    </div>
+    <div class="space-y-1.5">
+      <h3 id="feedback-popup-title" class="text-base font-bold text-white">Berhasil</h3>
+      <p id="feedback-popup-message" class="text-xs text-slate-300 leading-relaxed"></p>
+    </div>
+    <div id="feedback-popup-actions" class="flex flex-col gap-2">
+      <button type="button" id="feedback-popup-btn" onclick="closeFeedbackPopup()"
+        class="w-full py-2.5 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold text-xs transition cursor-pointer">
+        OK, Lanjutkan
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Konfirmasi Aksi (Selesaikan Audit / Rekonsiliasi) -->
+<div id="modal-action-confirm" class="no-print fixed inset-0 z-[70] hidden flex items-center justify-center p-4">
+  <div onclick="closeActionConfirmModal()" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm"></div>
+  <div class="relative bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-sm p-6 text-center space-y-4 shadow-2xl z-10">
+    <div id="action-confirm-icon" class="w-12 h-12 rounded-2xl mx-auto flex items-center justify-center bg-amber-500/15 text-amber-400 border border-amber-500/30">
+      <i data-lucide="lock" class="w-6 h-6"></i>
+    </div>
+    <div class="space-y-1.5">
+      <h3 id="action-confirm-title" class="text-base font-bold text-white">Konfirmasi</h3>
+      <p id="action-confirm-message" class="text-xs text-slate-300 leading-relaxed"></p>
+    </div>
+    <div class="grid grid-cols-2 gap-2.5 pt-1">
+      <button type="button" onclick="closeActionConfirmModal()"
+        class="py-2.5 px-4 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-200 font-semibold text-xs transition cursor-pointer">
+        Batal
+      </button>
+      <button type="button" id="action-confirm-submit-btn" onclick="submitConfirmedAction()"
+        class="py-2.5 px-4 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs transition cursor-pointer">
+        Ya, Lanjutkan
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Catat Barang Belum Terdaftar -->
+<% if (audit.status === 'in_progress') { %>
+  <div id="modal-unregistered" class="no-print fixed inset-0 z-50 hidden flex items-center justify-center p-4">
+    <div onclick="closeModal('modal-unregistered')" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm"></div>
+    <div class="relative bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-lg max-h-[90dvh] flex flex-col shadow-2xl z-10 overflow-hidden">
+      <div class="px-5 py-4 border-b border-slate-700 flex items-center justify-between shrink-0">
+        <h3 class="text-sm sm:text-base font-bold text-white flex items-center gap-2">
+          <i data-lucide="package-plus" class="w-5 h-5 text-sky-400"></i>
+          <span>Catat Barang Belum Terdaftar di Aset</span>
+        </h3>
+        <button type="button" onclick="closeModal('modal-unregistered')" class="text-slate-400 hover:text-white p-1 cursor-pointer">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <form action="/assets/audits/<%= audit.id %>/unregistered" method="POST" enctype="multipart/form-data" class="p-5 overflow-y-auto space-y-3.5 text-xs">
+        <div>
+          <label class="block font-medium text-slate-300 mb-1">Nama / Deskripsi Perangkat <span class="text-rose-400">*</span></label>
+          <input type="text" name="unregistered_name" required placeholder="Misal: Switch 8 Port TP-Link Ruang Poli"
+            class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:border-sky-500">
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block font-medium text-slate-300 mb-1">Jenis Perangkat</label>
+            <input type="text" name="unregistered_type" placeholder="Router / Switch / AP"
+              class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-white focus:outline-none focus:border-sky-500">
+          </div>
+          <div>
+            <label class="block font-medium text-slate-300 mb-1">Merk &amp; Model</label>
+            <input type="text" name="unregistered_brand_model" placeholder="MikroTik RB750Gr3"
+              class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-white focus:outline-none focus:border-sky-500">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block font-medium text-slate-300 mb-1">Serial Number (Jika ada)</label>
+            <input type="text" name="unregistered_sn" id="unregistered-sn-input" placeholder="SN pada stiker pabrikan"
+              class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-white font-mono focus:outline-none focus:border-sky-500">
+          </div>
+          <div>
+            <label class="block font-medium text-slate-300 mb-1">Lokasi / Ruangan Ditemukan</label>
+            <input type="text" name="unregistered_location" placeholder="Rak Server / Nurse Station"
+              class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-white focus:outline-none focus:border-sky-500">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block font-medium text-slate-300 mb-1">Kondisi Fisik</label>
+            <select name="actual_condition" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-white">
+              <option value="baik">Baik / Beroperasi</option>
+              <option value="rusak_ringan">Rusak Ringan</option>
+              <option value="rusak_berat">Rusak Berat / Mati</option>
+            </select>
+          </div>
+          <div>
+            <label class="block font-medium text-slate-300 mb-1">Foto Bukti Fisik</label>
+            <input type="file" name="photo_evidence" accept="image/*" capture="environment"
+              class="w-full bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-1.5 text-slate-300 text-[11px]">
+          </div>
+        </div>
+
+        <div>
+          <label class="block font-medium text-slate-300 mb-1">Catatan Tambahan</label>
+          <textarea name="notes" rows="2" placeholder="Keterangan asal-usul perangkat jika diketahui..."
+            class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-white focus:outline-none focus:border-sky-500"></textarea>
+        </div>
+
+        <div class="pt-3 border-t border-slate-700 flex justify-end gap-2">
+          <button type="button" onclick="closeModal('modal-unregistered')" class="px-4 py-2 rounded-xl bg-slate-700 text-slate-200 font-semibold cursor-pointer">Batal</button>
+          <button type="submit" class="px-4 py-2 rounded-xl bg-sky-500 hover:bg-sky-600 text-slate-950 font-bold cursor-pointer">Simpan Temuan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+<% } %>
+
+<!-- Modal Kelola Penugasan Auditor (Khusus Administrator) -->
+<% if (isAdmin) { %>
+  <div id="modal-assignees" class="no-print fixed inset-0 z-50 hidden flex items-center justify-center p-4">
+    <div onclick="closeModal('modal-assignees')" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm"></div>
+    <div class="relative bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-md max-h-[85dvh] flex flex-col shadow-2xl z-10 overflow-hidden">
+      <div class="px-5 py-4 border-b border-slate-700 flex items-center justify-between">
+        <h3 class="text-sm font-bold text-white">Kelola Auditor Ditugaskan</h3>
+        <button type="button" onclick="closeModal('modal-assignees')" class="text-slate-400 hover:text-white cursor-pointer"><i data-lucide="x" class="w-4 h-4"></i></button>
+      </div>
+      <form action="/assets/audits/<%= audit.id %>/assignees" method="POST" class="p-5 overflow-y-auto space-y-4 text-xs">
+        <div class="space-y-2 max-h-60 overflow-y-auto">
+          <% const assignedIds = new Set(assignees.map(a => a.id)); %>
+          <% allUsers.forEach(u => { %>
+            <label class="flex items-center justify-between p-2 rounded-xl bg-slate-900/70 border border-slate-700/70 cursor-pointer">
+              <div class="flex items-center gap-2.5">
+                <input type="checkbox" name="assignee_ids" value="<%= u.id %>" <%= assignedIds.has(u.id) ? 'checked' : '' %>
+                  class="w-4 h-4 rounded border-slate-600 text-emerald-500">
+                <div>
+                  <span class="font-semibold text-white block"><%= u.full_name %></span>
+                  <span class="text-[10px] text-slate-400">@<%= u.username %></span>
+                </div>
+              </div>
+              <span class="text-[10px] uppercase text-slate-400"><%= u.role %></span>
+            </label>
+          <% }) %>
+        </div>
+        <div class="flex justify-end gap-2 pt-2 border-t border-slate-700">
+          <button type="button" onclick="closeModal('modal-assignees')" class="px-3.5 py-2 rounded-xl bg-slate-700 text-slate-200 cursor-pointer">Batal</button>
+          <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-500 text-slate-950 font-bold cursor-pointer">Simpan Penugasan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+<% } %>
+
+<script>
+  const AUDIT_ID = <%= audit.id %>;
+  const AUDIT_STATUS = <%- JSON.stringify(audit.status) %>;
+  const IS_ADMIN = <%= isAdmin ? 'true' : 'false' %>;
+  let currentAuditFilter = 'all';
+  let auditQrScanner = null;
+  let auditScanning = false;
+  let pendingConfirmFormId = null;
+
+  function escapeHtml(str) {
+    return String(str ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function showFeedbackPopup(type, title, message, extraActionHtml = '') {
+    const modal = document.getElementById('modal-feedback-popup');
+    const iconBox = document.getElementById('feedback-popup-icon');
+    const titleEl = document.getElementById('feedback-popup-title');
+    const msgEl = document.getElementById('feedback-popup-message');
+    const actionsEl = document.getElementById('feedback-popup-actions');
+
+    titleEl.textContent = title;
+    msgEl.textContent = message;
+
+    let btnClass = 'bg-emerald-500 hover:bg-emerald-600 text-slate-950';
+    if (type === 'error') {
+      iconBox.className = 'w-12 h-12 rounded-2xl mx-auto flex items-center justify-center bg-rose-500/15 text-rose-400 border border-rose-500/30';
+      iconBox.innerHTML = '<i data-lucide="alert-circle" class="w-6 h-6"></i>';
+      btnClass = 'bg-rose-500 hover:bg-rose-600 text-white';
+    } else if (type === 'warning') {
+      iconBox.className = 'w-12 h-12 rounded-2xl mx-auto flex items-center justify-center bg-amber-500/15 text-amber-400 border border-amber-500/30';
+      iconBox.innerHTML = '<i data-lucide="alert-triangle" class="w-6 h-6"></i>';
+      btnClass = 'bg-amber-500 hover:bg-amber-600 text-slate-950';
+    } else if (type === 'info') {
+      iconBox.className = 'w-12 h-12 rounded-2xl mx-auto flex items-center justify-center bg-sky-500/15 text-sky-400 border border-sky-500/30';
+      iconBox.innerHTML = '<i data-lucide="info" class="w-6 h-6"></i>';
+      btnClass = 'bg-sky-500 hover:bg-sky-600 text-slate-950';
+    } else {
+      iconBox.className = 'w-12 h-12 rounded-2xl mx-auto flex items-center justify-center bg-emerald-500/15 text-emerald-400 border border-emerald-500/30';
+      iconBox.innerHTML = '<i data-lucide="check-circle-2" class="w-6 h-6"></i>';
+    }
+
+    actionsEl.innerHTML = `
+      ${extraActionHtml}
+      <button type="button" onclick="closeFeedbackPopup()"
+        class="w-full py-2.5 px-4 rounded-xl ${btnClass} font-bold text-xs transition cursor-pointer">
+        OK, Lanjutkan
+      </button>
+    `;
+
+    modal.classList.remove('hidden');
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+  }
+
+  function closeFeedbackPopup() {
+    document.getElementById('modal-feedback-popup')?.classList.add('hidden');
+    const codeInput = document.getElementById('audit-code-input');
+    if (codeInput) codeInput.focus();
+  }
+
+  function openActionConfirmModal(actionType) {
+    const modal = document.getElementById('modal-action-confirm');
+    const iconBox = document.getElementById('action-confirm-icon');
+    const titleEl = document.getElementById('action-confirm-title');
+    const msgEl = document.getElementById('action-confirm-message');
+    const submitBtn = document.getElementById('action-confirm-submit-btn');
+
+    if (actionType === 'close') {
+      pendingConfirmFormId = 'form-close-audit';
+      iconBox.className = 'w-12 h-12 rounded-2xl mx-auto flex items-center justify-center bg-amber-500/15 text-amber-400 border border-amber-500/30';
+      iconBox.innerHTML = '<i data-lucide="lock" class="w-6 h-6"></i>';
+      titleEl.textContent = 'Selesaikan Sesi Audit?';
+      msgEl.textContent = 'Seluruh aset yang belum terpindai akan otomatis ditandai sebagai Tidak Ditemukan (Missing) dan sesi audit akan dikunci.';
+      submitBtn.className = 'py-2.5 px-4 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs transition cursor-pointer';
+      submitBtn.textContent = 'Ya, Selesaikan';
+    } else if (actionType === 'reconcile') {
+      pendingConfirmFormId = 'form-reconcile-audit';
+      iconBox.className = 'w-12 h-12 rounded-2xl mx-auto flex items-center justify-center bg-emerald-500/15 text-emerald-400 border border-emerald-500/30';
+      iconBox.innerHTML = '<i data-lucide="refresh-cw" class="w-6 h-6"></i>';
+      titleEl.textContent = 'Rekonsiliasi ke Master Aset?';
+      msgEl.textContent = 'Temuan Salah Cabang akan otomatis dimutasi ke cabang ini dan perubahan Kondisi Rusak akan disinkronkan ke Master Aset.';
+      submitBtn.className = 'py-2.5 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold text-xs transition cursor-pointer';
+      submitBtn.textContent = 'Ya, Sinkronkan';
+    }
+
+    modal.classList.remove('hidden');
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+  }
+
+  function closeActionConfirmModal() {
+    pendingConfirmFormId = null;
+    document.getElementById('modal-action-confirm')?.classList.add('hidden');
+  }
+
+  function submitConfirmedAction() {
+    if (!pendingConfirmFormId) return;
+    const form = document.getElementById(pendingConfirmFormId);
+    if (form) form.submit();
+  }
+
+  function openUnregisteredWithCode(scannedCode) {
+    closeFeedbackPopup();
+    openModal('modal-unregistered');
+    const snInput = document.getElementById('unregistered-sn-input');
+    if (snInput && scannedCode) snInput.value = scannedCode;
+  }
+
+  function filterRegisterModels() {
+    const typeVal = document.getElementById('reg-type-select')?.value || '';
+    const brandVal = document.getElementById('reg-brand-select')?.value || '';
+    const modelSelect = document.getElementById('reg-model-select');
+    if (!modelSelect) return;
+
+    Array.from(modelSelect.options).forEach((opt, idx) => {
+      if (idx === 0) return;
+      const optBrand = opt.getAttribute('data-brand-id') || '';
+      const optType = opt.getAttribute('data-type-id') || '';
+      const matchBrand = !brandVal || !optBrand || optBrand === brandVal;
+      const matchType = !typeVal || !optType || optType === typeVal;
+      opt.hidden = !(matchBrand && matchType);
+    });
+
+    const selectedOpt = modelSelect.options[modelSelect.selectedIndex];
+    if (selectedOpt && selectedOpt.hidden) {
+      modelSelect.value = '';
+    }
+  }
+
+  function openRegisterUnregisteredModal(item) {
+    const form = document.getElementById('form-register-unregistered');
+    if (!form) return;
+
+    form.action = `/assets/audits/${AUDIT_ID}/items/${item.id}/register`;
+    document.getElementById('reg-ref-summary').textContent =
+      `${item.name} ${item.brand_model ? '(' + item.brand_model + ')' : ''} — Lokasi: ${item.location || '-'}`;
+    document.getElementById('reg-sn-input').value = item.sn || '';
+    document.getElementById('reg-condition-input').value = item.condition || 'baik';
+    document.getElementById('reg-notes-input').value = item.notes || '';
+
+    const typeSel = document.getElementById('reg-type-select');
+    const brandSel = document.getElementById('reg-brand-select');
+    const modelSel = document.getElementById('reg-model-select');
+    if (typeSel) typeSel.value = '';
+    if (brandSel) brandSel.value = '';
+    if (modelSel) modelSel.value = '';
+    filterRegisterModels();
+
+    openModal('modal-register-unregistered');
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const serverMsg = <%- JSON.stringify(msg || '') %>;
+    const serverErr = <%- JSON.stringify(err || '') %>;
+
+    if (serverErr) {
+      showFeedbackPopup('error', 'Terjadi Kesalahan', serverErr);
+      window.history.replaceState({}, '', window.location.pathname);
+    } else if (serverMsg) {
+      showFeedbackPopup('success', 'Berhasil', serverMsg);
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  });
+
+  function filterAuditTable(type) {
+    currentAuditFilter = type;
+    document.querySelectorAll('.audit-row').forEach(row => {
+      const f = row.getAttribute('data-finding');
+      if (type === 'all') {
+        row.classList.remove('hidden');
+      } else if (type === 'pending_or_missing') {
+        row.classList.toggle('hidden', f !== 'pending' && f !== 'missing');
+      } else {
+        row.classList.toggle('hidden', f !== type);
+      }
+    });
+  }
+
+  // Update Tabel Web (9 Kolom), Tabel Lampiran Cetak, & Statistik secara real-time tanpa reload halaman
+  function renderAuditTableAndStats(items, stats) {
+    if (stats) {
+      document.getElementById('stat-accuracy-percent').textContent = `${stats.accuracyPercent}%`;
+      document.getElementById('stat-matched-ratio').textContent = `${stats.matched}/${stats.totalTarget} Sesuai`;
+      document.getElementById('stat-matched-count').textContent = stats.matched;
+      document.getElementById('stat-mismatch-count').textContent = stats.condition_mismatch;
+      document.getElementById('stat-misplaced-count').textContent = stats.misplaced;
+      document.getElementById('stat-unregistered-count').textContent = stats.unregistered;
+      document.getElementById('stat-remaining-count').textContent = AUDIT_STATUS === 'closed' ? stats.missing : stats.pending;
+
+      const pTotal = document.getElementById('print-stat-total');
+      if (pTotal) pTotal.textContent = stats.totalTarget;
+      const pAcc = document.getElementById('print-stat-accuracy');
+      if (pAcc) pAcc.textContent = stats.accuracyPercent;
+      const pMatch = document.getElementById('print-stat-matched');
+      if (pMatch) pMatch.textContent = stats.matched;
+      const pMis = document.getElementById('print-stat-mismatch');
+      if (pMis) pMis.textContent = stats.condition_mismatch;
+      const pPlace = document.getElementById('print-stat-misplaced');
+      if (pPlace) pPlace.textContent = stats.misplaced;
+      const pRem = document.getElementById('print-stat-remaining');
+      if (pRem) pRem.textContent = AUDIT_STATUS === 'closed' ? stats.missing : stats.pending;
+      const pUnreg = document.getElementById('print-stat-unregistered');
+      if (pUnreg) pUnreg.textContent = stats.unregistered;
+    }
+
+    if (!Array.isArray(items)) return;
+
+    const totalLabel = document.getElementById('audit-items-total-label');
+    if (totalLabel) totalLabel.textContent = items.length;
+
+    const badgeMap = {
+      pending: 'bg-slate-700 text-slate-300 border-slate-600',
+      matched: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
+      condition_mismatch: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
+      misplaced: 'bg-purple-500/15 text-purple-400 border-purple-500/30',
+      unregistered: 'bg-sky-500/15 text-sky-400 border-sky-500/30',
+      missing: 'bg-rose-500/15 text-rose-400 border-rose-500/30'
+    };
+    const labelMap = {
+      pending: 'PENDING',
+      matched: 'SESUAI',
+      condition_mismatch: 'KONDISI BERUBAH',
+      misplaced: 'SALAH CABANG',
+      unregistered: 'BELUM TERDAFTAR',
+      missing: 'TIDAK DITEMUKAN'
+    };
+
+    // 1. Render Tabel Web (Screen-Only - 9 Kolom Terpisah)
+    const webTbody = document.getElementById('audit-items-tbody');
+    if (webTbody) {
+      webTbody.innerHTML = items.map(it => {
+        const isUnreg = it.finding_type === 'unregistered';
+
+        const kodeHtml = isUnreg
+          ? `<span class="font-mono text-[11px] font-bold text-sky-400">[BELUM TERDAFTAR]</span>`
+          : `<span class="font-mono font-bold text-emerald-400">${escapeHtml(it.asset_code)}</span>`;
+
+        const merkModelHtml = isUnreg
+          ? `<span class="font-semibold text-white">${escapeHtml(it.unregistered_name || '-')}</span>` +
+            (it.unregistered_brand_model ? `<span class="text-[11px] text-slate-400 block">${escapeHtml(it.unregistered_brand_model)}</span>` : '')
+          : `<span class="font-semibold text-white">${escapeHtml([it.brand_name, it.model_name].filter(Boolean).join(' ') || '-')}</span>`;
+
+        const jenisVal = isUnreg ? (it.unregistered_type || '-') : (it.type_name || '-');
+        const snVal = isUnreg ? (it.unregistered_sn || '-') : (it.serial_number || '-');
+
+        let locLine = '';
+        if (isUnreg) {
+          locLine = escapeHtml(it.unregistered_location || '-');
+        } else if (it.finding_type === 'misplaced') {
+          locLine = `Asal: <strong class="text-purple-400">${escapeHtml(it.expected_branch_code)}</strong> &rarr; Ketemu di <strong>${escapeHtml(it.found_branch_code)}</strong>`;
+        } else {
+          locLine = it.linked_hostname
+            ? `${escapeHtml(it.linked_hostname)} (${escapeHtml(it.linked_location || '-')})`
+            : `Cabang ${escapeHtml(it.expected_branch_code || '-')}`;
+        }
+
+        const registerBtnHtml = (isUnreg && IS_ADMIN)
+          ? `<button type="button" onclick='openRegisterUnregisteredModal(${JSON.stringify({
+              id: it.id,
+              name: it.unregistered_name || '',
+              type: it.unregistered_type || '',
+              brand_model: it.unregistered_brand_model || '',
+              sn: it.unregistered_sn || '',
+              location: it.unregistered_location || '',
+              condition: it.actual_condition || 'baik',
+              notes: it.notes || '',
+              photo: it.photo_evidence || ''
+            })})' class="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-sky-500 hover:bg-sky-600 text-slate-950 font-bold text-[10px] transition cursor-pointer">
+              <i data-lucide="plus-circle" class="w-3 h-3"></i>
+              <span>Daftarkan ke Master</span>
+            </button>`
+          : '';
+
+        const condVal = escapeHtml(it.actual_condition || it.expected_condition || '-');
+        const noteText = escapeHtml(it.notes || '-');
+        const photoHtml = it.photo_evidence
+          ? `<a href="${escapeHtml(it.photo_evidence)}" target="_blank" class="inline-flex items-center gap-1 text-[11px] text-sky-400 hover:underline mt-1 block"><i data-lucide="image" class="w-3 h-3"></i> Lihat Foto Bukti</a>`
+          : '';
+
+        const scannerHtml = it.scanner_name
+          ? `<span class="text-slate-200 font-medium block">${escapeHtml(it.scanner_name)}</span><span>${escapeHtml(it.scanned_at || '')}</span>`
+          : '<span>-</span>';
+
+        return `
+          <tr class="audit-row hover:bg-slate-700/30" data-finding="${escapeHtml(it.finding_type)}">
+            <td class="px-3.5 py-3 whitespace-nowrap">${kodeHtml}</td>
+            <td class="px-3.5 py-3">${merkModelHtml}</td>
+            <td class="px-3.5 py-3 whitespace-nowrap text-slate-300">${escapeHtml(jenisVal)}</td>
+            <td class="px-3.5 py-3 whitespace-nowrap font-mono text-slate-200">${escapeHtml(snVal)}</td>
+            <td class="px-3.5 py-3 text-[11px] text-slate-300">${locLine}</td>
+            <td class="px-3.5 py-3 whitespace-nowrap">
+              <div class="flex flex-col items-start gap-1.5">
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase border ${badgeMap[it.finding_type] || badgeMap.pending}">
+                  ${labelMap[it.finding_type] || escapeHtml(it.finding_type)}
+                </span>
+                ${registerBtnHtml}
+              </div>
+            </td>
+            <td class="px-3.5 py-3 whitespace-nowrap">
+              <span class="uppercase font-semibold text-slate-200">${condVal}</span>
+            </td>
+            <td class="px-3.5 py-3 min-w-[160px] max-w-[240px] break-words [overflow-wrap:anywhere] text-[11px] text-slate-300">
+              <span>${noteText}</span>
+              ${photoHtml}
+            </td>
+            <td class="px-3.5 py-3 whitespace-nowrap text-[11px] text-slate-400">${scannerHtml}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    // 2. Render Tabel Lampiran Berita Acara (Print-Only)
+    const printTbody = document.getElementById('print-items-tbody');
+    if (printTbody) {
+      printTbody.innerHTML = items.map((it, idx) => {
+        const isUnreg = it.finding_type === 'unregistered';
+        const col1 = isUnreg
+          ? `<div><strong>[TEMUAN FISIK BARU]</strong></div>
+             <div><strong>${escapeHtml(it.unregistered_name)}</strong></div>
+             <div>${escapeHtml(it.unregistered_brand_model || '-')}</div>`
+          : `<div><strong>${escapeHtml(it.asset_code)}</strong></div>
+             <div><strong>${escapeHtml([it.brand_name, it.model_name].filter(Boolean).join(' ') || '-')}</strong></div>`;
+
+        const snVal = isUnreg ? (it.unregistered_sn || '-') : (it.serial_number || '-');
+        const typeVal = isUnreg ? (it.unregistered_type || '-') : (it.type_name || '-');
+        const condVal = escapeHtml(it.actual_condition || it.expected_condition || '-');
+        const noteHtml = it.notes ? `<div style="margin-top: 2px;">${escapeHtml(it.notes)}</div>` : '';
+
+        return `
+          <tr>
+            <td style="text-align: center;">${idx + 1}</td>
+            <td>${col1}</td>
+            <td>
+              <div>SN: ${escapeHtml(snVal)}</div>
+              <div style="margin-top: 2px;">Jenis: ${escapeHtml(typeVal)}</div>
+            </td>
+            <td><strong>${labelMap[it.finding_type] || escapeHtml(it.finding_type)}</strong></td>
+            <td>
+              <div style="text-transform: uppercase;"><strong>${condVal}</strong></div>
+              ${noteHtml}
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    filterAuditTable(currentAuditFilter);
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+  }
+
+  async function startAuditCamera() {
+    if (auditScanning || typeof Html5Qrcode === 'undefined') return;
+    document.getElementById('audit-scanner-wrapper').classList.remove('hidden');
+    document.getElementById('btn-audit-cam-start').classList.add('hidden');
+    document.getElementById('btn-audit-cam-stop').classList.remove('hidden');
+
+    auditQrScanner = new Html5Qrcode('audit-qr-reader');
+    try {
+      await auditQrScanner.start(
+        { facingMode: 'environment' },
+        { fps: 10, qrbox: { width: 200, height: 200 } },
+        async (decodedText) => {
+          let code = String(decodedText || '').trim();
+          try {
+            if (/^https?:\/\//i.test(code)) {
+              const p = new URL(code).searchParams.get('code');
+              if (p) code = decodeURIComponent(p).trim();
+            }
+          } catch (e) {}
+          document.getElementById('audit-code-input').value = code;
+          await stopAuditCamera();
+          document.getElementById('audit-scan-form').dispatchEvent(new Event('submit'));
+        }
+      );
+      auditScanning = true;
+    } catch (e) {
+      await stopAuditCamera();
+      showFeedbackPopup('error', 'Kamera Tidak Dapat Dibuka', 'Pastikan izin kamera diizinkan pada browser dan diakses melalui HTTPS.');
+    }
+  }
+
+  async function stopAuditCamera() {
+    if (auditQrScanner && auditScanning) {
+      try { await auditQrScanner.stop(); auditQrScanner.clear(); } catch (e) {}
+    }
+    auditScanning = false;
+    document.getElementById('audit-scanner-wrapper')?.classList.add('hidden');
+    document.getElementById('btn-audit-cam-start')?.classList.remove('hidden');
+    document.getElementById('btn-audit-cam-stop')?.classList.add('hidden');
+  }
+
+  async function submitAuditScan(e) {
+    e.preventDefault();
+    const codeInput = document.getElementById('audit-code-input');
+    const condInput = document.getElementById('audit-condition-input');
+    const notesInput = document.getElementById('audit-notes-input');
+    const btnDesk = document.getElementById('btn-audit-submit-desktop');
+    const btnMob = document.getElementById('btn-audit-submit-mobile');
+
+    const code = codeInput.value.trim();
+    const actualCondition = condInput.value;
+    const notes = notesInput.value.trim();
+
+    if (!code) return;
+
+    if (btnDesk) { btnDesk.disabled = true; btnDesk.textContent = 'Memproses...'; }
+    if (btnMob) { btnMob.disabled = true; btnMob.textContent = 'Memproses...'; }
+
+    try {
+      const resp = await fetch(`/api/assets/audits/${AUDIT_ID}/scan`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code, actual_condition: actualCondition, notes })
+      });
+      const data = await resp.json();
+
+      if (data.success) {
+        renderAuditTableAndStats(data.items, data.stats);
+
+        codeInput.value = '';
+        condInput.value = 'baik';
+        notesInput.value = '';
+
+        const popupType = data.findingType === 'matched' ? 'success' : 'warning';
+        const popupTitle = data.findingType === 'matched'
+          ? 'Aset Terverifikasi Sesuai'
+          : (data.findingType === 'misplaced' ? 'Temuan Salah Cabang' : 'Perubahan Kondisi Fisik');
+
+        showFeedbackPopup(popupType, popupTitle, data.message);
+      } else if (data.notFoundInMaster) {
+        const extraBtn = `
+          <button type="button" onclick="openUnregisteredWithCode('${escapeHtml(data.scannedCode || code)}')"
+            class="w-full py-2.5 px-4 rounded-xl bg-sky-500 hover:bg-sky-600 text-slate-950 font-bold text-xs transition cursor-pointer">
+            + Catat Barang Belum Terdaftar
+          </button>
+        `;
+        showFeedbackPopup('info', 'Tidak Terdaftar di Master Aset', data.message, extraBtn);
+      } else {
+        showFeedbackPopup('error', 'Gagal Mencatat Temuan', data.message || 'Gagal mencatat temuan.');
+      }
+    } catch (err) {
+      showFeedbackPopup('error', 'Kesalahan Jaringan', 'Terjadi kesalahan jaringan saat mengirim hasil scan.');
+    } finally {
+      if (btnDesk) { btnDesk.disabled = false; btnDesk.textContent = 'Catat'; }
+      if (btnMob) { btnMob.disabled = false; btnMob.textContent = 'Catat'; }
+    }
+  }
+</script>
+
+<%- include('../partials/footer') %>
