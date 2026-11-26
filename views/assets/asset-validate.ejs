@@ -42,7 +42,7 @@
 
   <!-- Top Navbar -->
   <header class="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 sticky top-0 z-30">
-    <div class="max-w-3xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
+    <div class="max-w-full mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
       <a href="<%= isAuthenticated ? '/assets' : '/assets/validate' %>" class="flex items-center gap-2.5 min-w-0 group">
         <div class="w-12 h-12 rounded-xl p-1.5 flex items-center justify-center shrink-0 group-hover:border-emerald-500/50 transition">
           <img src="/img/favicon.png" alt="SIMAJAR" class="w-full h-full object-contain"
@@ -51,11 +51,8 @@
         </div>
         <div class="leading-tight min-w-0">
           <div class="flex items-center gap-2">
-            <span class="text-base font-extrabold tracking-wider text-slate-900 dark:text-white">
+            <span class="font-extrabold tracking-wider text-slate-900 dark:text-white">
               SIM<span class="text-emerald-500">AJAR</span>
-            </span>
-            <span class="hidden sm:inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25">
-              Asset Verification
             </span>
           </div>
           <span class="block text-[10px] text-slate-500 dark:text-slate-400 truncate">
@@ -71,7 +68,7 @@
             <span>Master Aset</span>
           </a>
         <% } else if (!isAuthenticated) { %>
-          <a href="/login" title="Login IT" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white dark:text-slate-950 text-xs font-semibold shadow-sm shadow-emerald-500/20 transition">
+          <a href="/login" title="Login" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white dark:text-slate-950 text-xs font-semibold shadow-sm shadow-emerald-500/20 transition">
             <i data-lucide="log-in" class="w-3.5 h-3.5"></i>
           </a>
         <% } %>
@@ -92,12 +89,17 @@
       <div class="bg-white/95 dark:bg-slate-900/95 backdrop-blur border border-slate-200 dark:border-slate-800 rounded-2xl p-5 sm:p-6 shadow-md space-y-4">
         <div class="flex items-start justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-3.5">
           <div>
-            <h1 class="text-base sm:text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <span class="w-8 h-8 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-500 shrink-0">
-                <i data-lucide="scan-line" class="w-4 h-4"></i>
-              </span>
-              <span>Pemindai Stiker Aset</span>
-            </h1>
+            <div>
+              <h1 class="text-base sm:text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <span class="w-8 h-8 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-500 shrink-0">
+                  <i data-lucide="scan-line" class="w-4 h-4"></i>
+                </span>
+                <span>Pemindai Stiker Aset</span>
+                <span class="hidden sm:inline-flex items-center px-2 py-0.5 rounded-md text-sm font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25">
+                  Asset Verification
+                </span>
+              </h1>
+            </div>
             <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
               Masukkan kode inventaris / Serial Number atau klik ikon kamera di kanan untuk scan QR.
             </p>
@@ -430,22 +432,23 @@
                 <i data-lucide="badge-check" class="w-6 h-6"></i>
               </div>
               <div class="min-w-0">
-                <div class="flex flex-wrap items-center gap-2">
+                <div class="flex flex-wrap items-center">
                   <span class="text-xs font-extrabold uppercase tracking-wide text-emerald-600 dark:text-emerald-400">
                     ASET TERVERIFIKASI
                   </span>
+                </div>
+                <div>
                   ${getStatusBadgeHtml(a.status)}
                 </div>
                 <p class="text-[11px] text-slate-600 dark:text-slate-300 mt-0.5 truncate">
-                  Inventaris <strong>${escapeHtml(ORG_NAME)}</strong>
+                  <strong>Inventaris ${escapeHtml(ORG_NAME)}</strong>
                 </p>
               </div>
             </div>
 
             <div class="flex items-center gap-2 shrink-0">
-              ${detailBtnHtml}
               <button type="button" onclick="closeValidationResult()" title="Tutup"
-                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-200/90 dark:bg-slate-800 hover:bg-rose-500/20 text-slate-700 dark:text-slate-200 hover:text-rose-500 border border-slate-300/80 dark:border-slate-700 text-xs font-semibold transition cursor-pointer">
+                class="inline-flex items-center gap-1.5 px-2 py-1.5 rounded-xl bg-slate-200/90 dark:bg-slate-800 hover:bg-rose-500/20 text-red-700 dark:text-red-200 hover:text-rose-500 border border-slate-300/80 dark:border-slate-700 text-xs font-semibold transition cursor-pointer">
                 <i data-lucide="x" class="w-4 h-4"></i>
               </button>
             </div>
@@ -499,7 +502,7 @@
                 <span class="text-[11px] text-slate-500 dark:text-slate-400 block">Penempatan / Hostname</span>
                 <span class="font-semibold text-slate-900 dark:text-white mt-0.5 block">
                   ${a.linked_hostname
-                    ? `${escapeHtml(a.linked_location || '-')} — ${escapeHtml(a.linked_hostname)} (${escapeHtml(a.linked_ip || 'No IP')})`
+                    ? `${escapeHtml(a.linked_location || '-')} / ${escapeHtml(a.linked_hostname)} (${escapeHtml(a.linked_ip || 'No IP')})`
                     : (m && m.to_location ? escapeHtml(m.to_location) : 'Gudang / Spare Cabang')}
                 </span>
               </div>
@@ -515,12 +518,12 @@
 
             ${photosSectionHtml}
 
-            <!-- Tombol Bawah untuk Pindai Ulang -->
-            <div class="pt-2 flex justify-end">
+            <div class="pt-2 flex justify-end gap-2">
+              ${detailBtnHtml}
               <button type="button" onclick="closeValidationResult()"
                 class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-200/80 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-200 transition cursor-pointer">
                 <i data-lucide="scan-line" class="w-3.5 h-3.5 text-emerald-500"></i>
-                <span>Scan / Cek Aset Lain</span>
+                <span>Cek Aset Lain</span>
               </button>
             </div>
           </div>
