@@ -19,6 +19,7 @@ const manufactureRoutes = require('./routes/manufactureRoutes');
 const assetRoutes = require('./routes/assetRoutes');
 const assetController = require('./controllers/assetController');
 const auditRoutes = require('./routes/auditRoutes');
+const profileRoutes = require('./routes/profileRoutes');
 
 const app = express();
 const PORT = 3500;
@@ -111,6 +112,7 @@ app.use('/', auditLogRoutes);
 app.use('/', manufactureRoutes);
 app.use('/', auditRoutes);
 app.use('/', assetRoutes);
+app.use('/', profileRoutes);
 
 app.listen(PORT, HOST, () => {
   console.log(`Server berjalan di http://${HOST}:${PORT}`);

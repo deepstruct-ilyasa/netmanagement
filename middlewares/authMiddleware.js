@@ -51,7 +51,7 @@ function resolveUserFromCookie(req) {
   const userId = verifySessionToken(cookies.netasset_session);
   if (!userId) return null;
 
-  const user = db.prepare('SELECT id, full_name, username, role, all_branches, allowed_menus, is_active FROM users WHERE id = ?').get(userId);
+  const user = db.prepare('SELECT id, full_name, username, role, all_branches, allowed_menus, is_active, profile_photo FROM users WHERE id = ?').get(userId);
   if (!user || user.is_active !== 1) return null;
 
   let parsedMenus = [];

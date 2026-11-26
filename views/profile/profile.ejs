@@ -1,0 +1,853 @@
+<%- include('../partials/header', { pageTitle: 'Detail & Pengaturan Profil' }) %>
+
+<main class="p-4 sm:p-6 flex-1 w-full mx-auto space-y-5">
+
+  <div class="grid grid-cols-1 lg:grid-cols-12 lg:grid-rows-[auto_1fr] lg:items-start gap-5">
+
+    <!-- 1. Kartu Ringkasan Identitas (Urutan 1 di Mobile, Kiri Atas di Desktop) -->
+    <div class="order-1 lg:col-span-4 lg:col-start-1 lg:row-start-1 bg-slate-800 border border-slate-700 rounded-2xl p-5 text-center space-y-4">
+      <div class="relative w-28 h-28 mx-auto group">
+        <% if (profileUser.profile_photo) { %>
+          <button type="button" onclick="openPhotoLightboxModal()" title="Klik untuk memperbesar, mengunduh, atau menghapus foto"
+            class="relative w-28 h-28 rounded-2xl overflow-hidden border-2 border-emerald-500/50 shadow-md block cursor-pointer focus:outline-none focus:ring-2 focus:ring-emerald-400">
+            <img id="avatar-preview-img" src="<%= profileUser.profile_photo %>?v=<%= Date.now() %>" alt="<%= profileUser.full_name %>"
+              class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200">
+            <div class="absolute inset-0 bg-slate-950/55 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1 text-white">
+              <i data-lucide="maximize-2" class="w-5 h-5 text-emerald-400"></i>
+              <span class="text-[10px] font-semibold">Lihat Foto</span>
+            </div>
+          </button>
+        <% } else { %>
+          <img id="avatar-preview-img" src="" alt="" class="hidden w-28 h-28 rounded-2xl object-cover border-2 border-emerald-500/50 shadow-md">
+          <div id="avatar-fallback-box"
+            class="w-28 h-28 rounded-2xl bg-emerald-500/15 border-2 border-emerald-500/30 flex items-center justify-center text-3xl font-extrabold text-emerald-400 uppercase">
+            <%= (profileUser.full_name || profileUser.username || 'U').slice(0, 2) %>
+          </div>
+        <% } %>
+      </div>
+
+      <div>
+        <h2 class="text-base font-bold text-white"><%= profileUser.full_name %></h2>
+        <p class="text-xs font-mono text-slate-400 mt-0.5">@<%= profileUser.username %></p>
+        <div class="mt-2.5">
+          <% if (profileUser.role === 'administrator') { %>
+            <span class="px-2.5 py-1 rounded-md text-[11px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+              Administrator
+            </span>
+          <% } else if (profileUser.role === 'branch_user') { %>
+            <span class="px-2.5 py-1 rounded-md text-[11px] font-bold bg-sky-500/15 text-sky-400 border border-sky-500/30">
+              User Cabang
+            </span>
+          <% } else { %>
+            <span class="px-2.5 py-1 rounded-md text-[11px] font-bold bg-slate-700 text-slate-300 border border-slate-600">
+              Viewer (Read-Only)
+            </span>
+          <% } %>
+        </div>
+      </div>
+
+      <!-- Form Tersembunyi untuk Hapus Foto (Dipicu dari Modal Foto) -->
+      <% if (profileUser.profile_photo) { %>
+        <form id="delete-photo-form" action="/profile/photo/delete" method="POST" class="hidden"></form>
+      <% } %>
+    </div>
+
+    <!-- 2. Form Edit Profil & Form Ubah Password (Urutan 2 di Mobile, Kolom Kanan di Desktop) -->
+    <div class="order-2 lg:col-span-8 lg:col-start-5 lg:row-start-1 lg:row-span-2 space-y-5">
+
+      <!-- Form 1: Edit Informasi Profil & Foto -->
+      <form id="profile-info-form" action="/profile" method="POST" enctype="multipart/form-data"
+        class="bg-slate-800 border border-slate-700 rounded-2xl p-5 sm:p-6 space-y-4">
+        <div class="border-b border-slate-700 pb-3">
+          <h3 class="text-sm font-semibold text-white flex items-center gap-2">
+            <i data-lucide="user-cog" class="w-4 h-4 text-emerald-400"></i>
+            <span>Informasi Akun & Foto Profil</span>
+          </h3>
+          <p class="text-[11px] text-slate-400 mt-0.5">Perbarui nama tampilan atau unggah foto profil (otomatis crop & resize maks. 5 MB).</p>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+          <div>
+            <label class="block text-slate-300 font-medium mb-1.5">Username (Login)</label>
+            <input type="text" value="<%= profileUser.username %>" disabled
+              class="w-full bg-slate-900/70 border border-slate-700 rounded-xl px-3.5 py-2.5 text-slate-400 font-mono cursor-not-allowed">
+            <span class="text-[10px] text-slate-500 mt-1 block">Username tidak dapat diubah mandiri.</span>
+          </div>
+
+          <div>
+            <label for="full_name" class="block text-slate-300 font-medium mb-1.5">Nama Lengkap</label>
+            <input type="text" id="full_name" name="full_name" value="<%= profileUser.full_name %>"
+              class="w-full bg-slate-900 border border-slate-600 rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:border-emerald-400">
+          </div>
+        </div>
+
+        <div class="text-xs space-y-2.5">
+          <div class="flex items-center justify-between">
+            <label for="profile_photo" class="block text-slate-300 font-medium">Unggah Foto Profil Baru</label>
+            <span id="cropped-file-badge" class="hidden text-[11px] font-semibold text-emerald-400"></span>
+          </div>
+
+          <input type="file" id="profile_photo" name="profile_photo" accept="image/jpeg,image/png,image/webp"
+            onchange="handlePhotoFileSelected(this)"
+            class="w-full bg-slate-900 border border-slate-600 rounded-xl px-3 py-2 text-slate-300 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-emerald-500/15 file:text-emerald-400 hover:file:bg-emerald-500/25 cursor-pointer">
+
+          <!-- Kotak Preview Hasil Crop Sebelum Disimpan (Responsif Mobile & Desktop) -->
+          <div id="inline-crop-preview-box"
+            class="hidden flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-xl bg-slate-900/90 border border-emerald-500/35">
+            <div class="flex items-center gap-3 min-w-0 flex-1">
+              <img id="inline-crop-preview-img" src="" alt="Preview Foto Profil Baru"
+                class="w-14 h-14 sm:w-16 sm:h-16 rounded-xl object-cover border-2 border-emerald-500/50 shrink-0 shadow">
+              <div class="min-w-0 flex-1 space-y-0.5">
+                <div class="text-[11px] font-semibold text-emerald-400 flex items-center gap-1.5">
+                  <i data-lucide="check-circle-2" class="w-3.5 h-3.5 shrink-0"></i>
+                  <span class="truncate">Preview Foto Siap Disimpan</span>
+                </div>
+                <p id="inline-crop-preview-name" class="text-xs font-mono text-slate-200 truncate">-</p>
+                <p id="inline-crop-preview-meta" class="text-[11px] text-slate-400 truncate">Persegi 1:1 • JPG</p>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-2 pt-2.5 sm:pt-0 border-t sm:border-t-0 border-slate-800 shrink-0">
+              <button type="button" onclick="reopenPhotoCropper()"
+                class="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3 py-2 sm:py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600 text-[11px] font-medium transition cursor-pointer">
+                <i data-lucide="crop" class="w-3.5 h-3.5 text-emerald-400 shrink-0"></i>
+                <span>Atur Ulang</span>
+              </button>
+              <button type="button" onclick="clearSelectedCroppedPhoto()" title="Batalkan pilihan foto"
+                class="inline-flex items-center justify-center gap-1 px-2.5 py-2 sm:p-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 text-[11px] font-medium transition cursor-pointer">
+                <i data-lucide="x" class="w-3.5 h-3.5 shrink-0"></i>
+                <span class="sm:hidden">Batal</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="pt-2 flex justify-end">
+          <button type="submit"
+            class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-semibold text-xs transition cursor-pointer">
+            <i data-lucide="save" class="w-4 h-4"></i>
+            <span>Simpan Perubahan Profil</span>
+          </button>
+        </div>
+      </form>
+
+      <!-- Form 2: Ganti Password -->
+      <form id="profile-password-form" action="/profile/password" method="POST"
+        class="bg-slate-800 border border-slate-700 rounded-2xl p-5 sm:p-6 space-y-4">
+        <div class="border-b border-slate-700 pb-3">
+          <h3 class="text-sm font-semibold text-white flex items-center gap-2">
+            <i data-lucide="key-round" class="w-4 h-4 text-sky-400"></i>
+            <span>Ubah Password</span>
+          </h3>
+          <p class="text-[11px] text-slate-400 mt-0.5">Gunakan kombinasi minimal 6 karakter untuk keamanan akun Anda.</p>
+        </div>
+
+        <div class="space-y-3.5 text-xs">
+          <div>
+            <label for="current_password" class="block text-slate-300 font-medium mb-1.5">Password Saat Ini</label>
+            <div class="relative">
+              <input type="password" id="current_password" name="current_password" placeholder="Masukkan password lama"
+                class="w-full bg-slate-900 border border-slate-600 rounded-xl pl-3.5 pr-10 py-2.5 text-white focus:outline-none focus:border-sky-400">
+              <button type="button" onclick="togglePwdField('current_password')"
+                class="text-slate-400 hover:text-white absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer">
+                <i data-lucide="eye" class="w-4 h-4"></i>
+              </button>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label for="new_password" class="block text-slate-300 font-medium mb-1.5">Password Baru</label>
+              <div class="relative">
+                <input type="password" id="new_password" name="new_password" placeholder="Minimal 6 karakter"
+                  class="w-full bg-slate-900 border border-slate-600 rounded-xl pl-3.5 pr-10 py-2.5 text-white focus:outline-none focus:border-sky-400">
+                <button type="button" onclick="togglePwdField('new_password')"
+                  class="text-slate-400 hover:text-white absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer">
+                  <i data-lucide="eye" class="w-4 h-4"></i>
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label for="confirm_password" class="block text-slate-300 font-medium mb-1.5">Konfirmasi Password Baru</label>
+              <div class="relative">
+                <input type="password" id="confirm_password" name="confirm_password" placeholder="Ulangi password baru"
+                  class="w-full bg-slate-900 border border-slate-600 rounded-xl pl-3.5 pr-10 py-2.5 text-white focus:outline-none focus:border-sky-400">
+                <button type="button" onclick="togglePwdField('confirm_password')"
+                  class="text-slate-400 hover:text-white absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer">
+                  <i data-lucide="eye" class="w-4 h-4"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="pt-2 flex justify-end">
+          <button type="submit"
+            class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-sky-500 hover:bg-sky-600 text-slate-950 font-semibold text-xs transition cursor-pointer">
+            <i data-lucide="shield-check" class="w-4 h-4"></i>
+            <span>Perbarui Password</span>
+          </button>
+        </div>
+      </form>
+
+    </div>
+
+    <!-- 3. Daftar Cabang yang Diizinkan (Urutan 3 / Paling Bawah di Mobile, Kiri Bawah di Desktop) -->
+    <div class="order-3 lg:col-span-4 lg:col-start-1 lg:row-start-2 bg-slate-800 border border-slate-700 rounded-2xl p-4 space-y-3">
+      <div class="flex items-center justify-between">
+        <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-400">Akses Cabang Terdaftar</h3>
+        <span class="text-[11px] font-semibold text-emerald-400"><%= allowedBranches.length %> Cabang</span>
+      </div>
+      <div class="flex flex-wrap justify-center gap-1.5">
+        <% if (allowedBranches.length === 0) { %>
+          <span class="text-xs text-slate-400">Belum ada cabang yang ditugaskan.</span>
+        <% } else { %>
+          <% allowedBranches.forEach(b => { %>
+            <span class="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-700 text-[11px] text-slate-200">
+              <strong class="text-emerald-400"><%= b.branch_code %></strong> — <%= b.branch_name %>
+            </span>
+          <% }) %>
+        <% } %>
+      </div>
+    </div>
+
+  </div>
+
+</main>
+
+<!-- ========================================================= -->
+<!-- CUSTOM POPUP MODAL: INTERACTIVE CROP, PAN & ZOOM FOTO     -->
+<!-- ========================================================= -->
+<div id="photo-cropper-modal"
+  class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/85 backdrop-blur-sm p-4">
+  <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-md w-full overflow-hidden shadow-2xl">
+    <div class="px-5 py-3.5 border-b border-slate-700 flex items-center justify-between">
+      <div>
+        <h3 class="text-sm font-bold text-white flex items-center gap-2">
+          <i data-lucide="crop" class="w-4 h-4 text-emerald-400"></i>
+          <span>Sesuaikan Posisi Foto Profil</span>
+        </h3>
+        <p class="text-[11px] text-slate-400">Geser gambar di dalam kotak atau atur zoom agar pas.</p>
+      </div>
+      <button type="button" onclick="cancelPhotoCropper()"
+        class="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700/60 transition cursor-pointer">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+    </div>
+
+    <!-- Area Canvas Interaktif (Drag / Geser dengan Mouse maupun Sentuhan) -->
+    <div class="p-5 bg-slate-950/70 flex flex-col items-center justify-center space-y-3">
+      <div class="relative rounded-2xl overflow-hidden border-2 border-emerald-500/60 shadow-lg select-none">
+        <canvas id="cropper-canvas" width="280" height="280"
+          class="block bg-slate-900 cursor-grab active:cursor-grabbing touch-none"></canvas>
+      </div>
+      <span class="text-[11px] text-slate-400 flex items-center gap-1.5">
+        <i data-lucide="move" class="w-3.5 h-3.5 text-emerald-400"></i>
+        <span>Klik & geser foto untuk mengatur posisi tengah</span>
+      </span>
+    </div>
+
+    <!-- Kontrol Zoom & Putar -->
+    <div class="px-5 py-3.5 border-t border-slate-700/80 space-y-3 text-xs">
+      <div class="flex items-center gap-3">
+        <i data-lucide="zoom-out" class="w-4 h-4 text-slate-400 shrink-0"></i>
+        <input type="range" id="cropper-zoom-slider" min="1" max="3" step="0.02" value="1"
+          oninput="updateCropperZoom(this.value)"
+          class="w-full accent-emerald-500 cursor-pointer">
+        <i data-lucide="zoom-in" class="w-4 h-4 text-slate-400 shrink-0"></i>
+        <button type="button" onclick="rotateCropperImage()" title="Putar 90°"
+          class="p-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-200 transition shrink-0 cursor-pointer">
+          <i data-lucide="rotate-cw" class="w-3.5 h-3.5"></i>
+        </button>
+      </div>
+
+      <div class="grid grid-cols-2 gap-2.5 pt-1">
+        <button type="button" onclick="cancelPhotoCropper()"
+          class="py-2.5 px-4 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-200 font-semibold transition cursor-pointer">
+          Batal
+        </button>
+        <button type="button" id="apply-crop-btn" onclick="applyPhotoCropAndResize()"
+          class="py-2.5 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-semibold transition cursor-pointer">
+          Terapkan Foto
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========================================================= -->
+<!-- CUSTOM POPUP MODAL: PRATINJAU FOTO PROFIL (DOWNLOAD/HAPUS) -->
+<!-- ========================================================= -->
+<% if (profileUser.profile_photo) { %>
+  <div id="photo-lightbox-modal" onclick="if (event.target === this) closePhotoLightboxModal()"
+    class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-md w-full overflow-hidden shadow-2xl">
+      <div class="px-5 py-3.5 border-b border-slate-700 flex items-center justify-between">
+        <div class="min-w-0">
+          <h3 class="text-sm font-bold text-white truncate">Foto Profil — <%= profileUser.full_name %></h3>
+          <p class="text-[11px] font-mono text-slate-400 truncate">@<%= profileUser.username %></p>
+        </div>
+        <button type="button" onclick="closePhotoLightboxModal()"
+          class="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700/60 transition cursor-pointer">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <div class="p-5 bg-slate-900/70 flex items-center justify-center">
+        <img src="<%= profileUser.profile_photo %>?v=<%= Date.now() %>" alt="<%= profileUser.full_name %>"
+          class="max-h-80 w-auto rounded-xl object-contain border border-slate-700 shadow-lg">
+      </div>
+
+      <div id="lightbox-actions-default" class="px-5 py-4 border-t border-slate-700 grid grid-cols-2 gap-2.5 text-xs">
+        <a href="<%= profileUser.profile_photo %>"
+          download="<%= profileUser.profile_photo.split('/').pop() %>"
+          class="inline-flex items-center justify-center gap-1.5 py-2.5 px-4 rounded-xl bg-sky-500/15 hover:bg-sky-500/25 text-sky-400 border border-sky-500/30 font-semibold transition">
+          <i data-lucide="download" class="w-4 h-4"></i>
+          <span>Download Foto</span>
+        </a>
+
+        <button type="button" onclick="toggleLightboxDeleteConfirm(true)"
+          class="inline-flex items-center justify-center gap-1.5 py-2.5 px-4 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 border border-rose-500/30 font-semibold transition cursor-pointer">
+          <i data-lucide="trash-2" class="w-4 h-4"></i>
+          <span>Hapus Foto</span>
+        </button>
+      </div>
+
+      <div id="lightbox-actions-confirm" class="hidden px-5 py-4 border-t border-rose-500/30 bg-rose-500/10 space-y-3 text-xs">
+        <p class="text-rose-300 text-center font-medium">
+          Yakin ingin menghapus foto profil ini secara permanen?
+        </p>
+        <div class="grid grid-cols-2 gap-2.5">
+          <button type="button" onclick="toggleLightboxDeleteConfirm(false)"
+            class="py-2 px-4 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-200 font-semibold transition cursor-pointer">
+            Batal
+          </button>
+          <button type="button" onclick="document.getElementById('delete-photo-form').submit()"
+            class="py-2 px-4 rounded-xl bg-rose-500 hover:bg-rose-600 text-white font-semibold transition cursor-pointer">
+            Ya, Hapus Permanen
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+<% } %>
+
+<!-- ========================================================= -->
+<!-- CUSTOM POPUP MODAL: NOTIFIKASI SUKSES / ERROR             -->
+<!-- ========================================================= -->
+<div id="profile-status-modal" onclick="if (event.target === this) closeProfileStatusModal()"
+  class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/75 backdrop-blur-sm p-4">
+  <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-sm w-full p-6 text-center shadow-2xl space-y-4">
+    <div id="status-modal-icon-wrap"
+      class="w-12 h-12 rounded-2xl mx-auto flex items-center justify-center bg-emerald-500/15 border border-emerald-500/30 text-emerald-400">
+      <i id="status-modal-icon" data-lucide="check-circle-2" class="w-6 h-6"></i>
+    </div>
+    <div class="space-y-1.5">
+      <h3 id="status-modal-title" class="text-base font-bold text-white">Berhasil</h3>
+      <p id="status-modal-message" class="text-xs text-slate-300 leading-relaxed"></p>
+    </div>
+    <div class="pt-1">
+      <button type="button" id="status-modal-btn" onclick="closeProfileStatusModal()"
+        class="w-full py-2.5 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-semibold text-xs transition cursor-pointer">
+        Mengerti
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const MAX_PROFILE_BYTES = 5 * 1024 * 1024; // 5 MB
+  const INITIAL_AVATAR_SRC = <%- JSON.stringify(profileUser.profile_photo ? `${profileUser.profile_photo}?v=${Date.now()}` : '') %>;
+
+  function togglePwdField(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.type = el.type === 'password' ? 'text' : 'password';
+  }
+
+  function openPhotoLightboxModal() {
+    const modal = document.getElementById('photo-lightbox-modal');
+    if (!modal) return;
+    toggleLightboxDeleteConfirm(false);
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+  }
+
+  function closePhotoLightboxModal() {
+    const modal = document.getElementById('photo-lightbox-modal');
+    if (!modal) return;
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+    toggleLightboxDeleteConfirm(false);
+  }
+
+  function toggleLightboxDeleteConfirm(showConfirm) {
+    const defaultBar = document.getElementById('lightbox-actions-default');
+    const confirmBar = document.getElementById('lightbox-actions-confirm');
+    if (!defaultBar || !confirmBar) return;
+    if (showConfirm) {
+      defaultBar.classList.add('hidden');
+      confirmBar.classList.remove('hidden');
+    } else {
+      confirmBar.classList.add('hidden');
+      defaultBar.classList.remove('hidden');
+    }
+  }
+
+  function openProfileStatusModal(type, title, message) {
+    const modal = document.getElementById('profile-status-modal');
+    const iconWrap = document.getElementById('status-modal-icon-wrap');
+    const iconEl = document.getElementById('status-modal-icon');
+    const titleEl = document.getElementById('status-modal-title');
+    const msgEl = document.getElementById('status-modal-message');
+    const btnEl = document.getElementById('status-modal-btn');
+
+    if (!modal) return;
+
+    titleEl.textContent = title;
+    msgEl.textContent = message;
+
+    if (type === 'error') {
+      iconWrap.className = 'w-12 h-12 rounded-2xl mx-auto flex items-center justify-center bg-rose-500/15 border border-rose-500/30 text-rose-400';
+      iconEl.setAttribute('data-lucide', 'alert-circle');
+      btnEl.className = 'w-full py-2.5 px-4 rounded-xl bg-rose-500 hover:bg-rose-600 text-white font-semibold text-xs transition cursor-pointer';
+    } else {
+      iconWrap.className = 'w-12 h-12 rounded-2xl mx-auto flex items-center justify-center bg-emerald-500/15 border border-emerald-500/30 text-emerald-400';
+      iconEl.setAttribute('data-lucide', 'check-circle-2');
+      btnEl.className = 'w-full py-2.5 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-semibold text-xs transition cursor-pointer';
+    }
+
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+  }
+
+  function closeProfileStatusModal() {
+    const modal = document.getElementById('profile-status-modal');
+    if (!modal) return;
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+  }
+
+  // =========================================================
+  // ENGINE CROP, PAN (GESER), ZOOM & AUTO-RESIZE <= 5 MB
+  // =========================================================
+  const cropperState = {
+    img: null,
+    baseScale: 1,
+    zoom: 1,
+    rotation: 0,
+    offsetX: 0,
+    offsetY: 0,
+    isDragging: false,
+    dragStartX: 0,
+    dragStartY: 0,
+    originalFileName: 'profile.jpg'
+  };
+
+  function getRotatedDimensions() {
+    if (!cropperState.img) return { w: 1, h: 1 };
+    const isSwapped = cropperState.rotation % 180 !== 0;
+    return {
+      w: isSwapped ? cropperState.img.height : cropperState.img.width,
+      h: isSwapped ? cropperState.img.width : cropperState.img.height
+    };
+  }
+
+  function clampCropperOffsets(canvasSize) {
+    const { w, h } = getRotatedDimensions();
+    const scale = cropperState.baseScale * cropperState.zoom;
+    const drawW = w * scale;
+    const drawH = h * scale;
+    const maxOffsetX = Math.max(0, (drawW - canvasSize) / 2);
+    const maxOffsetY = Math.max(0, (drawH - canvasSize) / 2);
+
+    cropperState.offsetX = Math.max(-maxOffsetX, Math.min(maxOffsetX, cropperState.offsetX));
+    cropperState.offsetY = Math.max(-maxOffsetY, Math.min(maxOffsetY, cropperState.offsetY));
+  }
+
+  function drawCropperCanvas() {
+    const canvas = document.getElementById('cropper-canvas');
+    if (!canvas || !cropperState.img) return;
+    const ctx = canvas.getContext('2d');
+    const size = canvas.width;
+
+    clampCropperOffsets(size);
+
+    ctx.clearRect(0, 0, size, size);
+    ctx.save();
+    ctx.translate(size / 2 + cropperState.offsetX, size / 2 + cropperState.offsetY);
+    ctx.rotate((cropperState.rotation * Math.PI) / 180);
+
+    const scale = cropperState.baseScale * cropperState.zoom;
+    ctx.scale(scale, scale);
+    ctx.drawImage(
+      cropperState.img,
+      -cropperState.img.width / 2,
+      -cropperState.img.height / 2
+    );
+    ctx.restore();
+
+    // Garis panduan rule-of-thirds
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.22)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(size / 3, 0); ctx.lineTo(size / 3, size);
+    ctx.moveTo((size * 2) / 3, 0); ctx.lineTo((size * 2) / 3, size);
+    ctx.moveTo(0, size / 3); ctx.lineTo(size, size / 3);
+    ctx.moveTo(0, (size * 2) / 3); ctx.lineTo(size, (size * 2) / 3);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function resetCropperTransform() {
+    const canvas = document.getElementById('cropper-canvas');
+    if (!canvas || !cropperState.img) return;
+    const { w, h } = getRotatedDimensions();
+    cropperState.baseScale = Math.max(canvas.width / w, canvas.height / h);
+    cropperState.zoom = 1;
+    cropperState.offsetX = 0;
+    cropperState.offsetY = 0;
+    const slider = document.getElementById('cropper-zoom-slider');
+    if (slider) slider.value = '1';
+    drawCropperCanvas();
+  }
+
+  function updateCropperZoom(val) {
+    cropperState.zoom = parseFloat(val) || 1;
+    drawCropperCanvas();
+  }
+
+  function rotateCropperImage() {
+    cropperState.rotation = (cropperState.rotation + 90) % 360;
+    resetCropperTransform();
+  }
+
+  function handlePhotoFileSelected(input) {
+    if (!input.files || !input.files[0]) return;
+    const file = input.files[0];
+
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      input.value = '';
+      openProfileStatusModal('error', 'Format Tidak Didukung', 'Foto profil harus berformat JPG, PNG, atau WEBP.');
+      return;
+    }
+
+    cropperState.originalFileName = file.name || 'profile.jpg';
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        cropperState.img = img;
+        cropperState.rotation = 0;
+
+        const modal = document.getElementById('photo-cropper-modal');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+
+        resetCropperTransform();
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function reopenPhotoCropper() {
+    if (!cropperState.img) return;
+    const modal = document.getElementById('photo-cropper-modal');
+    if (!modal) return;
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+    drawCropperCanvas();
+  }
+
+  function cancelPhotoCropper() {
+    const modal = document.getElementById('photo-cropper-modal');
+    const input = document.getElementById('profile_photo');
+    if (modal) {
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+    if (input && !input.dataset.croppedReady) {
+      input.value = '';
+    }
+  }
+
+  function clearSelectedCroppedPhoto() {
+    const fileInput = document.getElementById('profile_photo');
+    if (fileInput) {
+      fileInput.value = '';
+      delete fileInput.dataset.croppedReady;
+    }
+
+    const previewBox = document.getElementById('inline-crop-preview-box');
+    const previewImg = document.getElementById('inline-crop-preview-img');
+    const badge = document.getElementById('cropped-file-badge');
+
+    if (previewBox) {
+      previewBox.classList.add('hidden');
+      previewBox.classList.remove('flex');
+    }
+    if (previewImg) previewImg.src = '';
+    if (badge) badge.classList.add('hidden');
+
+    const avatarImg = document.getElementById('avatar-preview-img');
+    const fallbackBox = document.getElementById('avatar-fallback-box');
+    if (INITIAL_AVATAR_SRC) {
+      if (avatarImg) {
+        avatarImg.src = INITIAL_AVATAR_SRC;
+        avatarImg.classList.remove('hidden');
+      }
+      if (fallbackBox) fallbackBox.classList.add('hidden');
+    } else {
+      if (avatarImg) {
+        avatarImg.src = '';
+        avatarImg.classList.add('hidden');
+      }
+      if (fallbackBox) fallbackBox.classList.remove('hidden');
+    }
+
+    cropperState.img = null;
+  }
+
+  function canvasToBlobUnderLimit(sourceCanvas, maxBytes) {
+    return new Promise((resolve) => {
+      const targetSizes = [800, 640, 512];
+      const qualities = [0.92, 0.85, 0.75, 0.65];
+
+      let sizeIdx = 0;
+      let qualIdx = 0;
+
+      function tryEncode() {
+        const dim = targetSizes[sizeIdx];
+        const outCanvas = document.createElement('canvas');
+        outCanvas.width = dim;
+        outCanvas.height = dim;
+        const outCtx = outCanvas.getContext('2d');
+
+        outCtx.fillStyle = '#0f172a';
+        outCtx.fillRect(0, 0, dim, dim);
+        outCtx.drawImage(sourceCanvas, 0, 0, dim, dim);
+
+        outCanvas.toBlob((blob) => {
+          if (!blob) return resolve(null);
+          if (blob.size <= maxBytes || (sizeIdx === targetSizes.length - 1 && qualIdx === qualities.length - 1)) {
+            return resolve(blob);
+          }
+          qualIdx += 1;
+          if (qualIdx >= qualities.length) {
+            qualIdx = 0;
+            sizeIdx += 1;
+          }
+          tryEncode();
+        }, 'image/jpeg', qualities[qualIdx]);
+      }
+
+      tryEncode();
+    });
+  }
+
+  async function applyPhotoCropAndResize() {
+    if (!cropperState.img) return;
+    const previewCanvas = document.getElementById('cropper-canvas');
+    const applyBtn = document.getElementById('apply-crop-btn');
+    if (applyBtn) {
+      applyBtn.disabled = true;
+      applyBtn.textContent = 'Memproses...';
+    }
+
+    const hiResSize = 800;
+    const ratio = hiResSize / previewCanvas.width;
+    const cleanCanvas = document.createElement('canvas');
+    cleanCanvas.width = hiResSize;
+    cleanCanvas.height = hiResSize;
+    const ctx = cleanCanvas.getContext('2d');
+
+    ctx.translate(hiResSize / 2 + cropperState.offsetX * ratio, hiResSize / 2 + cropperState.offsetY * ratio);
+    ctx.rotate((cropperState.rotation * Math.PI) / 180);
+    const scale = cropperState.baseScale * cropperState.zoom * ratio;
+    ctx.scale(scale, scale);
+    ctx.drawImage(cropperState.img, -cropperState.img.width / 2, -cropperState.img.height / 2);
+
+    const finalBlob = await canvasToBlobUnderLimit(cleanCanvas, MAX_PROFILE_BYTES);
+
+    if (applyBtn) {
+      applyBtn.disabled = false;
+      applyBtn.textContent = 'Terapkan Foto';
+    }
+
+    if (!finalBlob || finalBlob.size > MAX_PROFILE_BYTES) {
+      cancelPhotoCropper();
+      openProfileStatusModal('error', 'Ukuran Melebihi 5 MB', 'Gagal mengecilkan gambar di bawah batas maksimal 5 MB.');
+      return;
+    }
+
+    const baseName = cropperState.originalFileName.replace(/\.[^.]+$/, '') || 'profile';
+    const croppedFile = new File([finalBlob], `${baseName}.jpg`, { type: 'image/jpeg' });
+
+    const dataTransfer = new DataTransfer();
+    dataTransfer.items.add(croppedFile);
+
+    const fileInput = document.getElementById('profile_photo');
+    fileInput.files = dataTransfer.files;
+    fileInput.dataset.croppedReady = '1';
+
+    const previewUrl = URL.createObjectURL(finalBlob);
+
+    // Update avatar di kartu sebelah kiri
+    const avatarImg = document.getElementById('avatar-preview-img');
+    const fallbackBox = document.getElementById('avatar-fallback-box');
+    if (avatarImg) {
+      avatarImg.src = previewUrl;
+      avatarImg.classList.remove('hidden');
+    }
+    if (fallbackBox) {
+      fallbackBox.classList.add('hidden');
+    }
+
+    const sizeKb = Math.round(finalBlob.size / 1024);
+    const sizeLabel = sizeKb >= 1024 ? `${(sizeKb / 1024).toFixed(2)} MB` : `${sizeKb} KB`;
+    const badge = document.getElementById('cropped-file-badge');
+
+    // Tampilkan kotak preview inline tepat di bawah input file
+    const inlineBox = document.getElementById('inline-crop-preview-box');
+    const inlineImg = document.getElementById('inline-crop-preview-img');
+    const inlineName = document.getElementById('inline-crop-preview-name');
+    const inlineMeta = document.getElementById('inline-crop-preview-meta');
+
+    if (inlineImg) inlineImg.src = previewUrl;
+    if (inlineName) inlineName.textContent = croppedFile.name;
+    if (inlineMeta) inlineMeta.textContent = `Persegi 1:1 • ${sizeLabel} • Siap diunggah`;
+    if (inlineBox) {
+      inlineBox.classList.remove('hidden');
+      inlineBox.classList.add('flex');
+    }
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+
+    const modal = document.getElementById('photo-cropper-modal');
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+  }
+
+  // Event Mouse & Touch untuk Menggeser (Pan) Gambar di Dalam Canvas
+  (function initCropperDragEvents() {
+    const canvas = document.getElementById('cropper-canvas');
+    if (!canvas) return;
+
+    const getClientPos = (e) => {
+      if (e.touches && e.touches.length > 0) {
+        return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      }
+      return { x: e.clientX, y: e.clientY };
+    };
+
+    const startDrag = (e) => {
+      if (!cropperState.img) return;
+      const pos = getClientPos(e);
+      cropperState.isDragging = true;
+      cropperState.dragStartX = pos.x - cropperState.offsetX;
+      cropperState.dragStartY = pos.y - cropperState.offsetY;
+    };
+
+    const moveDrag = (e) => {
+      if (!cropperState.isDragging) return;
+      e.preventDefault();
+      const pos = getClientPos(e);
+      cropperState.offsetX = pos.x - cropperState.dragStartX;
+      cropperState.offsetY = pos.y - cropperState.dragStartY;
+      drawCropperCanvas();
+    };
+
+    const endDrag = () => {
+      cropperState.isDragging = false;
+    };
+
+    canvas.addEventListener('mousedown', startDrag);
+    window.addEventListener('mousemove', moveDrag);
+    window.addEventListener('mouseup', endDrag);
+
+    canvas.addEventListener('touchstart', startDrag, { passive: true });
+    canvas.addEventListener('touchmove', moveDrag, { passive: false });
+    window.addEventListener('touchend', endDrag);
+
+    canvas.addEventListener('wheel', (e) => {
+      if (!cropperState.img) return;
+      e.preventDefault();
+      const slider = document.getElementById('cropper-zoom-slider');
+      const delta = e.deltaY < 0 ? 0.08 : -0.08;
+      const nextZoom = Math.max(1, Math.min(3, cropperState.zoom + delta));
+      cropperState.zoom = nextZoom;
+      if (slider) slider.value = String(nextZoom);
+      drawCropperCanvas();
+    }, { passive: false });
+  })();
+
+  document.getElementById('profile-info-form')?.addEventListener('submit', function (e) {
+    const fullName = document.getElementById('full_name')?.value.trim();
+    if (!fullName) {
+      e.preventDefault();
+      openProfileStatusModal('error', 'Data Belum Lengkap', 'Nama lengkap tidak boleh dikosongkan.');
+      return;
+    }
+
+    const fileInput = document.getElementById('profile_photo');
+    if (fileInput && fileInput.files && fileInput.files[0] && fileInput.files[0].size > MAX_PROFILE_BYTES) {
+      e.preventDefault();
+      openProfileStatusModal('error', 'Ukuran File Terlalu Besar', 'Ukuran foto profil tidak boleh melebihi 5 MB.');
+    }
+  });
+
+  document.getElementById('profile-password-form')?.addEventListener('submit', function (e) {
+    const currentPwd = document.getElementById('current_password')?.value || '';
+    const newPwd = document.getElementById('new_password')?.value || '';
+    const confirmPwd = document.getElementById('confirm_password')?.value || '';
+
+    if (!currentPwd || !newPwd || !confirmPwd) {
+      e.preventDefault();
+      openProfileStatusModal('error', 'Kolom Belum Lengkap', 'Harap isi password saat ini, password baru, dan konfirmasi password.');
+      return;
+    }
+
+    if (newPwd.length < 6) {
+      e.preventDefault();
+      openProfileStatusModal('error', 'Password Terlalu Pendek', 'Password baru minimal harus terdiri dari 6 karakter.');
+      return;
+    }
+
+    if (newPwd !== confirmPwd) {
+      e.preventDefault();
+      openProfileStatusModal('error', 'Konfirmasi Tidak Cocok', 'Password baru dan konfirmasi password baru tidak sama.');
+    }
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      closeProfileStatusModal();
+      closePhotoLightboxModal();
+      cancelPhotoCropper();
+    }
+  });
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const serverMsg = <%- JSON.stringify(msg || '') %>;
+    const serverErr = <%- JSON.stringify(err || '') %>;
+
+    if (serverMsg) {
+      openProfileStatusModal('success', 'Perubahan Disimpan', serverMsg);
+      window.history.replaceState({}, document.title, '/profile');
+    } else if (serverErr) {
+      openProfileStatusModal('error', 'Gagal Memproses', serverErr);
+      window.history.replaceState({}, document.title, '/profile');
+    }
+  });
+</script>
+
+<%- include('../partials/footer') %>

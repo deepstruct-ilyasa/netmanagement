@@ -184,6 +184,7 @@ db.exec(`
     full_name TEXT NOT NULL,
     username TEXT NOT NULL UNIQUE,
     password_hash TEXT NOT NULL,
+    profile_photo TEXT DEFAULT NULL,
     role TEXT NOT NULL DEFAULT 'branch_user',
     all_branches INTEGER NOT NULL DEFAULT 0,
     allowed_menus TEXT NOT NULL DEFAULT '["topology","assets","devices"]',
