@@ -139,12 +139,20 @@
       </div>
     <% } %>
 
+    <!-- Grup Audit & Stock Opname: Dashboard tampil untuk semua user login, eksekusi audit sesuai izin -->
+    <div class="px-3 pt-4 pb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+      Audit & Stock Opname
+    </div>
+
+    <a href="/audits/dashboard"
+      class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition <%= (typeof activeMenu !== 'undefined' && activeMenu === 'audit-dashboard') ? 'bg-emerald-500/15 text-emerald-400 font-semibold border border-emerald-500/30' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' %>">
+      <i data-lucide="bar-chart-3" class="w-4 h-4 shrink-0"></i>
+      <span class="truncate">Dashboard Audit</span>
+    </a>
+
     <% if (typeof can === 'function' && can('menu.asset-audits')) { %>
-      <div class="px-3 pt-4 pb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-        Audit & Stock Opname
-      </div>
       <a href="/audits"
-        class="flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl text-sm font-medium transition <%= (typeof activeMenu !== 'undefined' && activeMenu === 'asset-audits') ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' %>">
+        class="flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl text-sm font-medium transition <%= (typeof activeMenu !== 'undefined' && activeMenu === 'asset-audits') ? 'bg-emerald-500/15 text-emerald-400 font-semibold border border-emerald-500/30' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' %>">
         <span class="flex items-center gap-3 min-w-0">
           <i data-lucide="clipboard-check" class="w-4 h-4 shrink-0"></i>
           <span class="truncate">Audit & Stock Opname</span>

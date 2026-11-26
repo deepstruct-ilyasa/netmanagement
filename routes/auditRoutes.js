@@ -14,6 +14,9 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage, limits: { fileSize: 8 * 1024 * 1024 } });
 
+// Dashboard Rekapitulasi & Visualisasi Audit
+router.get('/audits/dashboard', auditController.dashboardAudit);
+
 // Daftar & Detail Audit (Wajib Administrator atau User yang pernah ditugaskan audit)
 router.get('/audits', requireMenu('asset-audits'), auditController.listAudits);
 router.get('/audits/:id', requireMenu('asset-audits'), auditController.detailAudit);

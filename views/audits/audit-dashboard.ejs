@@ -1,0 +1,515 @@
+<%- include('../partials/header', { pageTitle: 'Dashboard Audit' }) %>
+
+<%
+  const monthNamesFull = [
+    { val: '01', label: 'Januari' },
+    { val: '02', label: 'Februari' },
+    { val: '03', label: 'Maret' },
+    { val: '04', label: 'April' },
+    { val: '05', label: 'Mei' },
+    { val: '06', label: 'Juni' },
+    { val: '07', label: 'Juli' },
+    { val: '08', label: 'Agustus' },
+    { val: '09', label: 'September' },
+    { val: '10', label: 'Oktober' },
+    { val: '11', label: 'November' },
+    { val: '12', label: 'Desember' }
+  ];
+  const activeMonthObj = monthNamesFull.find(m => m.val === selectedMonth);
+  const activeSessionObj = (availableSessions || []).find(s => Number(s.id) === Number(selectedSessionId));
+
+  let activePeriodLabel = `Tahun ${selectedYear}`;
+  if (filterMode === 'month') {
+    activePeriodLabel = `${activeMonthObj ? activeMonthObj.label : selectedMonth} ${selectedYear}`;
+  } else if (filterMode === 'session') {
+    activePeriodLabel = activeSessionObj ? `${activeSessionObj.audit_code} (${activeSessionObj.title})` : 'Belum Ada Sesi Audit';
+  }
+%>
+
+<main class="p-4 sm:p-6 flex-1 w-full space-y-5">
+
+  <!-- Header & Filter Bar Dinamis -->
+  <div class="flex flex-col xl:flex-row xl:items-center justify-between gap-3 bg-slate-800 border border-slate-700 p-4 rounded-xl">
+    <div>
+      <div class="flex flex-wrap items-center gap-2">
+        <h2 class="text-base font-semibold text-white">Rekapitulasi & Visualisasi Audit Aset</h2>
+        <span class="px-2.5 py-0.5 rounded-md text-[11px] font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+          <%= activePeriodLabel %>
+        </span>
+      </div>
+      <p class="text-xs text-slate-400 mt-0.5">Pilih cakupan rekapitulasi berdasarkan tahun, bulan pelaksanaan, atau per sesi audit spesifik.</p>
+    </div>
+
+    <div>
+        <form id="audit-dashboard-filter-form" method="GET" action="/audits/dashboard"
+        class="w-full xl:w-auto flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-2 text-xs">
+
+        <!-- 1. Dropdown Cabang (Opsi "Semua Cabang" hanya tampil jika cabang yang diizinkan > 1) -->
+        <select name="branch_id" onchange="this.form.submit()"
+          class="w-full sm:w-auto bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-400 cursor-pointer">
+          <% if (branches && branches.length > 1) { %>
+            <option value="all" <%= selectedBranchId === 'all' ? 'selected' : '' %>>Semua Cabang</option>
+          <% } %>
+          <% if (branches && branches.length > 0) { %>
+            <% branches.forEach(b => { %>
+              <option value="<%= b.id %>" <%= String(selectedBranchId) === String(b.id) ? 'selected' : '' %>>
+                [<%= b.branch_code %>] <%= b.branch_name %>
+              </option>
+            <% }) %>
+          <% } else { %>
+            <option value="none">Tidak ada akses cabang</option>
+          <% } %>
+        </select>
+
+        <!-- 2. Dropdown Mode Rekapitulasi -->
+        <select name="mode" onchange="this.form.submit()"
+            class="w-full sm:w-auto bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 font-semibold focus:outline-none focus:border-emerald-400 cursor-pointer">
+            <option value="year" <%= filterMode === 'year' ? 'selected' : '' %>>Filter: Per Tahun</option>
+            <option value="month" <%= filterMode === 'month' ? 'selected' : '' %>>Filter: Per Bulan</option>
+            <option value="session" <%= filterMode === 'session' ? 'selected' : '' %>>Filter: Per Sesi</option>
+        </select>
+
+        <% if (filterMode === 'session') { %>
+            <!-- 3A. Dropdown Pilih Sesi Audit -->
+            <select name="session_id" onchange="this.form.submit()"
+            class="w-full sm:w-auto sm:max-w-xs bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-400 cursor-pointer">
+            <% if (!availableSessions || availableSessions.length === 0) { %>
+                <option value="">-- Tidak ada sesi audit --</option>
+            <% } else { %>
+                <% availableSessions.forEach(s => { %>
+                <option value="<%= s.id %>" <%= Number(selectedSessionId) === Number(s.id) ? 'selected' : '' %>>
+                    <%= s.audit_code %> — <%= s.title %>
+                </option>
+                <% }) %>
+            <% } %>
+            </select>
+
+            <% if (activeSessionObj) { %>
+            <a href="/audits/<%= activeSessionObj.id %>" title="Buka Kertas Kerja Sesi Ini"
+                class="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 bg-sky-500/15 hover:bg-sky-500/25 text-sky-400 border border-sky-500/30 font-semibold px-3 py-2 rounded-lg transition">
+                <i data-lucide="external-link" class="w-3.5 h-3.5 shrink-0"></i>
+                <span>Detail Sesi</span>
+            </a>
+            <% } %>
+
+        <% } else { %>
+            <!-- 3B. Dropdown Bulan (Khusus Mode Per Bulan) -->
+            <% if (filterMode === 'month') { %>
+            <select name="month" onchange="this.form.submit()"
+                class="w-full sm:w-auto bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-400 cursor-pointer">
+                <% monthNamesFull.forEach(m => { %>
+                <option value="<%= m.val %>" <%= selectedMonth === m.val ? 'selected' : '' %>><%= m.label %></option>
+                <% }) %>
+            </select>
+            <% } %>
+
+            <!-- Dropdown Tahun -->
+            <select name="year" onchange="this.form.submit()"
+            class="w-full sm:w-auto bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-400 cursor-pointer">
+            <% const curYr = new Date().getFullYear(); %>
+            <% [curYr, curYr - 1, curYr - 2].forEach(y => { %>
+                <option value="<%= y %>" <%= String(selectedYear) === String(y) ? 'selected' : '' %>>Tahun <%= y %></option>
+            <% }) %>
+            </select>
+        <% } %>
+        </form>
+    </div>
+  </div>
+
+  <!-- 4 Kartu KPI Utama -->
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+    <div class="bg-slate-800 border border-slate-700 rounded-xl p-4">
+      <div class="flex items-center justify-between text-slate-400 text-xs mb-1">
+        <span>Tingkat Akurasi Aset</span>
+        <i data-lucide="shield-check" class="w-4 h-4 text-emerald-400"></i>
+      </div>
+      <div class="text-2xl font-bold text-emerald-400"><%= accuracyRate %>%</div>
+      <div class="text-[11px] text-slate-400 mt-1">
+        <%= itemStats.matched_count || 0 %> sesuai dari <%= itemStats.target_items || 0 %> target aset
+      </div>
+    </div>
+
+    <div class="bg-slate-800 border border-slate-700 rounded-xl p-4">
+      <div class="flex items-center justify-between text-slate-400 text-xs mb-1">
+        <span><%= filterMode === 'session' ? 'Status Sesi Terpilih' : 'Total Sesi Audit' %></span>
+        <i data-lucide="clipboard-list" class="w-4 h-4 text-sky-400"></i>
+      </div>
+      <% if (filterMode === 'session') { %>
+        <div class="text-xl font-bold uppercase <%= activeSessionObj && activeSessionObj.status === 'closed' ? 'text-emerald-400' : 'text-amber-400' %>">
+          <%= activeSessionObj ? (activeSessionObj.status === 'closed' ? 'CLOSED' : 'IN PROGRESS') : '-' %>
+        </div>
+        <div class="text-[11px] text-slate-400 mt-1">
+          <%= auditStats.reconciled_sessions > 0 ? 'Sudah disinkronkan ke Master Aset' : 'Belum direkonsiliasi' %>
+        </div>
+      <% } else { %>
+        <div class="text-2xl font-bold text-white"><%= auditStats.total_sessions || 0 %> <span class="text-xs font-normal text-slate-400">Sesi</span></div>
+        <div class="text-[11px] text-slate-400 mt-1">
+          <span class="text-emerald-400 font-semibold"><%= auditStats.closed_sessions || 0 %> Closed</span> &bull;
+          <span class="text-amber-400"><%= auditStats.ongoing_sessions || 0 %> Berjalan</span>
+        </div>
+      <% } %>
+    </div>
+
+    <div class="bg-slate-800 border border-slate-700 rounded-xl p-4">
+      <div class="flex items-center justify-between text-slate-400 text-xs mb-1">
+        <span>Temuan Tak Terdaftar</span>
+        <i data-lucide="package-plus" class="w-4 h-4 text-amber-400"></i>
+      </div>
+      <div class="text-2xl font-bold text-amber-400"><%= itemStats.unregistered_count || 0 %> <span class="text-xs font-normal text-slate-400">Unit</span></div>
+      <div class="text-[11px] text-slate-400 mt-1">Perangkat fisik belum di master aset</div>
+    </div>
+
+    <div class="bg-slate-800 border border-slate-700 rounded-xl p-4">
+      <div class="flex items-center justify-between text-slate-400 text-xs mb-1">
+        <span>Hilang / Salah Cabang</span>
+        <i data-lucide="alert-triangle" class="w-4 h-4 text-rose-400"></i>
+      </div>
+      <div class="text-2xl font-bold text-rose-400">
+        <%= (itemStats.missing_count || 0) + (itemStats.misplaced_count || 0) %> <span class="text-xs font-normal text-slate-400">Unit</span>
+      </div>
+      <div class="text-[11px] text-slate-400 mt-1">
+        <%= itemStats.missing_count || 0 %> hilang &bull; <%= itemStats.misplaced_count || 0 %> misplaced &bull; <%= itemStats.condition_mismatch_count || 0 %> beda kondisi
+      </div>
+    </div>
+  </div>
+
+  <!-- Baris Grafik 1: Donut Komposisi Status & Bar Perbandingan Cabang -->
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+    <!-- Donut Chart Komposisi Hasil Audit -->
+    <div class="lg:col-span-5 bg-slate-800 border border-slate-700 rounded-xl p-4 sm:p-5 flex flex-col justify-between">
+      <div class="mb-3">
+        <h3 class="text-sm font-semibold text-white">Komposisi Status Verifikasi</h3>
+        <p class="text-[11px] text-slate-400">Proporsi hasil pengecekan fisik pada cakupan filter terpilih.</p>
+      </div>
+      <div class="relative h-56 flex items-center justify-center">
+        <canvas id="chart-audit-composition"></canvas>
+      </div>
+      <div class="grid grid-cols-2 gap-2 pt-3 mt-3 border-t border-slate-700/70 text-[11px]">
+        <div class="flex items-center justify-between bg-slate-900/60 px-2.5 py-1.5 rounded-lg">
+          <span class="text-slate-300 flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>Sesuai (Matched)</span>
+          <strong class="text-white"><%= itemStats.matched_count || 0 %></strong>
+        </div>
+        <div class="flex items-center justify-between bg-slate-900/60 px-2.5 py-1.5 rounded-lg">
+          <span class="text-slate-300 flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span>Hilang (Missing)</span>
+          <strong class="text-white"><%= itemStats.missing_count || 0 %></strong>
+        </div>
+        <div class="flex items-center justify-between bg-slate-900/60 px-2.5 py-1.5 rounded-lg">
+          <span class="text-slate-300 flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span>Tak Terdaftar</span>
+          <strong class="text-white"><%= itemStats.unregistered_count || 0 %></strong>
+        </div>
+        <div class="flex items-center justify-between bg-slate-900/60 px-2.5 py-1.5 rounded-lg">
+          <span class="text-slate-300 flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-sky-400"></span>Misplaced / Kondisi</span>
+          <strong class="text-white"><%= (itemStats.misplaced_count || 0) + (itemStats.condition_mismatch_count || 0) %></strong>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stacked Bar Chart Perbandingan Antar Cabang -->
+    <div class="lg:col-span-7 bg-slate-800 border border-slate-700 rounded-xl p-4 sm:p-5 flex flex-col justify-between">
+      <div class="mb-3">
+        <h3 class="text-sm font-semibold text-white">Rekapitulasi Temuan per Cabang</h3>
+        <p class="text-[11px] text-slate-400">Perbandingan jumlah aset sesuai vs temuan selisih per unit cabang.</p>
+      </div>
+      <div class="relative h-72 w-full">
+        <canvas id="chart-branch-comparison"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Baris Grafik 2: Tren Bulanan -->
+  <div class="bg-slate-800 border border-slate-700 rounded-xl p-4 sm:p-5">
+    <div class="mb-3">
+      <h3 class="text-sm font-semibold text-white">Tren Pelaksanaan & Selisih Audit Bulanan (<%= selectedYear %>)</h3>
+      <p class="text-[11px] text-slate-400">Perkembangan jumlah unit terverifikasi sesuai dan temuan selisih sepanjang tahun.</p>
+    </div>
+    <div class="relative h-64 w-full">
+      <canvas id="chart-monthly-trend"></canvas>
+    </div>
+  </div>
+
+  <!-- Tabel Rekapitulasi Sesi & Temuan Kritis -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+    <!-- Rekap Sesi Audit -->
+    <div class="bg-slate-800 border border-slate-700 rounded-xl overflow-hidden">
+      <div class="px-4 py-3.5 border-b border-slate-700 flex items-center">
+        <h3 class="text-sm font-semibold text-white">Rekapitulasi Sesi Audit</h3>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse text-xs whitespace-nowrap">
+          <thead>
+            <tr class="bg-slate-900/60 border-b border-slate-700 text-slate-400 uppercase text-[11px]">
+              <th class="py-2.5 px-3.5">Kode Audit</th>
+              <th class="py-2.5 px-3.5">Cabang</th>
+              <th class="py-2.5 px-3.5 text-center">Akurasi</th>
+              <th class="py-2.5 px-3.5 text-center">Status</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-700/60">
+            <% if (recentAudits.length === 0) { %>
+              <tr>
+                <td colspan="4" class="py-8 text-center text-slate-400">Belum ada sesi audit pada filter ini.</td>
+              </tr>
+            <% } %>
+            <% recentAudits.forEach(aud => { %>
+              <% const pct = aud.total_target > 0 ? Math.round((aud.matched_items / aud.total_target) * 100) : 0; %>
+              <tr class="hover:bg-slate-700/25 transition">
+                <td class="py-2.5 px-3.5">
+                  <a href="/audits/<%= aud.id %>" class="font-mono font-bold text-emerald-400 hover:underline"><%= aud.audit_code %></a>
+                  <div class="text-[10px] text-slate-400"><%= aud.title || '-' %></div>
+                </td>
+                <td class="py-2.5 px-3.5">
+                  <span class="px-2 py-0.5 rounded bg-slate-900 border border-slate-700 text-sky-400 font-semibold"><%= aud.branch_code %></span>
+                </td>
+                <td class="py-2.5 px-3.5 text-center">
+                  <span class="font-bold text-white"><%= pct %>%</span>
+                  <div class="text-[10px] text-slate-400"><%= aud.matched_items || 0 %>/<%= aud.total_target || 0 %> target</div>
+                </td>
+                <td class="py-2.5 px-3.5 text-center">
+                  <% if (aud.status === 'closed') { %>
+                    <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                      CLOSED<%= aud.is_reconciled ? ' • SYNC' : '' %>
+                    </span>
+                  <% } else { %>
+                    <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30">IN PROGRESS</span>
+                  <% } %>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Daftar Temuan Selisih -->
+    <div class="bg-slate-800 border border-slate-700 rounded-xl overflow-hidden">
+      <div class="px-4 py-3.5 border-b border-slate-700 flex items-center justify-between">
+        <h3 class="text-sm font-semibold text-white">Temuan Selisih & Belum Terdaftar</h3>
+        <span class="text-[11px] text-slate-400">15 Terbaru</span>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse text-xs whitespace-nowrap">
+          <thead>
+            <tr class="bg-slate-900/60 border-b border-slate-700 text-slate-400 uppercase text-[11px]">
+              <th class="py-2.5 px-3.5">Perangkat / Temuan</th>
+              <th class="py-2.5 px-3.5">Sesi</th>
+              <th class="py-2.5 px-3.5 text-center">Kategori</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-700/60">
+            <% if (criticalFindings.length === 0) { %>
+              <tr>
+                <td colspan="3" class="py-8 text-center text-slate-400">Tidak ada temuan selisih pada filter ini.</td>
+              </tr>
+            <% } %>
+            <% criticalFindings.forEach(item => { %>
+              <tr class="hover:bg-slate-700/25 transition">
+                <td class="py-2.5 px-3.5">
+                  <% if (item.asset_code) { %>
+                    <div class="font-mono font-bold text-white"><%= item.asset_code %></div>
+                    <div class="text-[10px] text-slate-400"><%= [item.brand_name, item.model_name, item.type_name].filter(Boolean).join(' ') %></div>
+                  <% } else { %>
+                    <div class="font-semibold text-amber-300"><%= item.unregistered_name || 'Perangkat Tanpa Label' %></div>
+                    <div class="text-[10px] text-slate-400"><%= item.unregistered_location || '-' %></div>
+                  <% } %>
+                </td>
+                <td class="py-2.5 px-3.5">
+                  <a href="/audits/<%= item.audit_id %>" class="font-mono text-sky-400 hover:underline"><%= item.audit_code %></a>
+                  <div class="text-[10px] text-slate-400">[<%= item.branch_code %>]</div>
+                </td>
+                <td class="py-2.5 px-3.5 text-center">
+                  <% if (item.finding_type === 'missing') { %>
+                    <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-500/15 text-rose-400 border border-rose-500/30">HILANG</span>
+                  <% } else if (item.finding_type === 'unregistered') { %>
+                    <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30">TAK TERDAFTAR</span>
+                  <% } else if (item.finding_type === 'misplaced') { %>
+                    <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-500/15 text-purple-400 border border-purple-500/30">MISPLACED</span>
+                  <% } else { %>
+                    <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-sky-500/15 text-sky-400 border border-sky-500/30">BEDA KONDISI</span>
+                  <% } %>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<script src="/js/chart.umd.min.js"></script>
+<script>
+  const ITEM_STATS = <%- JSON.stringify(itemStats || {}) %>;
+  const BRANCH_DATA = <%- JSON.stringify(branchComparison || []) %>;
+  const MONTHLY_DATA = <%- JSON.stringify(monthlyRows || []) %>;
+
+  let compositionChart = null;
+  let branchChart = null;
+  let monthlyChart = null;
+
+  function getChartColors() {
+    const isDark = document.documentElement.classList.contains('dark');
+    return {
+      text: isDark ? '#cbd5e1' : '#334155',
+      muted: isDark ? '#94a3b8' : '#64748b',
+      grid: isDark ? 'rgba(51, 65, 85, 0.45)' : 'rgba(203, 213, 225, 0.7)'
+    };
+  }
+
+  function renderAuditCharts() {
+    if (typeof Chart === 'undefined') return;
+    const c = getChartColors();
+
+    // 1. Donut Komposisi
+    const ctxComp = document.getElementById('chart-audit-composition');
+    if (ctxComp) {
+      if (compositionChart) compositionChart.destroy();
+      compositionChart = new Chart(ctxComp, {
+        type: 'doughnut',
+        data: {
+          labels: ['Sesuai (Matched)', 'Hilang (Missing)', 'Tak Terdaftar', 'Misplaced / Kondisi', 'Belum Dicek'],
+          datasets: [{
+            data: [
+              ITEM_STATS.matched_count || 0,
+              ITEM_STATS.missing_count || 0,
+              ITEM_STATS.unregistered_count || 0,
+              (ITEM_STATS.misplaced_count || 0) + (ITEM_STATS.condition_mismatch_count || 0),
+              ITEM_STATS.pending_count || 0
+            ],
+            backgroundColor: ['#10b981', '#f43f5e', '#fbbf24', '#38bdf8', '#64748b'],
+            borderWidth: 0
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: '66%',
+          plugins: {
+            legend: { display: false }
+          }
+        }
+      });
+    }
+
+    // 2. Bar Perbandingan per Cabang
+    const ctxBranch = document.getElementById('chart-branch-comparison');
+    if (ctxBranch) {
+      if (branchChart) branchChart.destroy();
+      branchChart = new Chart(ctxBranch, {
+        type: 'bar',
+        data: {
+          labels: BRANCH_DATA.map(b => b.branch_code),
+          datasets: [
+            {
+              label: 'Sesuai',
+              data: BRANCH_DATA.map(b => b.matched || 0),
+              backgroundColor: '#10b981',
+              borderRadius: 4
+            },
+            {
+              label: 'Tak Terdaftar',
+              data: BRANCH_DATA.map(b => b.unregistered || 0),
+              backgroundColor: '#fbbf24',
+              borderRadius: 4
+            },
+            {
+              label: 'Misplaced / Kondisi',
+              data: BRANCH_DATA.map(b => b.mismatch || 0),
+              backgroundColor: '#38bdf8',
+              borderRadius: 4
+            },
+            {
+              label: 'Hilang',
+              data: BRANCH_DATA.map(b => b.missing || 0),
+              backgroundColor: '#f43f5e',
+              borderRadius: 4
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: { stacked: true, ticks: { color: c.text }, grid: { display: false } },
+            y: { stacked: true, beginAtZero: true, ticks: { color: c.muted, precision: 0 }, grid: { color: c.grid } }
+          },
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: {
+                color: c.text,
+                boxWidth: 12,
+                padding: 16,
+                usePointStyle: true,
+                pointStyle: 'circle',
+                font: { size: 11 }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // 3. Line Tren Bulanan (Jan - Des)
+    const ctxMonthly = document.getElementById('chart-monthly-trend');
+    if (ctxMonthly) {
+      if (monthlyChart) monthlyChart.destroy();
+      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+      const matchedSeries = Array(12).fill(0);
+      const discrepancySeries = Array(12).fill(0);
+
+      MONTHLY_DATA.forEach(row => {
+        const idx = (row.month_num || 1) - 1;
+        if (idx >= 0 && idx < 12) {
+          matchedSeries[idx] = row.matched || 0;
+          discrepancySeries[idx] = row.discrepancy || 0;
+        }
+      });
+
+      monthlyChart = new Chart(ctxMonthly, {
+        type: 'line',
+        data: {
+          labels: monthNames,
+          datasets: [
+            {
+              label: 'Unit Sesuai',
+              data: matchedSeries,
+              borderColor: '#10b981',
+              backgroundColor: 'rgba(16, 185, 129, 0.15)',
+              fill: true,
+              tension: 0.35
+            },
+            {
+              label: 'Temuan Selisih',
+              data: discrepancySeries,
+              borderColor: '#f43f5e',
+              backgroundColor: 'rgba(244, 63, 94, 0.12)',
+              fill: true,
+              tension: 0.35
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: { ticks: { color: c.text }, grid: { display: false } },
+            y: { beginAtZero: true, ticks: { color: c.muted, precision: 0 }, grid: { color: c.grid } }
+          },
+          plugins: {
+            legend: { labels: { color: c.text, boxWidth: 12, font: { size: 11 } } }
+          }
+        }
+      });
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    renderAuditCharts();
+    document.getElementById('theme-toggle')?.addEventListener('click', () => {
+      setTimeout(renderAuditCharts, 50);
+    });
+  });
+</script>
+
+<%- include('../partials/footer') %>

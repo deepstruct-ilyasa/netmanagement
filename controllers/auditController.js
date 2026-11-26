@@ -115,6 +115,263 @@ function getAuditItemsAndStats(auditId) {
   return { items, stats };
 }
 
+// 0. GET /audits/dashboard - Rekapitulasi & Visualisasi Audit (Akses Cabang User OR Penugasan Auditor)
+exports.dashboardAudit = (req, res) => {
+  const isAdmin = req.user.role === 'administrator' || Number(req.user.all_branches) === 1;
+  const branchId = req.query.branch_id || (req.session?.selectedBranchId || 'all');
+  const filterMode = ['year', 'month', 'session'].includes(req.query.mode) ? req.query.mode : 'year';
+  const year = String(req.query.year || new Date().getFullYear());
+  const month = String(req.query.month || String(new Date().getMonth() + 1).padStart(2, '0')).padStart(2, '0');
+  const sessionId = req.query.session_id ? Number(req.query.session_id) : null;
+
+  // Deteksi otomatis kolom tanggal pada tabel asset_audits
+  const auditCols = db.prepare('PRAGMA table_info(asset_audits)').all().map(c => c.name);
+  const dateCol = ['created_at', 'started_at', 'audit_date', 'completed_at'].find(c => auditCols.includes(c));
+
+  const yearExpr = dateCol
+    ? `COALESCE(strftime('%Y', au.${dateCol}), '20' || substr(au.audit_code, -10, 2))`
+    : `('20' || substr(au.audit_code, -10, 2))`;
+
+  const monthStrExpr = dateCol
+    ? `COALESCE(strftime('%m', au.${dateCol}), substr(au.audit_code, -8, 2))`
+    : `substr(au.audit_code, -8, 2)`;
+
+  const monthIntExpr = `CAST(${monthStrExpr} AS INTEGER)`;
+
+  const branches = isAdmin
+    ? db.prepare('SELECT id, branch_code, branch_name FROM branches ORDER BY branch_code ASC').all()
+    : db.prepare(`
+        SELECT DISTINCT b.id, b.branch_code, b.branch_name
+        FROM branches b
+        WHERE b.id IN (SELECT branch_id FROM user_branches WHERE user_id = ?)
+           OR b.id IN (
+             SELECT au.branch_id
+             FROM asset_audits au
+             JOIN asset_audit_assignees aa ON aa.audit_id = au.id
+             WHERE aa.user_id = ?
+           )
+        ORDER BY b.branch_code ASC
+      `).all(req.user.id, req.user.id);
+
+  // CTE: Sesi audit yang boleh diakses user (semua sesi di cabang miliknya OR sesi yang ditugaskan padanya)
+  const allowedCte = isAdmin
+    ? `WITH allowed_audits AS (SELECT * FROM asset_audits)`
+    : `WITH allowed_audits AS (
+         SELECT DISTINCT au.*
+         FROM asset_audits au
+         WHERE au.branch_id IN (SELECT branch_id FROM user_branches WHERE user_id = ?)
+            OR au.id IN (SELECT audit_id FROM asset_audit_assignees WHERE user_id = ?)
+       )`;
+  const cteParams = isAdmin ? [] : [req.user.id, req.user.id];
+
+  // Daftar sesi audit untuk dropdown mode "Per Sesi"
+  const sessionListWhere = [];
+  const sessionListParams = [...cteParams];
+  if (branchId && branchId !== 'all' && branchId !== 'none') {
+    sessionListWhere.push('au.branch_id = ?');
+    sessionListParams.push(Number(branchId));
+  }
+  const availableSessions = db.prepare(`
+    ${allowedCte}
+    SELECT au.id, au.audit_code, au.title, au.status, b.branch_code
+    FROM allowed_audits au
+    LEFT JOIN branches b ON b.id = au.branch_id
+    ${sessionListWhere.length ? 'WHERE ' + sessionListWhere.join(' AND ') : ''}
+    ORDER BY au.id DESC
+  `).all(...sessionListParams);
+
+  const activeSessionId = (filterMode === 'session')
+    ? (sessionId && availableSessions.some(s => Number(s.id) === sessionId)
+        ? sessionId
+        : (availableSessions[0] ? Number(availableSessions[0].id) : 0))
+    : null;
+
+  // Bangun klausa filter utama sesuai mode (Per Tahun / Per Bulan / Per Sesi)
+  const whereClauses = [];
+  const baseParams = [...cteParams];
+
+  if (filterMode === 'session') {
+    whereClauses.push('au.id = ?');
+    baseParams.push(activeSessionId || -1);
+  } else {
+    whereClauses.push(`${yearExpr} = ?`);
+    baseParams.push(year);
+
+    if (filterMode === 'month') {
+      whereClauses.push(`${monthStrExpr} = ?`);
+      baseParams.push(month);
+    }
+
+    if (branchId && branchId !== 'all' && branchId !== 'none') {
+      whereClauses.push('au.branch_id = ?');
+      baseParams.push(Number(branchId));
+    }
+  }
+
+  const whereSql = whereClauses.length ? whereClauses.join(' AND ') : '1=1';
+
+  // 1. Statistik Sesi Audit
+  const auditStats = db.prepare(`
+    ${allowedCte}
+    SELECT
+      COUNT(DISTINCT au.id) AS total_sessions,
+      SUM(CASE WHEN au.status = 'closed' THEN 1 ELSE 0 END) AS closed_sessions,
+      SUM(CASE WHEN au.status = 'in_progress' THEN 1 ELSE 0 END) AS ongoing_sessions,
+      SUM(CASE WHEN au.is_reconciled = 1 THEN 1 ELSE 0 END) AS reconciled_sessions
+    FROM allowed_audits au
+    WHERE ${whereSql}
+  `).get(...baseParams) || {};
+
+  // 2. Statistik Item Kertas Kerja Audit
+  const itemStats = db.prepare(`
+    ${allowedCte}
+    SELECT
+      COUNT(i.id) AS total_items,
+      SUM(CASE WHEN i.finding_type NOT IN ('unregistered', 'misplaced') THEN 1 ELSE 0 END) AS target_items,
+      SUM(CASE WHEN i.finding_type = 'matched' THEN 1 ELSE 0 END) AS matched_count,
+      SUM(CASE WHEN i.finding_type = 'missing' THEN 1 ELSE 0 END) AS missing_count,
+      SUM(CASE WHEN i.finding_type = 'unregistered' THEN 1 ELSE 0 END) AS unregistered_count,
+      SUM(CASE WHEN i.finding_type = 'misplaced' THEN 1 ELSE 0 END) AS misplaced_count,
+      SUM(CASE WHEN i.finding_type = 'condition_mismatch' THEN 1 ELSE 0 END) AS condition_mismatch_count,
+      SUM(CASE WHEN i.finding_type = 'pending' THEN 1 ELSE 0 END) AS pending_count
+    FROM asset_audit_items i
+    JOIN allowed_audits au ON au.id = i.audit_id
+    WHERE ${whereSql}
+  `).get(...baseParams) || {};
+
+  // 3. Tren Pelaksanaan & Temuan Bulanan (Konteks 1 tahun penuh)
+  const trendWhere = [`${yearExpr} = ?`];
+  const trendParams = [...cteParams, year];
+  if (branchId && branchId !== 'all' && branchId !== 'none') {
+    trendWhere.push('au.branch_id = ?');
+    trendParams.push(Number(branchId));
+  }
+  const monthlyRows = db.prepare(`
+    ${allowedCte}
+    SELECT
+      ${monthIntExpr} AS month_num,
+      COUNT(DISTINCT au.id) AS session_count,
+      SUM(CASE WHEN i.finding_type = 'matched' THEN 1 ELSE 0 END) AS matched,
+      SUM(CASE WHEN i.finding_type IN ('missing', 'unregistered', 'misplaced', 'condition_mismatch') THEN 1 ELSE 0 END) AS discrepancy
+    FROM allowed_audits au
+    LEFT JOIN asset_audit_items i ON i.audit_id = au.id
+    WHERE ${trendWhere.join(' AND ')}
+    GROUP BY month_num
+    ORDER BY month_num ASC
+  `).all(...trendParams);
+
+  // 4. Perbandingan Akurasi & Temuan Antar Cabang (Hanya cabang yang diizinkan pada user)
+  const branchJoinConds = [];
+  const branchParams = [...cteParams];
+  if (filterMode === 'session') {
+    branchJoinConds.push('au.id = ?');
+    branchParams.push(activeSessionId || -1);
+  } else {
+    branchJoinConds.push(`${yearExpr} = ?`);
+    branchParams.push(year);
+    if (filterMode === 'month') {
+      branchJoinConds.push(`${monthStrExpr} = ?`);
+      branchParams.push(month);
+    }
+  }
+
+  let branchFilterSql = '';
+  if (!isAdmin) {
+    branchFilterSql = `
+      WHERE b.id IN (SELECT branch_id FROM user_branches WHERE user_id = ?)
+         OR b.id IN (SELECT DISTINCT branch_id FROM allowed_audits)
+    `;
+    branchParams.push(req.user.id);
+  }
+
+  const branchComparison = db.prepare(`
+    ${allowedCte}
+    SELECT
+      b.branch_code,
+      b.branch_name,
+      COUNT(DISTINCT au.id) AS total_audits,
+      SUM(CASE WHEN i.finding_type = 'matched' THEN 1 ELSE 0 END) AS matched,
+      SUM(CASE WHEN i.finding_type = 'missing' THEN 1 ELSE 0 END) AS missing,
+      SUM(CASE WHEN i.finding_type = 'unregistered' THEN 1 ELSE 0 END) AS unregistered,
+      SUM(CASE WHEN i.finding_type IN ('misplaced', 'condition_mismatch') THEN 1 ELSE 0 END) AS mismatch
+    FROM branches b
+    LEFT JOIN allowed_audits au ON au.branch_id = b.id AND ${branchJoinConds.join(' AND ')}
+    LEFT JOIN asset_audit_items i ON i.audit_id = au.id
+    ${branchFilterSql}
+    GROUP BY b.id
+    ORDER BY b.branch_code ASC
+  `).all(...branchParams);
+
+  // 5. Rekapitulasi Sesi Audit Terbaru
+  const recentAudits = db.prepare(`
+    ${allowedCte}
+    SELECT
+      au.*,
+      b.branch_code,
+      b.branch_name,
+      SUM(CASE WHEN i.finding_type NOT IN ('unregistered', 'misplaced') THEN 1 ELSE 0 END) AS total_target,
+      SUM(CASE WHEN i.finding_type = 'matched' THEN 1 ELSE 0 END) AS matched_items,
+      SUM(CASE WHEN i.finding_type IN ('missing', 'unregistered', 'misplaced', 'condition_mismatch') THEN 1 ELSE 0 END) AS issue_items
+    FROM allowed_audits au
+    JOIN branches b ON b.id = au.branch_id
+    LEFT JOIN asset_audit_items i ON i.audit_id = au.id
+    WHERE ${whereSql}
+    GROUP BY au.id
+    ORDER BY au.id DESC
+    LIMIT 10
+  `).all(...baseParams);
+
+  // 6. Temuan Kritis / Selisih Terbaru
+  const criticalFindings = db.prepare(`
+    ${allowedCte}
+    SELECT
+      i.*,
+      au.audit_code,
+      au.id AS audit_id,
+      b.branch_code,
+      a.asset_code,
+      dt.type_name,
+      br.brand_name,
+      dm.model_name
+    FROM asset_audit_items i
+    JOIN allowed_audits au ON au.id = i.audit_id
+    JOIN branches b ON b.id = au.branch_id
+    LEFT JOIN assets a ON a.id = i.asset_id
+    LEFT JOIN device_types dt ON dt.id = a.device_type_id
+    LEFT JOIN brands br ON br.id = a.brand_id
+    LEFT JOIN device_models dm ON dm.id = a.model_id
+    WHERE ${whereSql}
+      AND i.finding_type IN ('missing', 'unregistered', 'misplaced', 'condition_mismatch')
+    ORDER BY i.id DESC
+    LIMIT 15
+  `).all(...baseParams);
+
+  const totalTarget = Number(itemStats.target_items || 0);
+  const matchedCount = Number(itemStats.matched_count || 0);
+  const accuracyRate = totalTarget > 0 ? Math.round((matchedCount / totalTarget) * 1000) / 10 : 0;
+
+  return res.render('audits/audit-dashboard', {
+    title: 'Dashboard Audit',
+    pageTitle: 'Dashboard Audit',
+    activeMenu: 'audit-dashboard',
+    branches,
+    availableSessions,
+    filterMode,
+    selectedBranchId: branchId,
+    selectedYear: year,
+    selectedMonth: month,
+    selectedSessionId: activeSessionId,
+    auditStats,
+    itemStats,
+    accuracyRate,
+    monthlyRows,
+    branchComparison,
+    recentAudits,
+    criticalFindings,
+    isAdmin
+  });
+};
+
 // 1. GET /audits - Daftar Sesi Audit
 exports.listAudits = (req, res) => {
   const isAdmin = req.user.role === 'administrator';
@@ -186,7 +443,7 @@ exports.listAudits = (req, res) => {
   }
 
   res.render('audits/audits', {
-    title: 'Audit Aset (Stock Opname) — SIMAJAR',
+    title: 'Audit & Stock Opname',
     pageTitle: 'Audit Aset & Stock Opname',
     activeMenu: 'asset-audits',
     audits,
@@ -353,8 +610,8 @@ exports.detailAudit = (req, res) => {
   const settings = getOrgSettings();
 
   res.render('audits/audit-detail', {
-    title: `${audit.audit_code} — Audit Aset SIMAJAR`,
-    pageTitle: `Audit: ${audit.audit_code}`,
+    title: `Audit Sesi ${audit.audit_code}`,
+    pageTitle: `Audit Sesi ${audit.audit_code}`,
     activeMenu: 'asset-audits',
     audit,
     assignees,
