@@ -89,14 +89,7 @@
         </div>
       </div>
 
-      <% if (typeof errorMsg !== 'undefined' && errorMsg) { %>
-        <div class="bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-300 px-3.5 py-2.5 rounded-xl text-xs flex items-center gap-2.5">
-          <i data-lucide="alert-circle" class="w-4 h-4 shrink-0 text-rose-500"></i>
-          <span><%= errorMsg %></span>
-        </div>
-      <% } %>
-
-      <form id="login-form" action="/login" method="POST" class="space-y-4 text-sm">
+      <form id="login-form" action="/login" method="POST" class="space-y-4 text-sm" novalidate>
         <div>
           <label for="username" class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">Username</label>
           <div class="relative group">
@@ -148,6 +141,29 @@
     </div>
   </div>
 
+  <!-- ========================================================= -->
+  <!-- CUSTOM POPUP MODAL: NOTIFIKASI LOGIN / SESI KEDALUWARSA   -->
+  <!-- ========================================================= -->
+  <div id="login-alert-modal" onclick="if (event.target === this) closeLoginAlertModal()"
+    class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/75 backdrop-blur-sm p-4">
+    <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl max-w-sm w-full p-6 text-center shadow-2xl space-y-4">
+      <div id="login-modal-icon-wrap"
+        class="w-12 h-12 rounded-2xl mx-auto flex items-center justify-center bg-rose-500/15 border border-rose-500/30 text-rose-500 dark:text-rose-400">
+        <i id="login-modal-icon" data-lucide="alert-circle" class="w-6 h-6"></i>
+      </div>
+      <div class="space-y-1.5">
+        <h3 id="login-modal-title" class="text-base font-bold text-slate-900 dark:text-white">Gagal Masuk</h3>
+        <p id="login-modal-message" class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed"></p>
+      </div>
+      <div class="pt-1">
+        <button type="button" id="login-modal-btn" onclick="closeLoginAlertModal()"
+          class="w-full py-2.5 px-4 rounded-xl bg-rose-500 hover:bg-rose-600 text-white font-semibold text-xs transition cursor-pointer">
+          Coba Lagi
+        </button>
+      </div>
+    </div>
+  </div>
+
   <script>
     // Sinkronkan Ikon Tema saat halaman dimuat (identik dengan header/footer dashboard)
     function updateThemeIcons() {
@@ -189,7 +205,66 @@
       hideWrap.classList.toggle('hidden', !isHidden);
     }
 
-    document.getElementById('login-form')?.addEventListener('submit', function () {
+    function resetLoginSubmitButton() {
+      const btn = document.getElementById('login-submit-btn');
+      const txt = document.getElementById('login-submit-text');
+      if (btn && txt) {
+        btn.disabled = false;
+        btn.classList.remove('opacity-80', 'cursor-not-allowed');
+        txt.textContent = 'Masuk';
+      }
+    }
+
+    function openLoginAlertModal(type, title, message) {
+      const modal = document.getElementById('login-alert-modal');
+      const iconWrap = document.getElementById('login-modal-icon-wrap');
+      const iconEl = document.getElementById('login-modal-icon');
+      const titleEl = document.getElementById('login-modal-title');
+      const msgEl = document.getElementById('login-modal-message');
+      const btnEl = document.getElementById('login-modal-btn');
+
+      if (!modal) return;
+
+      resetLoginSubmitButton();
+      titleEl.textContent = title;
+      msgEl.textContent = message;
+
+      if (type === 'warning') {
+        iconWrap.className = 'w-12 h-12 rounded-2xl mx-auto flex items-center justify-center bg-amber-500/15 border border-amber-500/30 text-amber-500 dark:text-amber-400';
+        iconEl.setAttribute('data-lucide', 'clock-alert');
+        btnEl.className = 'w-full py-2.5 px-4 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-semibold text-xs transition cursor-pointer';
+        btnEl.textContent = 'Mengerti';
+      } else {
+        iconWrap.className = 'w-12 h-12 rounded-2xl mx-auto flex items-center justify-center bg-rose-500/15 border border-rose-500/30 text-rose-500 dark:text-rose-400';
+        iconEl.setAttribute('data-lucide', 'alert-circle');
+        btnEl.className = 'w-full py-2.5 px-4 rounded-xl bg-rose-500 hover:bg-rose-600 text-white font-semibold text-xs transition cursor-pointer';
+        btnEl.textContent = 'Coba Lagi';
+      }
+
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function closeLoginAlertModal() {
+      const modal = document.getElementById('login-alert-modal');
+      if (!modal) return;
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+      document.getElementById('username')?.focus();
+    }
+
+    document.getElementById('login-form')?.addEventListener('submit', function (e) {
+      const username = document.getElementById('username')?.value.trim();
+      const password = document.getElementById('password')?.value || '';
+
+      if (!username || !password) {
+        e.preventDefault();
+        openLoginAlertModal('error', 'Data Belum Lengkap', 'Username dan password wajib diisi sebelum masuk ke sistem.');
+        return;
+      }
+
       const btn = document.getElementById('login-submit-btn');
       const txt = document.getElementById('login-submit-text');
       if (btn && txt) {
@@ -199,11 +274,31 @@
       }
     });
 
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeLoginAlertModal();
+    });
+
     lucide.createIcons();
     window.addEventListener('DOMContentLoaded', () => {
       requestAnimationFrame(() => {
         document.documentElement.classList.remove('preload');
       });
+
+      const serverError = <%- JSON.stringify(typeof errorMsg !== 'undefined' && errorMsg ? errorMsg : '') %>;
+      const urlParams = new URLSearchParams(window.location.search);
+      const queryError = urlParams.get('error');
+      const isExpired = urlParams.get('expired') === '1';
+
+      if (serverError || queryError) {
+        openLoginAlertModal('error', 'Login Gagal', serverError || queryError);
+      } else if (isExpired) {
+        openLoginAlertModal('warning', 'Sesi Berakhir', 'Masa berlaku sesi login Anda telah habis. Silakan masuk kembali.');
+      }
+
+      // Hilangkan query string (?error=... / ?expired=1) dari URL address bar
+      if (window.location.search) {
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
     });
   </script>
 </body>
