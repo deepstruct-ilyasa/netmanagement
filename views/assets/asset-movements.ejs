@@ -207,13 +207,50 @@
       <input type="hidden" name="redirect_to" value="/asset-movements">
       <div class="p-4 sm:p-6 overflow-y-auto space-y-3.5 flex-1">
         <div>
-          <label class="block text-slate-300 text-xs mb-1">Pilih Unit Aset *</label>
-          <select name="asset_id" required class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-emerald-400">
+          <label for="accessible_asset_search_input" class="block text-slate-300 text-xs mb-1">Pilih Unit Aset *</label>
+
+          <!-- Hidden select asli agar validasi required & form submit tetap berjalan normal -->
+          <select name="asset_id" id="accessible_asset_id" required class="sr-only" tabindex="-1" aria-hidden="true">
             <option value="">-- Pilih Aset --</option>
             <% accessibleAssets.forEach(a => { %>
-              <option value="<%= a.id %>">[<%= a.branch_code %>] <%= a.asset_code %> - <%= a.brand_name || '' %> <%= a.model_name || a.type_name %> (SN: <%= a.serial_number || '-' %>)</option>
+              <option value="<%= a.id %>"
+                data-branch="<%= a.branch_code || '-' %>"
+                data-code="<%= a.asset_code || '-' %>"
+                data-device="<%= [a.brand_name, a.model_name || a.type_name].filter(Boolean).join(' ') || '-' %>"
+                data-sn="<%= a.serial_number || '-' %>">
+                [<%= a.branch_code %>] <%= a.asset_code %> - <%= a.brand_name || '' %> <%= a.model_name || a.type_name %> (SN: <%= a.serial_number || '-' %>)
+              </option>
             <% }) %>
           </select>
+
+          <!-- Custom Searchable Input & Dropdown List -->
+          <div id="accessible-asset-combobox" class="relative">
+            <div class="relative flex items-center">
+              <i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute left-3 pointer-events-none"></i>
+              <input type="text" id="accessible_asset_search_input"
+                autocomplete="off"
+                placeholder="Ketik cabang, kode aset, perangkat, atau SN..."
+                onfocus="openAccessibleAssetDropdown()"
+                oninput="filterAccessibleAssetOptions(this.value)"
+                class="w-full bg-slate-900 border border-slate-600 rounded-lg pl-8 pr-14 py-2 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-emerald-400 transition">
+
+              <button type="button" id="clear-accessible-asset-btn" onclick="clearSelectedAccessibleAsset()"
+                title="Hapus pilihan aset"
+                class="hidden text-slate-400 hover:text-rose-400 absolute right-7 p-1 cursor-pointer">
+                <i data-lucide="x" class="w-3.5 h-3.5"></i>
+              </button>
+              <button type="button" onclick="toggleAccessibleAssetDropdown()"
+                title="Buka/tutup daftar aset"
+                class="text-slate-400 hover:text-emerald-400 absolute right-2 p-1 cursor-pointer">
+                <i data-lucide="chevron-down" class="w-4 h-4"></i>
+              </button>
+            </div>
+
+            <!-- Daftar Hasil Pencarian Aset -->
+            <div id="accessible-asset-dropdown-list"
+              class="hidden absolute left-0 right-0 mt-1 max-h-56 overflow-y-auto bg-slate-900 border border-slate-600 rounded-lg shadow-2xl z-30 divide-y divide-slate-800">
+            </div>
+          </div>
         </div>
 
         <div class="grid grid-cols-2 gap-2.5 sm:gap-3">
@@ -356,6 +393,152 @@
       showAppAlert('error', 'Terjadi Kesalahan', serverError);
     } else if (serverSuccess) {
       showAppAlert('success', 'Berhasil', serverSuccess);
+    }
+  });
+
+  // =========================================================
+  // SEARCHABLE AUTOCOMPLETE UNTUK PILIH UNIT ASET
+  // =========================================================
+  function getAccessibleAssetItems() {
+    const selectEl = document.getElementById('accessible_asset_id');
+    if (!selectEl) return [];
+    return Array.from(selectEl.options)
+      .filter(opt => opt.value !== '')
+      .map(opt => ({
+        id: opt.value,
+        label: opt.textContent.trim(),
+        branch: opt.getAttribute('data-branch') || '-',
+        code: opt.getAttribute('data-code') || '-',
+        device: opt.getAttribute('data-device') || '-',
+        sn: opt.getAttribute('data-sn') || '-'
+      }));
+  }
+
+  function renderAccessibleAssetDropdown(keyword = '') {
+    const listEl = document.getElementById('accessible-asset-dropdown-list');
+    const selectEl = document.getElementById('accessible_asset_id');
+    if (!listEl || !selectEl) return;
+
+    const allItems = getAccessibleAssetItems();
+    const q = keyword.trim().toLowerCase();
+    const filtered = q
+      ? allItems.filter(item => item.label.toLowerCase().includes(q))
+      : allItems;
+
+    if (filtered.length === 0) {
+      const safeKeyword = keyword.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      listEl.innerHTML = `
+        <div class="px-3 py-3 text-xs text-slate-400 text-center">
+          Tidak ada aset yang cocok dengan "<span class="text-white font-semibold">${safeKeyword}</span>".
+        </div>
+      `;
+      return;
+    }
+
+    listEl.innerHTML = filtered.map(item => {
+      const isSelected = String(selectEl.value) === String(item.id);
+      return `
+        <button type="button"
+          onclick="selectAccessibleAssetItem('${item.id}')"
+          class="w-full text-left px-3 py-2 text-xs hover:bg-emerald-500/15 transition flex flex-col gap-0.5 cursor-pointer ${isSelected ? 'bg-emerald-500/20 text-emerald-300' : 'text-slate-200'}">
+          <div class="flex items-center justify-between gap-2">
+            <span class="font-mono font-bold text-emerald-400">${item.code}</span>
+            <span class="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-300">${item.branch}</span>
+          </div>
+          <div class="text-slate-200 font-medium truncate">
+            ${item.device}
+          </div>
+          <div class="text-[10px] text-slate-400 font-mono">
+            SN: ${item.sn}
+          </div>
+        </button>
+      `;
+    }).join('');
+  }
+
+  function openAccessibleAssetDropdown() {
+    const listEl = document.getElementById('accessible-asset-dropdown-list');
+    const searchInput = document.getElementById('accessible_asset_search_input');
+    const selectEl = document.getElementById('accessible_asset_id');
+    if (!listEl) return;
+
+    const keyword = selectEl && selectEl.value ? '' : (searchInput ? searchInput.value : '');
+    renderAccessibleAssetDropdown(keyword);
+    listEl.classList.remove('hidden');
+  }
+
+  function toggleAccessibleAssetDropdown() {
+    const listEl = document.getElementById('accessible-asset-dropdown-list');
+    if (!listEl) return;
+    if (listEl.classList.contains('hidden')) {
+      openAccessibleAssetDropdown();
+      document.getElementById('accessible_asset_search_input')?.focus();
+    } else {
+      listEl.classList.add('hidden');
+    }
+  }
+
+  function filterAccessibleAssetOptions(val) {
+    const selectEl = document.getElementById('accessible_asset_id');
+    const clearBtn = document.getElementById('clear-accessible-asset-btn');
+    const listEl = document.getElementById('accessible-asset-dropdown-list');
+
+    if (selectEl && selectEl.value) {
+      selectEl.value = '';
+      selectEl.dispatchEvent(new Event('change'));
+    }
+
+    if (clearBtn) {
+      clearBtn.classList.toggle('hidden', val.trim().length === 0);
+    }
+
+    renderAccessibleAssetDropdown(val);
+    if (listEl) listEl.classList.remove('hidden');
+  }
+
+  function selectAccessibleAssetItem(assetId) {
+    const selectEl = document.getElementById('accessible_asset_id');
+    const searchInput = document.getElementById('accessible_asset_search_input');
+    const clearBtn = document.getElementById('clear-accessible-asset-btn');
+    const listEl = document.getElementById('accessible-asset-dropdown-list');
+
+    if (!selectEl) return;
+    selectEl.value = assetId;
+    selectEl.dispatchEvent(new Event('change'));
+
+    const selectedOpt = selectEl.options[selectEl.selectedIndex];
+    if (searchInput && selectedOpt) {
+      searchInput.value = selectedOpt.textContent.trim();
+    }
+    if (clearBtn) clearBtn.classList.remove('hidden');
+    if (listEl) listEl.classList.add('hidden');
+  }
+
+  function clearSelectedAccessibleAsset() {
+    const selectEl = document.getElementById('accessible_asset_id');
+    const searchInput = document.getElementById('accessible_asset_search_input');
+    const clearBtn = document.getElementById('clear-accessible-asset-btn');
+    const listEl = document.getElementById('accessible-asset-dropdown-list');
+
+    if (selectEl) {
+      selectEl.value = '';
+      selectEl.dispatchEvent(new Event('change'));
+    }
+    if (searchInput) {
+      searchInput.value = '';
+      searchInput.focus();
+    }
+    if (clearBtn) clearBtn.classList.add('hidden');
+    renderAccessibleAssetDropdown('');
+    if (listEl) listEl.classList.remove('hidden');
+  }
+
+  // Tutup dropdown otomatis saat klik di luar combobox
+  document.addEventListener('click', function (e) {
+    const combobox = document.getElementById('accessible-asset-combobox');
+    const listEl = document.getElementById('accessible-asset-dropdown-list');
+    if (combobox && listEl && !combobox.contains(e.target)) {
+      listEl.classList.add('hidden');
     }
   });
 </script>

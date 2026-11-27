@@ -212,7 +212,7 @@
 
   <div class="relative bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl z-10">
     <div class="px-6 py-4 border-b border-slate-700 flex items-center justify-between">
-      <h3 class="text-base font-semibold text-emerald-400">+ Distribusi Perangkat dari Aset</h3>
+      <h3 class="text-base font-semibold text-emerald-400">Distribusi Perangkat dari Aset</h3>
       <button type="button" onclick="closeModal('modal-add-device')" class="text-slate-400 hover:text-white p-1 cursor-pointer">
         <i data-lucide="x" class="w-5 h-5"></i>
       </button>
@@ -222,19 +222,20 @@
       <!-- Pilih Unit dari Stok Master Assets (Spare) -->
       <div class="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-3.5 space-y-2.5">
         <div class="flex items-center justify-between">
-          <label class="text-xs font-semibold text-emerald-300">Pilih Unit Aset *</label>
+          <label for="add_asset_search_input" class="text-xs font-semibold text-emerald-300">Pilih Unit Aset *</label>
           <% if (can('menu.assets')) { %>
             <a href="/assets" class="text-[11px] text-sky-400 hover:underline font-medium">+ Tambah Aset Baru</a>
           <% } %>
         </div>
-        <select name="asset_id" id="add_asset_id" required onchange="onSelectSpareAsset(this)"
-          class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-400">
+
+        <!-- Hidden select asli agar form validation (required) & submit tetap standar -->
+        <select name="asset_id" id="add_asset_id" required class="sr-only" tabindex="-1" aria-hidden="true">
           <option value="">-- Pilih Kode Aset Spare yang Akan Dipasang --</option>
           <% if (typeof spareAssets !== 'undefined') { %>
             <% spareAssets.forEach(sa => { %>
               <option value="<%= sa.id %>"
                 data-code="<%= sa.asset_code %>"
-                data-branch-label="[<%= sa.branch_code %>] <%= sa.branch_name %>"
+                data-branch-label="<%= sa.branch_code %>"
                 data-type-name="<%= sa.type_name %>"
                 data-is-switch="<%= sa.is_switch %>"
                 data-brand-model="<%= [sa.brand_name, sa.model_name].filter(Boolean).join(' ') || '-' %>"
@@ -245,6 +246,35 @@
             <% }) %>
           <% } %>
         </select>
+
+        <!-- Custom Searchable Input & Dropdown List -->
+        <div id="spare-asset-combobox" class="relative">
+          <div class="relative flex items-center">
+            <i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute left-3 pointer-events-none"></i>
+            <input type="text" id="add_asset_search_input"
+              autocomplete="off"
+              placeholder="Ketik kode aset, jenis, merk/model, cabang, atau SN..."
+              onfocus="openSpareAssetDropdown()"
+              oninput="filterSpareAssetOptions(this.value)"
+              class="w-full bg-slate-900 border border-slate-600 rounded-lg pl-8 pr-14 py-2 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-emerald-400 transition">
+
+            <button type="button" id="clear-spare-asset-btn" onclick="clearSelectedSpareAsset()"
+              title="Hapus pilihan aset"
+              class="hidden text-slate-400 hover:text-rose-400 absolute right-7 p-1 cursor-pointer">
+              <i data-lucide="x" class="w-3.5 h-3.5"></i>
+            </button>
+            <button type="button" onclick="toggleSpareAssetDropdown()"
+              title="Buka/tutup daftar aset"
+              class="text-slate-400 hover:text-emerald-400 absolute right-2 p-1 cursor-pointer">
+              <i data-lucide="chevron-down" class="w-4 h-4"></i>
+            </button>
+          </div>
+
+          <!-- Daftar Hasil Pencarian Aset -->
+          <div id="spare-asset-dropdown-list"
+            class="hidden absolute left-0 right-0 mt-1 max-h-56 overflow-y-auto bg-slate-900 border border-slate-600 rounded-lg shadow-2xl z-30 divide-y divide-slate-800">
+          </div>
+        </div>
 
         <!-- Ringkasan Spesifikasi Fisik Otomatis dari Master Assets -->
         <div id="add_asset_spec_card" class="hidden bg-slate-900/90 border border-slate-700 rounded-lg p-3 grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
@@ -932,6 +962,159 @@
       showAppAlert('error', 'Terjadi Kesalahan', serverError);
     } else if (serverSuccess) {
       showAppAlert('success', 'Berhasil', serverSuccess);
+    }
+  });
+
+  // =========================================================
+  // SEARCHABLE AUTOCOMPLETE UNTUK PILIH UNIT ASET SPARE
+  // =========================================================
+  function getSpareAssetItemsFromSelect() {
+    const selectEl = document.getElementById('add_asset_id');
+    if (!selectEl) return [];
+    return Array.from(selectEl.options)
+      .filter(opt => opt.value !== '')
+      .map(opt => ({
+        id: opt.value,
+        label: opt.textContent.trim(),
+        code: opt.getAttribute('data-code') || '',
+        branchLabel: opt.getAttribute('data-branch-label') || '',
+        typeName: opt.getAttribute('data-type-name') || '',
+        brandModel: opt.getAttribute('data-brand-model') || '',
+        sn: opt.getAttribute('data-sn') || '-',
+        mac: opt.getAttribute('data-mac') || '-'
+      }));
+  }
+
+  function renderSpareAssetDropdownItems(keyword = '') {
+    const listEl = document.getElementById('spare-asset-dropdown-list');
+    const selectEl = document.getElementById('add_asset_id');
+    if (!listEl || !selectEl) return;
+
+    const allItems = getSpareAssetItemsFromSelect();
+    const q = keyword.trim().toLowerCase();
+    const filtered = q
+      ? allItems.filter(item =>
+          item.label.toLowerCase().includes(q) ||
+          item.mac.toLowerCase().includes(q)
+        )
+      : allItems;
+
+    if (filtered.length === 0) {
+      listEl.innerHTML = `
+        <div class="px-3 py-3 text-xs text-slate-400 text-center">
+          Tidak ada aset spare yang cocok dengan "<span class="text-white font-semibold">${keyword.replace(/</g, '&lt;')}</span>".
+        </div>
+      `;
+      return;
+    }
+
+    listEl.innerHTML = filtered.map(item => {
+      const isSelected = String(selectEl.value) === String(item.id);
+      return `
+        <button type="button"
+          onclick="selectSpareAssetItem('${item.id}')"
+          class="w-full text-left px-3 py-2 text-xs hover:bg-emerald-500/15 transition flex flex-col gap-0.5 cursor-pointer ${isSelected ? 'bg-emerald-500/20 text-emerald-300' : 'text-slate-200'}">
+          <div class="flex items-center justify-between gap-2">
+            <span class="font-mono font-bold text-emerald-400">${item.code}</span>
+            <span class="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-300">${item.branchLabel}</span>
+          </div>
+          <div class="text-slate-200 font-medium truncate">
+            ${item.typeName} &mdash; ${item.brandModel}
+          </div>
+          <div class="text-[10px] text-slate-400 font-mono">
+            SN: ${item.sn} &bull; MAC: ${item.mac}
+          </div>
+        </button>
+      `;
+    }).join('');
+  }
+
+  function openSpareAssetDropdown() {
+    const listEl = document.getElementById('spare-asset-dropdown-list');
+    const searchInput = document.getElementById('add_asset_search_input');
+    if (!listEl) return;
+
+    // Jika sudah ada aset terpilih, tampilkan semua opsi saat diklik ulang agar mudah ganti pilihan
+    const selectEl = document.getElementById('add_asset_id');
+    const keyword = selectEl && selectEl.value ? '' : (searchInput ? searchInput.value : '');
+    renderSpareAssetDropdownItems(keyword);
+    listEl.classList.remove('hidden');
+  }
+
+  function toggleSpareAssetDropdown() {
+    const listEl = document.getElementById('spare-asset-dropdown-list');
+    if (!listEl) return;
+    if (listEl.classList.contains('hidden')) {
+      openSpareAssetDropdown();
+      document.getElementById('add_asset_search_input')?.focus();
+    } else {
+      listEl.classList.add('hidden');
+    }
+  }
+
+  function filterSpareAssetOptions(val) {
+    const selectEl = document.getElementById('add_asset_id');
+    const clearBtn = document.getElementById('clear-spare-asset-btn');
+    const listEl = document.getElementById('spare-asset-dropdown-list');
+
+    // Reset pilihan sebelumnya jika user mengetik ulang kata kunci baru
+    if (selectEl && selectEl.value) {
+      selectEl.value = '';
+      onSelectSpareAsset(selectEl);
+    }
+
+    if (clearBtn) {
+      clearBtn.classList.toggle('hidden', val.trim().length === 0);
+    }
+
+    renderSpareAssetDropdownItems(val);
+    if (listEl) listEl.classList.remove('hidden');
+  }
+
+  function selectSpareAssetItem(assetId) {
+    const selectEl = document.getElementById('add_asset_id');
+    const searchInput = document.getElementById('add_asset_search_input');
+    const clearBtn = document.getElementById('clear-spare-asset-btn');
+    const listEl = document.getElementById('spare-asset-dropdown-list');
+
+    if (!selectEl) return;
+    selectEl.value = assetId;
+
+    const selectedOpt = selectEl.options[selectEl.selectedIndex];
+    if (searchInput && selectedOpt) {
+      searchInput.value = selectedOpt.textContent.trim();
+    }
+    if (clearBtn) clearBtn.classList.remove('hidden');
+    if (listEl) listEl.classList.add('hidden');
+
+    onSelectSpareAsset(selectEl);
+  }
+
+  function clearSelectedSpareAsset() {
+    const selectEl = document.getElementById('add_asset_id');
+    const searchInput = document.getElementById('add_asset_search_input');
+    const clearBtn = document.getElementById('clear-spare-asset-btn');
+    const listEl = document.getElementById('spare-asset-dropdown-list');
+
+    if (selectEl) {
+      selectEl.value = '';
+      onSelectSpareAsset(selectEl);
+    }
+    if (searchInput) {
+      searchInput.value = '';
+      searchInput.focus();
+    }
+    if (clearBtn) clearBtn.classList.add('hidden');
+    renderSpareAssetDropdownItems('');
+    if (listEl) listEl.classList.remove('hidden');
+  }
+
+  // Tutup dropdown otomatis jika klik di luar area combobox
+  document.addEventListener('click', function (e) {
+    const combobox = document.getElementById('spare-asset-combobox');
+    const listEl = document.getElementById('spare-asset-dropdown-list');
+    if (combobox && listEl && !combobox.contains(e.target)) {
+      listEl.classList.add('hidden');
     }
   });
 </script>
