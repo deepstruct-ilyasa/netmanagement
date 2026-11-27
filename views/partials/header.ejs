@@ -101,6 +101,28 @@
     html:not(.dark) .text-emerald-400 { color: #059669 !important; }
     html:not(.dark) input,
     html:not(.dark) select { color: #0f172a !important; }
+
+    /* Samakan tinggi, perataan kiri, dan tampilan <input type="date"> di iOS Safari (iPhone) */
+    input[type="date"] {
+      -webkit-appearance: none;
+      appearance: none;
+      display: flex;
+      align-items: center;
+      min-height: 2.125rem; /* 34px — sama persis dengan select & input text-xs py-2 */
+      text-align: left;
+    }
+
+    input[type="date"]::-webkit-date-and-time-value {
+      text-align: left;
+      width: 100%;
+      margin: 0;
+    }
+
+    /* Placeholder visual saat tanggal belum diisi di iOS (karena iOS merender kotak kosong) */
+    input[type="date"]:not([value])::-webkit-datetime-edit,
+    input[type="date"][value=""]::-webkit-datetime-edit {
+      color: #64748b; /* slate-500 */
+    }
   </style>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-dvh flex font-sans transition-colors duration-200">

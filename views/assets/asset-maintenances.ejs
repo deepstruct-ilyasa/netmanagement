@@ -216,16 +216,16 @@
           </select>
         </div>
 
-        <div class="grid grid-cols-2 gap-2.5 sm:gap-3">
-          <div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
+          <div class="min-w-0">
             <label class="block text-slate-300 text-xs mb-1">Tanggal Lapor / Masuk *</label>
-            <input type="date" name="issue_date" required value="<%= new Date().toISOString().split('T')[0] %>"
-              class="w-full bg-slate-900 border border-slate-600 rounded-lg px-2.5 py-2 text-white text-xs focus:outline-none focus:border-emerald-400">
+            <input type="date" name="issue_date"
+              class="w-full min-w-0 bg-slate-900 border border-slate-600 rounded-lg px-2.5 py-2 text-white text-xs focus:outline-none focus:border-emerald-400">
           </div>
-          <div>
+          <div class="min-w-0">
             <label class="block text-slate-300 text-xs mb-1">Tanggal Selesai</label>
             <input type="date" name="resolved_date"
-              class="w-full bg-slate-900 border border-slate-600 rounded-lg px-2.5 py-2 text-white text-xs focus:outline-none focus:border-emerald-400">
+              class="w-full min-w-0 bg-slate-900 border border-slate-600 rounded-lg px-2.5 py-2 text-white text-xs focus:outline-none focus:border-emerald-400">
           </div>
         </div>
 

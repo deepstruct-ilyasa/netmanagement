@@ -276,6 +276,11 @@
       const sidebar = document.getElementById('sidebar');
       if (!sidebar) return;
 
+      const loadedScriptUrls = new Set(
+        Array.from(document.querySelectorAll('script[src]')).map((s) => s.src)
+      );
+      let activeNavController = null;
+
       function updateSidebarActiveState(targetPathname) {
         const navLinks = sidebar.querySelectorAll('nav a[href]');
         const activeClasses = ['bg-emerald-500/15', 'text-emerald-400', 'border', 'border-emerald-500/30'];
@@ -308,6 +313,15 @@
       function executePageScripts(container) {
         const scripts = container.querySelectorAll('script');
         scripts.forEach((oldScript) => {
+          // Jangan download & parse ulang <script src="..."> yang sudah pernah dimuat
+          if (oldScript.src) {
+            if (loadedScriptUrls.has(oldScript.src)) {
+              oldScript.remove();
+              return;
+            }
+            loadedScriptUrls.add(oldScript.src);
+          }
+
           const newScript = document.createElement('script');
           Array.from(oldScript.attributes).forEach((attr) => {
             newScript.setAttribute(attr.name, attr.value);
@@ -338,12 +352,19 @@
           return;
         }
 
+        // Batalkan request navigasi sebelumnya jika user klik menu lain sebelum selesai loading
+        if (activeNavController) {
+          activeNavController.abort();
+        }
+        activeNavController = new AbortController();
+
         currentWrapper.style.opacity = '0.7';
         currentWrapper.style.transition = 'opacity 100ms ease';
 
         try {
           const response = await fetch(url, {
-            headers: { 'X-Requested-With': 'PJAX' }
+            headers: { 'X-Requested-With': 'PJAX' },
+            signal: activeNavController.signal
           });
 
           if (response.redirected && response.url.includes('/login')) {
@@ -359,6 +380,12 @@
           if (!nextWrapper) {
             window.location.href = url;
             return;
+          }
+
+          // Jalankan pembersih halaman sebelumnya (interval, kamera QR, vis.Network, dll.)
+          if (typeof window._onPageCleanup === 'function') {
+            try { window._onPageCleanup(); } catch (_) {}
+            window._onPageCleanup = null;
           }
 
           // Pastikan tidak ada overflow-hidden tertinggal dari modal halaman sebelumnya
@@ -387,6 +414,7 @@
           executePageScripts(currentWrapper);
           window.scrollTo({ top: 0, behavior: 'instant' });
         } catch (err) {
+          if (err && err.name === 'AbortError') return;
           window.location.href = url;
         }
       }
