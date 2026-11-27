@@ -66,20 +66,20 @@
     </div>
 
     <% if (can('menu.topology')) { %>
-      <a href="/topology" class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition <%= activeMenu === 'topology' ? 'bg-emerald-500/15 text-emerald-400 font-semibold border border-emerald-500/30' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' %>">
+      <a href="/topology" class="flex items-center font-bold gap-3 px-3 py-2.5 rounded-lg transition <%= activeMenu === 'topology' ? 'bg-emerald-500/15 font-bold text-emerald-400 border border-emerald-500/30' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white font-bold' %>">
         <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
         <span>Network Topology</span>
       </a>
     <% } %>
 
     <% if (can('menu.devices')) { %>
-      <a href="/devices" class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition <%= activeMenu === 'devices' ? 'bg-emerald-500/15 text-emerald-400 font-semibold border border-emerald-500/30' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' %>">
+      <a href="/devices" class="flex items-center font-bold gap-3 px-3 py-2.5 rounded-lg transition <%= activeMenu === 'devices' ? 'font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' : 'font-bold text-slate-300 hover:bg-slate-700/50 hover:text-white' %>">
         <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"/></svg>
         <span>Network Devices</span>
       </a>
     <% } %>
     <a href="/assets/validate"
-      class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition <%= activeMenu === 'asset-validate' ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' %>">
+      class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition <%= activeMenu === 'asset-validate' ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 font-bold' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white font-bold' %>">
       <i data-lucide="scan-line" class="w-4 h-4 shrink-0"></i>
       <span>Validasi QR Aset</span>
     </a>
@@ -89,17 +89,17 @@
         Master Assets
       </div>
 
-      <a href="/assets" class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition <%= activeMenu === 'assets' ? 'bg-emerald-500/15 text-emerald-400 font-semibold border border-emerald-500/30' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' %>">
+      <a href="/assets" class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition font-bold <%= activeMenu === 'assets' ? 'bg-emerald-500/15 font-bold text-emerald-400 border border-emerald-500/30' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white font-bold' %>">
         <i data-lucide="boxes" class="w-5 h-5 shrink-0"></i>
         <span>Network Assets</span>
       </a>
 
-      <a href="/asset-movements" class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition <%= activeMenu === 'asset-movements' ? 'bg-emerald-500/15 text-emerald-400 font-semibold border border-emerald-500/30' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' %>">
+      <a href="/asset-movements" class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition font-bold <%= activeMenu === 'asset-movements' ? 'bg-emerald-500/15 text-emerald-400 font-bold border border-emerald-500/30' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white font-bold' %>">
         <i data-lucide="arrow-left-right" class="w-5 h-5 shrink-0"></i>
         <span>Mutasi Aset</span>
       </a>
 
-      <a href="/asset-maintenances" class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition <%= activeMenu === 'asset-maintenances' ? 'bg-emerald-500/15 text-emerald-400 font-semibold border border-emerald-500/30' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' %>">
+      <a href="/asset-maintenances" class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition font-bold <%= activeMenu === 'asset-maintenances' ? 'bg-emerald-500/15 text-emerald-400 font-bold border border-emerald-500/30' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white font-bold' %>">
         <i data-lucide="wrench" class="w-5 h-5 shrink-0"></i>
         <span>Service & Maintenance</span>
       </a>
@@ -108,7 +108,7 @@
       <% const isMasterActive = ['device-types', 'brands', 'device-models'].includes(activeMenu); %>
       <div class="space-y-1">
         <button type="button" onclick="toggleMasterDropdown()"
-          class="w-full flex items-center justify-between px-3 py-2.5 rounded-lg transition cursor-pointer <%= isMasterActive ? 'bg-slate-700/70 text-emerald-400 font-semibold border border-slate-600/80' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' %>">
+          class="w-full flex items-center justify-between px-3 py-2.5 rounded-lg transition cursor-pointer font-bold <%= isMasterActive ? 'bg-slate-700/70 text-emerald-400 font-bold border border-slate-600/80' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white font-bold' %>">
           <div class="flex items-center gap-3">
             <i data-lucide="database" class="w-5 h-5 shrink-0 <%= isMasterActive ? 'text-emerald-400' : 'text-slate-400' %>"></i>
             <span>Manufactures</span>
@@ -119,19 +119,19 @@
 
         <div id="master-dropdown-menu" class="<%= isMasterActive ? '' : 'hidden' %> pl-4 ml-4 border-l border-slate-700 space-y-1">
           <a href="/device-types"
-            class="flex items-center gap-2.5 px-3 py-2 rounded-lg transition <%= activeMenu === 'device-types' ? 'bg-emerald-500/15 text-emerald-400 font-semibold border border-emerald-500/30' : 'text-slate-400 hover:bg-slate-700/50 hover:text-white' %>">
+            class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition <%= activeMenu === 'device-types' ? 'bg-emerald-500/15 text-emerald-400 font-bold border border-emerald-500/30' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white font-bold' %>">
             <i data-lucide="layers" class="w-4 h-4 shrink-0"></i>
             <span>Device Types</span>
           </a>
 
           <a href="/brands"
-            class="flex items-center gap-2.5 px-3 py-2 rounded-lg transition <%= activeMenu === 'brands' ? 'bg-emerald-500/15 text-emerald-400 font-semibold border border-emerald-500/30' : 'text-slate-400 hover:bg-slate-700/50 hover:text-white' %>">
+            class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition <%= activeMenu === 'brands' ? 'bg-emerald-500/15 text-emerald-400 font-bold border border-emerald-500/30' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white font-bold' %>">
             <i data-lucide="award" class="w-4 h-4 shrink-0"></i>
             <span>Brand / Merk</span>
           </a>
 
           <a href="/device-models"
-            class="flex items-center gap-2.5 px-3 py-2 rounded-lg transition <%= activeMenu === 'device-models' ? 'bg-emerald-500/15 text-emerald-400 font-semibold border border-emerald-500/30' : 'text-slate-400 hover:bg-slate-700/50 hover:text-white' %>">
+            class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition <%= activeMenu === 'device-models' ? 'bg-emerald-500/15 text-emerald-400 font-bold border border-emerald-500/30' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white font-bold' %>">
             <i data-lucide="cpu" class="w-4 h-4 shrink-0"></i>
             <span>Model / Type</span>
           </a>
@@ -145,14 +145,14 @@
     </div>
 
     <a href="/audits/dashboard"
-      class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition <%= (typeof activeMenu !== 'undefined' && activeMenu === 'audit-dashboard') ? 'bg-emerald-500/15 text-emerald-400 font-semibold border border-emerald-500/30' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' %>">
+      class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition <%= (typeof activeMenu !== 'undefined' && activeMenu === 'audit-dashboard') ? 'bg-emerald-500/15 text-emerald-400 font-bold border border-emerald-500/30' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white font-bold' %>">
       <i data-lucide="bar-chart-3" class="w-4 h-4 shrink-0"></i>
       <span class="truncate">Dashboard Audit</span>
     </a>
 
     <% if (typeof can === 'function' && can('menu.asset-audits')) { %>
       <a href="/audits"
-        class="flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl text-sm font-medium transition <%= (typeof activeMenu !== 'undefined' && activeMenu === 'asset-audits') ? 'bg-emerald-500/15 text-emerald-400 font-semibold border border-emerald-500/30' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' %>">
+        class="flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl text-sm font-bold transition <%= (typeof activeMenu !== 'undefined' && activeMenu === 'asset-audits') ? 'bg-emerald-500/15 text-emerald-400 font-bold border border-emerald-500/30' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white font-bold' %>">
         <span class="flex items-center gap-3 min-w-0">
           <i data-lucide="clipboard-check" class="w-4 h-4 shrink-0"></i>
           <span class="truncate">Audit & Stock Opname</span>
@@ -172,21 +172,21 @@
     <% } %>
 
     <% if (can('menu.branches')) { %>
-      <a href="/branches" class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition <%= activeMenu === 'branches' ? 'bg-emerald-500/15 text-emerald-400 font-semibold border border-emerald-500/30' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' %>">
+      <a href="/branches" class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition font-bold <%= activeMenu === 'branches' ? 'bg-emerald-500/15 text-emerald-400 font-bold border border-emerald-500/30' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white font-bold' %>">
         <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
         <span>Branches</span>
       </a>
     <% } %>
 
     <% if (can('menu.audit-logs')) { %>
-      <a href="/audit-logs" class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition <%= activeMenu === 'audit-logs' ? 'bg-emerald-500/15 text-emerald-400 font-semibold border border-emerald-500/30' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' %>">
+      <a href="/audit-logs" class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition font-bold <%= activeMenu === 'audit-logs' ? 'bg-emerald-500/15 text-emerald-400 font-bold border border-emerald-500/30' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white font-bold' %>">
         <i data-lucide="history" class="w-5 h-5 shrink-0"></i>
         <span>Audit Logs</span>
       </a>
     <% } %>
 
     <% if (can('menu.users')) { %>
-      <a href="/users" class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition <%= activeMenu === 'users' ? 'bg-emerald-500/15 text-emerald-400 font-semibold border border-emerald-500/30' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white' %>">
+      <a href="/users" class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition font-bold <%= activeMenu === 'users' ? 'bg-emerald-500/15 text-emerald-400 font-bold border border-emerald-500/30' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white font-bold' %>">
         <i data-lucide="users" class="w-5 h-5 shrink-0"></i>
         <span>Users & Access</span>
       </a>
