@@ -6,6 +6,10 @@ database/*.db
 database/*.db-shm
 database/*.db-wal
 
-# File upload user (opsional, sisakan folder kosongnya saja)
+# File upload user (sisakan folder kosongnya saja)
 public/uploads/*
 !public/uploads/.gitkeep
+
+# Foto profil user (sisakan folder kosongnya saja, favicon.ico tetap aman)
+public/img/profile/*
+!public/img/profile/.gitkeep
