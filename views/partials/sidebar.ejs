@@ -62,36 +62,36 @@
   <!-- Navigation Links -->
   <nav class="flex-1 px-3 py-4 space-y-1.5 overflow-y-auto text-sm">
     <div class="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-      Main Menu
+      Menu Utama
     </div>
 
     <% if (can('menu.topology')) { %>
       <a href="/topology" class="flex items-center font-bold gap-3 px-3 py-2.5 rounded-lg transition <%= activeMenu === 'topology' ? 'bg-emerald-500/15 font-bold text-emerald-400 border border-emerald-500/30' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white font-bold' %>">
         <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
-        <span>Network Topology</span>
+        <span>Topologi Jaringan</span>
       </a>
     <% } %>
 
     <% if (can('menu.devices')) { %>
       <a href="/devices" class="flex items-center font-bold gap-3 px-3 py-2.5 rounded-lg transition <%= activeMenu === 'devices' ? 'font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' : 'font-bold text-slate-300 hover:bg-slate-700/50 hover:text-white' %>">
         <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"/></svg>
-        <span>Network Devices</span>
+        <span>Perangkat Jaringan</span>
       </a>
     <% } %>
     <a href="/assets/validate"
-      class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition <%= activeMenu === 'asset-validate' ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 font-bold' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white font-bold' %>">
-      <i data-lucide="scan-line" class="w-4 h-4 shrink-0"></i>
+      class="flex items-center font-bold gap-3 px-3 py-2.5 rounded-lg transition <%= activeMenu === 'asset-validate' ? 'font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' : 'font-bold text-slate-300 hover:bg-slate-700/50 hover:text-white' %>">
+      <i data-lucide="scan-line" class="w-5 h-5 shrink-0"></i>
       <span>Validasi QR Aset</span>
     </a>
 
     <% if (can('menu.assets')) { %>
       <div class="px-3 pt-4 pb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-        Master Assets
+        Master Aset
       </div>
 
       <a href="/assets" class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition font-bold <%= activeMenu === 'assets' ? 'bg-emerald-500/15 font-bold text-emerald-400 border border-emerald-500/30' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white font-bold' %>">
         <i data-lucide="boxes" class="w-5 h-5 shrink-0"></i>
-        <span>Network Assets</span>
+        <span>Data Inventaris Aset</span>
       </a>
 
       <a href="/asset-movements" class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition font-bold <%= activeMenu === 'asset-movements' ? 'bg-emerald-500/15 text-emerald-400 font-bold border border-emerald-500/30' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white font-bold' %>">
@@ -101,7 +101,7 @@
 
       <a href="/asset-maintenances" class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition font-bold <%= activeMenu === 'asset-maintenances' ? 'bg-emerald-500/15 text-emerald-400 font-bold border border-emerald-500/30' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white font-bold' %>">
         <i data-lucide="wrench" class="w-5 h-5 shrink-0"></i>
-        <span>Service & Maintenance</span>
+        <span>Perbaikan & Servis</span>
       </a>
 
       <!-- PARENT DROPDOWN: MANUFACTURES -->
@@ -111,7 +111,7 @@
           class="w-full flex items-center justify-between px-3 py-2.5 rounded-lg transition cursor-pointer font-bold <%= isMasterActive ? 'bg-slate-700/70 text-emerald-400 font-bold border border-slate-600/80' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white font-bold' %>">
           <div class="flex items-center gap-3">
             <i data-lucide="database" class="w-5 h-5 shrink-0 <%= isMasterActive ? 'text-emerald-400' : 'text-slate-400' %>"></i>
-            <span>Manufactures</span>
+            <span>Katalog Perangkat</span>
           </div>
           <i id="master-dropdown-icon" data-lucide="chevron-down"
             class="w-4 h-4 text-slate-400 transition-transform duration-200 <%= isMasterActive ? 'rotate-180 text-emerald-400' : '' %>"></i>
@@ -121,19 +121,19 @@
           <a href="/device-types"
             class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition <%= activeMenu === 'device-types' ? 'bg-emerald-500/15 text-emerald-400 font-bold border border-emerald-500/30' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white font-bold' %>">
             <i data-lucide="layers" class="w-4 h-4 shrink-0"></i>
-            <span>Device Types</span>
+            <span>Jenis Perangkat</span>
           </a>
 
           <a href="/brands"
             class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition <%= activeMenu === 'brands' ? 'bg-emerald-500/15 text-emerald-400 font-bold border border-emerald-500/30' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white font-bold' %>">
             <i data-lucide="award" class="w-4 h-4 shrink-0"></i>
-            <span>Brand / Merk</span>
+            <span>Merek / Brand</span>
           </a>
 
           <a href="/device-models"
             class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition <%= activeMenu === 'device-models' ? 'bg-emerald-500/15 text-emerald-400 font-bold border border-emerald-500/30' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white font-bold' %>">
             <i data-lucide="cpu" class="w-4 h-4 shrink-0"></i>
-            <span>Model / Type</span>
+            <span>Model / Tipe</span>
           </a>
         </div>
       </div>
@@ -141,13 +141,13 @@
 
     <!-- Grup Audit & Stock Opname: Dashboard tampil untuk semua user login, eksekusi audit sesuai izin -->
     <div class="px-3 pt-4 pb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-      Audit & Stock Opname
+      Audit & Stok Opname
     </div>
 
     <a href="/audits/dashboard"
       class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition <%= (typeof activeMenu !== 'undefined' && activeMenu === 'audit-dashboard') ? 'bg-emerald-500/15 text-emerald-400 font-bold border border-emerald-500/30' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white font-bold' %>">
       <i data-lucide="bar-chart-3" class="w-4 h-4 shrink-0"></i>
-      <span class="truncate">Dashboard Audit</span>
+      <span class="truncate">Ringkasan Audit</span>
     </a>
 
     <% if (typeof can === 'function' && can('menu.asset-audits')) { %>
@@ -155,7 +155,7 @@
         class="flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl text-sm font-bold transition <%= (typeof activeMenu !== 'undefined' && activeMenu === 'asset-audits') ? 'bg-emerald-500/15 text-emerald-400 font-bold border border-emerald-500/30' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white font-bold' %>">
         <span class="flex items-center gap-3 min-w-0">
           <i data-lucide="clipboard-check" class="w-4 h-4 shrink-0"></i>
-          <span class="truncate">Audit & Stock Opname</span>
+          <span class="truncate">Stok Opname</span>
         </span>
         <% if (currentUser && currentUser.role !== 'administrator' && typeof activeAuditTaskCount !== 'undefined' && activeAuditTaskCount > 0) { %>
           <span class="px-1.5 py-0.5 text-[10px] font-bold rounded-md bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
@@ -167,28 +167,28 @@
 
     <% if (can('menu.audit-logs') || can('menu.users') || can('menu.branches')) { %>
       <div class="px-3 pt-4 pb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-        Governance & System
+        Pengaturan & Sistem
       </div>
     <% } %>
 
     <% if (can('menu.branches')) { %>
       <a href="/branches" class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition font-bold <%= activeMenu === 'branches' ? 'bg-emerald-500/15 text-emerald-400 font-bold border border-emerald-500/30' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white font-bold' %>">
         <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
-        <span>Branches</span>
-      </a>
-    <% } %>
-
-    <% if (can('menu.audit-logs')) { %>
-      <a href="/audit-logs" class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition font-bold <%= activeMenu === 'audit-logs' ? 'bg-emerald-500/15 text-emerald-400 font-bold border border-emerald-500/30' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white font-bold' %>">
-        <i data-lucide="history" class="w-5 h-5 shrink-0"></i>
-        <span>Audit Logs</span>
+        <span>Cabang</span>
       </a>
     <% } %>
 
     <% if (can('menu.users')) { %>
       <a href="/users" class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition font-bold <%= activeMenu === 'users' ? 'bg-emerald-500/15 text-emerald-400 font-bold border border-emerald-500/30' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white font-bold' %>">
         <i data-lucide="users" class="w-5 h-5 shrink-0"></i>
-        <span>Users & Access</span>
+        <span>Pengguna & Hak Akses</span>
+      </a>
+    <% } %>
+
+    <% if (can('menu.audit-logs')) { %>
+      <a href="/audit-logs" class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition font-bold <%= activeMenu === 'audit-logs' ? 'bg-emerald-500/15 text-emerald-400 font-bold border border-emerald-500/30' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white font-bold' %>">
+        <i data-lucide="history" class="w-5 h-5 shrink-0"></i>
+        <span>Log Aktivitas</span>
       </a>
     <% } %>
   </nav>
