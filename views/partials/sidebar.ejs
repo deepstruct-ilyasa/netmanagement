@@ -335,22 +335,40 @@
     if (icon) icon.classList.toggle('rotate-180');
   }
 
-  // =========================================================
-  // SWITCH CABANG TANPA FULL PAGE RELOAD (PJAX CONTENT ONLY)
-  // =========================================================
-  async function handleBranchSwitch(selectEl) {
-    if (!selectEl) return;
-    const branchId = selectEl.value;
-    const currentPathWithQuery = window.location.pathname + window.location.search;
+  // Helper sinkronisasi value semua dropdown cabang yang tampil di layar
+  window.setAllBranchDropdownValues = function (branchId) {
+    const val = String(branchId);
+    const sidebarSelect = document.getElementById('sidebar-branch-select');
+    const topoSelect = document.getElementById('branch_filter');
 
+    if (sidebarSelect) {
+      const hasOpt = Array.from(sidebarSelect.options).some(opt => String(opt.value) === val);
+      if (hasOpt) sidebarSelect.value = val;
+    }
+
+    if (topoSelect) {
+      const hasOpt = Array.from(topoSelect.options).some(opt => String(opt.value) === val);
+      if (hasOpt) topoSelect.value = val;
+    }
+  };
+
+  // =========================================================
+  // SWITCH CABANG DARI SIDEBAR TANPA FULL PAGE RELOAD
+  // =========================================================
+  window.handleBranchSwitch = async function (selectEl) {
+    if (!selectEl) return;
+    const branchId = String(selectEl.value);
+    const cleanPath = window.location.pathname; // Tetap bersih tanpa ?branch_id=...
+
+    window.setAllBranchDropdownValues(branchId);
     selectEl.disabled = true;
 
     try {
       const bodyParams = new URLSearchParams();
       bodyParams.append('branch_id', branchId);
-      bodyParams.append('redirect_to', currentPathWithQuery);
+      bodyParams.append('redirect_to', cleanPath);
 
-      const postRes = await fetch('/set-branch', {
+      await fetch('/set-branch', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
@@ -359,14 +377,16 @@
         body: bodyParams.toString()
       });
 
-      // Ambil HTML terbaru dari URL tujuan (mengikuti redirect jika server mengalihkan URL)
-      const targetUrl = postRes.redirected ? postRes.url : currentPathWithQuery;
+      // Pastikan URL address bar bersih tanpa ?branch_id=...
+      if (window.location.search.includes('branch_id')) {
+        window.history.replaceState({}, document.title, cleanPath);
+      }
 
-      // Jika sudah ada helper PJAX global di footer/header, gunakan itu; jika tidak, ganti konten <main> langsung
       if (typeof window.pjaxNavigate === 'function') {
-        await window.pjaxNavigate(targetUrl, { pushState: targetUrl !== currentPathWithQuery });
+        await window.pjaxNavigate(cleanPath, { pushState: false });
+        window.setAllBranchDropdownValues(branchId);
       } else {
-        const pageRes = await fetch(targetUrl, {
+        const pageRes = await fetch(cleanPath, {
           headers: { 'X-Requested-With': 'XMLHttpRequest' }
         });
         const htmlText = await pageRes.text();
@@ -376,33 +396,22 @@
         const currentMain = document.querySelector('main');
 
         if (newMain && currentMain) {
-          if (targetUrl !== currentPathWithQuery) {
-            window.history.pushState({}, doc.title || document.title, targetUrl);
-          }
           if (doc.title) document.title = doc.title;
 
-          // Sinkronkan juga judul halaman di header atas jika ada
           const newHeaderTitle = doc.querySelector('header h1, #header-page-title');
           const curHeaderTitle = document.querySelector('header h1, #header-page-title');
           if (newHeaderTitle && curHeaderTitle) {
             curHeaderTitle.innerHTML = newHeaderTitle.innerHTML;
           }
 
-          // Sinkronkan dropdown cabang di dalam halaman (misal di topology.ejs) jika ada
-          const newPageBranchSel = doc.querySelector('main select[name="branch_id"], #topology-branch-select');
-          if (newPageBranchSel) {
-            newPageBranchSel.value = branchId;
-          }
-
-          // Hapus modal lama yang berada di luar <main> agar tidak dobel saat script dieksekusi ulang
           document.querySelectorAll('body > div[id^="modal-"]').forEach(el => el.remove());
           doc.querySelectorAll('body > div[id^="modal-"]').forEach(modalEl => {
             document.body.appendChild(modalEl.cloneNode(true));
           });
 
           currentMain.replaceWith(newMain);
+          window.setAllBranchDropdownValues(branchId);
 
-          // Eksekusi ulang script inline milik konten halaman baru (penting untuk Cytoscape/Vis.js di topology.ejs)
           const scripts = Array.from(doc.querySelectorAll('script')).filter(s =>
             !s.src &&
             !s.textContent.includes('handleBranchSwitch') &&
@@ -419,16 +428,107 @@
             lucide.createIcons();
           }
         } else {
-          window.location.href = targetUrl;
+          window.location.href = cleanPath;
         }
       }
     } catch (err) {
       console.error('Gagal mengganti cabang via AJAX:', err);
-      window.location.reload();
+      window.location.href = cleanPath;
     } finally {
-      selectEl.disabled = false;
+      const sb = document.getElementById('sidebar-branch-select');
+      if (sb) sb.disabled = false;
     }
-  }
+  };
+
+  // =========================================================
+  // SWITCH CABANG DARI TOPOLOGY <-> SIDEBAR (URL TETAP /topology)
+  // =========================================================
+  window.syncBranchFromTopology = async function (branchId) {
+    const targetBranch = String(branchId);
+    const cleanUrl = '/topology';
+    const sidebarSelect = document.getElementById('sidebar-branch-select');
+    const topoSelect = document.getElementById('branch_filter');
+
+    window.setAllBranchDropdownValues(targetBranch);
+
+    if (sidebarSelect) sidebarSelect.disabled = true;
+    if (topoSelect) topoSelect.disabled = true;
+
+    try {
+      // 1. Update session cabang aktif di server
+      const bodyParams = new URLSearchParams();
+      bodyParams.append('branch_id', targetBranch);
+      bodyParams.append('redirect_to', cleanUrl);
+
+      await fetch('/set-branch', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: bodyParams.toString()
+      });
+
+      // Bersihkan query ?branch_id dari address bar jika sebelumnya ada
+      if (window.location.search) {
+        window.history.replaceState({}, document.title, cleanUrl);
+      }
+
+      // 2. Muat ulang konten /topology menggunakan session yang sudah diperbarui
+      if (typeof window.pjaxNavigate === 'function') {
+        await window.pjaxNavigate(cleanUrl, { pushState: false });
+        window.setAllBranchDropdownValues(targetBranch);
+        return;
+      }
+
+      const res = await fetch(cleanUrl, {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+      });
+      const htmlText = await res.text();
+      const doc = new DOMParser().parseFromString(htmlText, 'text/html');
+
+      const newMain = doc.querySelector('main');
+      const currentMain = document.querySelector('main');
+
+      if (newMain && currentMain) {
+        if (doc.title) document.title = doc.title;
+
+        document.querySelectorAll('body > div[id^="modal-"]').forEach(el => el.remove());
+        doc.querySelectorAll('body > div[id^="modal-"]').forEach(modalEl => {
+          document.body.appendChild(modalEl.cloneNode(true));
+        });
+
+        currentMain.replaceWith(newMain);
+        window.setAllBranchDropdownValues(targetBranch);
+
+        const scripts = Array.from(doc.querySelectorAll('script')).filter(s =>
+          !s.src &&
+          !s.textContent.includes('handleBranchSwitch') &&
+          !s.textContent.includes('SERVER_EXPIRES_AT')
+        );
+        scripts.forEach(oldScript => {
+          const newScript = document.createElement('script');
+          newScript.textContent = oldScript.textContent;
+          document.body.appendChild(newScript);
+          newScript.remove();
+        });
+
+        if (typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') {
+          lucide.createIcons();
+        }
+      } else {
+        window.location.href = cleanUrl;
+      }
+    } catch (err) {
+      console.error('Gagal menyinkronkan cabang dari topologi:', err);
+      window.location.href = cleanUrl;
+    } finally {
+      const s1 = document.getElementById('sidebar-branch-select');
+      const s2 = document.getElementById('branch_filter');
+      if (s1) s1.disabled = false;
+      if (s2) s2.disabled = false;
+    }
+  };
 
   // =========================================================
   // REAL FIXED SESSION EXPIRY WATCHER (BACKGROUND ONLY)
