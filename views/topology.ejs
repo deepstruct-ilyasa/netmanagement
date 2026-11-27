@@ -266,6 +266,89 @@
     let edgesDataSet = null;
     let physicsEnabled = true;
 
+    async function handleTopologyBranchChange(selectEl) {
+      if (!selectEl) return;
+      const branchId = selectEl.value;
+      const targetUrl = `/topology?branch_id=${encodeURIComponent(branchId)}`;
+
+      // Sinkronkan nilai dropdown cabang di sidebar kiri jika ada
+      const sidebarSelect = document.getElementById('sidebar-branch-select');
+      if (sidebarSelect) {
+        sidebarSelect.value = branchId;
+      }
+
+      selectEl.disabled = true;
+
+      try {
+        // Sinkronkan session cabang aktif di backend
+        const bodyParams = new URLSearchParams();
+        bodyParams.append('branch_id', branchId);
+        bodyParams.append('redirect_to', targetUrl);
+
+        await fetch('/set-branch', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+            'X-Requested-With': 'XMLHttpRequest'
+          },
+          body: bodyParams.toString()
+        });
+
+        // Jika helper PJAX global tersedia di layout/footer, gunakan itu
+        if (typeof window.pjaxNavigate === 'function') {
+          await window.pjaxNavigate(targetUrl, { pushState: true });
+          return;
+        }
+
+        // Ambil HTML terbaru /topology?branch_id=... lalu ganti <main> saja
+        const res = await fetch(targetUrl, {
+          headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        });
+        const htmlText = await res.text();
+        const doc = new DOMParser().parseFromString(htmlText, 'text/html');
+
+        const newMain = doc.querySelector('main');
+        const currentMain = document.querySelector('main');
+
+        if (newMain && currentMain) {
+          window.history.pushState({}, doc.title || document.title, targetUrl);
+          if (doc.title) document.title = doc.title;
+
+          // Bersihkan modal lama di luar <main> agar tidak duplikat
+          document.querySelectorAll('body > div[id^="modal-"]').forEach(el => el.remove());
+          doc.querySelectorAll('body > div[id^="modal-"]').forEach(modalEl => {
+            document.body.appendChild(modalEl.cloneNode(true));
+          });
+
+          currentMain.replaceWith(newMain);
+
+          // Jalankan ulang inline script milik topology.ejs agar kanvas Vis.js/Cytoscape ter-render ulang
+          const scripts = Array.from(doc.querySelectorAll('script')).filter(s =>
+            !s.src &&
+            !s.textContent.includes('handleBranchSwitch') &&
+            !s.textContent.includes('SERVER_EXPIRES_AT')
+          );
+          scripts.forEach(oldScript => {
+            const newScript = document.createElement('script');
+            newScript.textContent = oldScript.textContent;
+            document.body.appendChild(newScript);
+            newScript.remove();
+          });
+
+          if (typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') {
+            lucide.createIcons();
+          }
+        } else {
+          window.location.href = targetUrl;
+        }
+      } catch (err) {
+        console.error('Gagal mengganti cabang topologi:', err);
+        window.location.href = targetUrl;
+      } finally {
+        selectEl.disabled = false;
+      }
+    }
+
     function escapeXml(unsafe) {
       return String(unsafe || '')
         .replace(/&/g, '&amp;')
@@ -665,7 +748,7 @@
         }
       }
     };
-
+    
     function showEdgeDetails(c) {
       openInspectorPanel();
       document.getElementById('inspector-device').classList.add('hidden');
