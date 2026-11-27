@@ -18,7 +18,7 @@
         <span class="block text-base font-bold text-sm tracking-wide text-white whitespace-nowrap truncate">
           SIM<span class="text-emerald-400">AJAR</span>
         </span>
-        <span class="block text-xs text-slate-400 truncate">
+        <span class="block text-xs font-semibold text-slate-400 truncate">
           Manajemen Aset Jaringan
         </span>
       </div>
@@ -146,7 +146,7 @@
 
     <a href="/audits/dashboard"
       class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition <%= (typeof activeMenu !== 'undefined' && activeMenu === 'audit-dashboard') ? 'bg-emerald-500/15 text-emerald-400 font-bold border border-emerald-500/30' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white font-bold' %>">
-      <i data-lucide="bar-chart-3" class="w-4 h-4 shrink-0"></i>
+      <i data-lucide="bar-chart-3" class="w-5 h-5 shrink-0"></i>
       <span class="truncate">Ringkasan Audit</span>
     </a>
 
@@ -154,7 +154,7 @@
       <a href="/audits"
         class="flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl text-sm font-bold transition <%= (typeof activeMenu !== 'undefined' && activeMenu === 'asset-audits') ? 'bg-emerald-500/15 text-emerald-400 font-bold border border-emerald-500/30' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white font-bold' %>">
         <span class="flex items-center gap-3 min-w-0">
-          <i data-lucide="clipboard-check" class="w-4 h-4 shrink-0"></i>
+          <i data-lucide="clipboard-check" class="w-5 h-5 shrink-0"></i>
           <span class="truncate">Audit & Stok Opname</span>
         </span>
         <% if (currentUser && currentUser.role !== 'administrator' && typeof activeAuditTaskCount !== 'undefined' && activeAuditTaskCount > 0) { %>
