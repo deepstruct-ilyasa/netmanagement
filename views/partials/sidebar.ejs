@@ -8,7 +8,7 @@
   <div class="h-24 px-5 border-b border-slate-700 flex items-center justify-between shrink-0">
     <a href="/" class="flex items-center gap-2.5 min-w-0 overflow-hidden group">
       <img
-        src="/img/favicon.png"
+        src="/img/favicon.ico"
         alt="SIMAJAR Logo"
         class="w-14 h-14 object-contain shrink-0 p-0.5 group-hover:border-emerald-400/50 transition"
         onerror="this.classList.add('hidden'); this.nextElementSibling.classList.remove('hidden');"
@@ -245,34 +245,49 @@
     }
 
     if (photoUrl && sidebarImg) {
-      const cleanUrl = photoUrl.split('?')[0];
-      sidebarImg.src = `${cleanUrl}?v=${Date.now()}`;
+      const cleanUrl = photoUrl.startsWith('blob:') || photoUrl.startsWith('data:')
+        ? photoUrl
+        : `${photoUrl.split('?')[0]}?v=${Date.now()}`;
+      sidebarImg.src = cleanUrl;
       sidebarImg.classList.remove('hidden');
       if (sidebarFallback) sidebarFallback.classList.add('hidden');
     }
   }
 
-  document.getElementById('profile-info-form')?.addEventListener('submit', async function (e) {
+  // Event delegation agar form /profile tetap tertangkap meski dibuka via PJAX
+  document.addEventListener('submit', async function (e) {
+    const form = e.target;
+    if (!form || form.id !== 'profile-info-form') return;
+
     const fullName = document.getElementById('full_name')?.value.trim();
     if (!fullName) {
       e.preventDefault();
-      openProfileStatusModal('error', 'Data Belum Lengkap', 'Nama lengkap tidak boleh dikosongkan.');
+      if (typeof openProfileStatusModal === 'function') {
+        openProfileStatusModal('error', 'Data Belum Lengkap', 'Nama lengkap tidak boleh dikosongkan.');
+      }
       return;
     }
 
     const fileInput = document.getElementById('profile_photo');
-    if (fileInput && fileInput.files && fileInput.files[0] && fileInput.files[0].size > MAX_PROFILE_BYTES) {
+    if (
+      fileInput &&
+      fileInput.files &&
+      fileInput.files[0] &&
+      typeof MAX_PROFILE_BYTES !== 'undefined' &&
+      fileInput.files[0].size > MAX_PROFILE_BYTES
+    ) {
       e.preventDefault();
-      openProfileStatusModal('error', 'Ukuran File Terlalu Besar', 'Ukuran foto profil tidak boleh melebihi 5 MB.');
+      if (typeof openProfileStatusModal === 'function') {
+        openProfileStatusModal('error', 'Ukuran File Terlalu Besar', 'Ukuran foto profil tidak boleh melebihi 5 MB.');
+      }
       return;
     }
 
-    // Jika ada foto baru yang dipilih atau nama berubah, kirim via fetch agar sidebar langsung terupdate tanpa reload
     const hasNewPhoto = Boolean(fileInput && fileInput.files && fileInput.files[0]);
     if (!hasNewPhoto) return;
 
     e.preventDefault();
-    const submitBtn = this.querySelector('button[type="submit"]');
+    const submitBtn = form.querySelector('button[type="submit"]');
     const originalText = submitBtn ? submitBtn.innerHTML : '';
     if (submitBtn) {
       submitBtn.disabled = true;
@@ -280,8 +295,8 @@
     }
 
     try {
-      const formData = new FormData(this);
-      const response = await fetch(this.action, {
+      const formData = new FormData(form);
+      const response = await fetch(form.action, {
         method: 'POST',
         body: formData,
         headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
@@ -298,7 +313,6 @@
           openProfileStatusModal('success', 'Perubahan Disimpan', result.message || 'Foto profil berhasil diperbarui.');
         }
       } else {
-        // Fallback jika controller merender HTML/redirect: pakai preview lokal dulu lalu reload agar sesi tersinkron penuh
         const localPreview = document.getElementById('inline-crop-preview-img')?.src || '';
         syncSidebarProfileUI(localPreview, fullName);
         window.location.reload();
@@ -312,7 +326,7 @@
       }
     }
   });
-  
+
   function toggleMasterDropdown() {
     const menu = document.getElementById('master-dropdown-menu');
     const icon = document.getElementById('master-dropdown-icon');

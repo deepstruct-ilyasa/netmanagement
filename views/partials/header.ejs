@@ -4,12 +4,36 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title><%= typeof title !== 'undefined' ? title : 'SIMAJAR — Sistem Informasi Manajemen Aset Jaringan' %></title>
-  <link rel="icon" type="image/png" href="/img/favicon.png">
+  <link rel="icon" type="image/png" href="/img/favicon.ico">
   <link rel="stylesheet" href="/css/output.css">
   <script src="/js/lucide.min.js"></script>
   <script src="/js/html5-qrcode.min.js"></script>
   <script src="/js/vis-network.min.js"></script>
   <script>
+    // =========================================================
+    // AUTO-SHIM DOMContentLoaded UNTUK NAVIGASI TANPA RELOAD
+    // =========================================================
+    (function () {
+      const nativeDocAddEventListener = document.addEventListener.bind(document);
+      const nativeWinAddEventListener = window.addEventListener.bind(window);
+
+      document.addEventListener = function (type, listener, options) {
+        if (type === 'DOMContentLoaded' && document.readyState !== 'loading' && typeof listener === 'function') {
+          setTimeout(() => listener.call(document, new Event('DOMContentLoaded')), 0);
+          return;
+        }
+        return nativeDocAddEventListener(type, listener, options);
+      };
+
+      window.addEventListener = function (type, listener, options) {
+        if ((type === 'DOMContentLoaded' || type === 'load') && document.readyState === 'complete' && typeof listener === 'function') {
+          setTimeout(() => listener.call(window, new Event(type)), 0);
+          return;
+        }
+        return nativeWinAddEventListener(type, listener, options);
+      };
+    })();
+
     // Terapkan tema tersimpan sebelum halaman di-render (anti kedip)
     if (localStorage.getItem('theme') === 'light') {
       document.documentElement.classList.remove('dark');
@@ -84,8 +108,8 @@
   <!-- Panggil Sidebar -->
   <%- include('sidebar') %>
 
-  <!-- Wrapper Konten Kanan -->
-  <div class="flex-1 flex flex-col min-w-0 min-h-dvh">
+  <!-- Wrapper Konten Kanan (Hanya area ini yang diganti saat pindah menu) -->
+  <div id="app-main-wrapper" class="flex-1 flex flex-col min-w-0 min-h-dvh">
     
     <!-- Top Header Bar -->
     <header class="h-16 bg-slate-800/80 backdrop-blur border-b border-slate-700 px-4 sm:px-6 flex items-center justify-between sticky top-0 z-20 transition-colors duration-200">

@@ -1,6 +1,6 @@
 const db = require('../db');
 
-// Helper: Generate Kode Audit Default (AUD/{BRANCH_CODE}/{YYMMDD}/{SEQ})
+// Helper: Generate Kode Audit Default (SO/{BRANCH_CODE}/{YYMMDD}/{SEQ})
 function generateNextAuditCode(branchCode) {
   const cleanBranch = String(branchCode || 'HO').trim().toUpperCase();
   const now = new Date();
@@ -13,7 +13,7 @@ function generateNextAuditCode(branchCode) {
     SELECT audit_code FROM asset_audits
     WHERE audit_code LIKE ?
     ORDER BY id DESC LIMIT 1
-  `).get(`AUD/${cleanBranch}/%`);
+  `).get(`SO/${cleanBranch}/%`);
 
   let nextSeq = 1;
   if (row && row.audit_code) {
@@ -22,7 +22,7 @@ function generateNextAuditCode(branchCode) {
     if (!Number.isNaN(lastSeq)) nextSeq = lastSeq + 1;
   }
 
-  return `AUD/${cleanBranch}/${datePart}/${String(nextSeq).padStart(3, '0')}`;
+  return `SO/${cleanBranch}/${datePart}/${String(nextSeq).padStart(3, '0')}`;
 }
 
 // Helper: Cek apakah user boleh mengakses sesi audit tertentu

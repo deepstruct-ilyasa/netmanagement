@@ -1,7 +1,7 @@
 <footer class="mt-auto border-t border-slate-200 dark:border-slate-800 pt-3.5 pb-[calc(0.875rem+env(safe-area-inset-bottom,0px))] px-6 flex flex-col sm:flex-row items-center justify-center gap-2 text-xs text-slate-500">
       <span>SIMAJAR — Sistem Informasi Manajemen Aset Jaringan</span>
     </footer>
-  </div> <!-- Tutup Wrapper Konten Kanan -->
+  </div> <!-- Tutup Wrapper Konten Kanan (#app-main-wrapper) -->
 
   <!-- ======================================================================= -->
   <!-- GLOBAL FEEDBACK & CONFIRMATION MODALS (DIGUNAKAN DI SELURUH HALAMAN)    -->
@@ -114,7 +114,6 @@
       const modal = document.getElementById(modalId);
       if (modal) {
         modal.classList.add('hidden');
-        // Lepas overflow-hidden hanya jika tidak ada modal lain yang masih terbuka
         const anyOpen = document.querySelectorAll('[id^="modal-"]:not(.hidden), #global-feedback-modal:not(.hidden), #global-confirm-modal:not(.hidden)').length > 0;
         if (!anyOpen) {
           document.body.classList.remove('overflow-hidden');
@@ -231,13 +230,7 @@
       closeModal('global-confirm-modal');
     };
 
-    lucide.createIcons();
-
-    window.addEventListener('DOMContentLoaded', () => {
-      requestAnimationFrame(() => {
-        document.documentElement.classList.remove('preload');
-      });
-
+    function initPageHelpers() {
       // Deteksi otomatis query string (?success=... / ?error=... / ?msg=... / ?err=...)
       const params = new URLSearchParams(window.location.search);
       const errText = params.get('error') || params.get('err');
@@ -257,6 +250,8 @@
 
       // Intercept otomatis semua form yang memiliki atribut data-confirm="..."
       document.querySelectorAll('form[data-confirm]').forEach(form => {
+        if (form.dataset.confirmBound === 'true') return;
+        form.dataset.confirmBound = 'true';
         form.addEventListener('submit', function (e) {
           if (form.dataset.confirmed === 'true') return;
           e.preventDefault();
@@ -272,6 +267,160 @@
           });
         });
       });
+    }
+
+    // =========================================================================
+    // SMOOTH SIDEBAR NAVIGATION (PJAX — PINDAH MENU TANPA RELOAD SIDEBAR)
+    // =========================================================================
+    (function initSmoothSidebarNavigation() {
+      const sidebar = document.getElementById('sidebar');
+      if (!sidebar) return;
+
+      function updateSidebarActiveState(targetPathname) {
+        const navLinks = sidebar.querySelectorAll('nav a[href]');
+        const activeClasses = ['bg-emerald-500/15', 'text-emerald-400', 'border', 'border-emerald-500/30'];
+        const inactiveClasses = ['text-slate-300', 'hover:bg-slate-700/50', 'hover:text-white'];
+
+        navLinks.forEach((link) => {
+          const linkPath = new URL(link.href, window.location.origin).pathname;
+          const isMatch = linkPath === targetPathname;
+
+          if (isMatch) {
+            link.classList.remove(...inactiveClasses);
+            link.classList.add(...activeClasses);
+          } else {
+            link.classList.remove(...activeClasses);
+            link.classList.add(...inactiveClasses);
+          }
+        });
+
+        // Sinkronkan state dropdown Manufactures
+        const masterPaths = ['/device-types', '/brands', '/device-models'];
+        const isMaster = masterPaths.includes(targetPathname);
+        const masterMenu = document.getElementById('master-dropdown-menu');
+        const masterIcon = document.getElementById('master-dropdown-icon');
+        if (masterMenu && isMaster) {
+          masterMenu.classList.remove('hidden');
+          if (masterIcon) masterIcon.classList.add('rotate-180');
+        }
+      }
+
+      function executePageScripts(container) {
+        const scripts = container.querySelectorAll('script');
+        scripts.forEach((oldScript) => {
+          const newScript = document.createElement('script');
+          Array.from(oldScript.attributes).forEach((attr) => {
+            newScript.setAttribute(attr.name, attr.value);
+          });
+
+          if (oldScript.src) {
+            newScript.async = false;
+          } else {
+            // Bungkus skrip inline dalam IIFE agar deklarasi const/let tingkat atas tidak bentrok
+            // saat halaman yang sama dibuka ulang lewat PJAX, sambil tetap mengekspos fungsi onclick ke window.
+            const rawCode = oldScript.textContent || '';
+            const fnMatches = [...rawCode.matchAll(/^\s*(?:async\s+)?function\s+([a-zA-Z0-9_$]+)\s*\(/gm)];
+            const exportToWindow = fnMatches
+              .map((m) => `if (typeof ${m[1]} === 'function') window.${m[1]} = ${m[1]};`)
+              .join('\n');
+
+            newScript.textContent = `(function() {\n${rawCode}\n${exportToWindow}\n})();`;
+          }
+
+          oldScript.parentNode.replaceChild(newScript, oldScript);
+        });
+      }
+
+      async function navigateWithoutReload(url, pushHistory = true) {
+        const currentWrapper = document.getElementById('app-main-wrapper');
+        if (!currentWrapper) {
+          window.location.href = url;
+          return;
+        }
+
+        currentWrapper.style.opacity = '0.7';
+        currentWrapper.style.transition = 'opacity 100ms ease';
+
+        try {
+          const response = await fetch(url, {
+            headers: { 'X-Requested-With': 'PJAX' }
+          });
+
+          if (response.redirected && response.url.includes('/login')) {
+            window.location.href = response.url;
+            return;
+          }
+
+          const htmlText = await response.text();
+          const parser = new DOMParser();
+          const doc = parser.parseFromString(htmlText, 'text/html');
+          const nextWrapper = doc.getElementById('app-main-wrapper');
+
+          if (!nextWrapper) {
+            window.location.href = url;
+            return;
+          }
+
+          // Pastikan tidak ada overflow-hidden tertinggal dari modal halaman sebelumnya
+          document.body.classList.remove('overflow-hidden');
+
+          // Swap hanya konten di dalam #app-main-wrapper (sidebar & foto profil tetap diam)
+          document.title = doc.title;
+          currentWrapper.innerHTML = nextWrapper.innerHTML;
+          currentWrapper.style.opacity = '1';
+
+          if (pushHistory) {
+            window.history.pushState({ pjaxUrl: response.url }, doc.title, response.url);
+          }
+
+          const targetPath = new URL(response.url, window.location.origin).pathname;
+          updateSidebarActiveState(targetPath);
+
+          // Tutup drawer sidebar otomatis jika di layar mobile
+          if (window.innerWidth < 1024 && !sidebar.classList.contains('-translate-x-full')) {
+            toggleSidebar();
+          }
+
+          updateThemeIcons();
+          if (typeof lucide !== 'undefined') lucide.createIcons();
+          initPageHelpers();
+          executePageScripts(currentWrapper);
+          window.scrollTo({ top: 0, behavior: 'instant' });
+        } catch (err) {
+          window.location.href = url;
+        }
+      }
+
+      sidebar.addEventListener('click', (e) => {
+        const link = e.target.closest('a[href]');
+        if (!link) return;
+
+        const href = link.getAttribute('href');
+        if (!href || href.startsWith('#') || href.startsWith('javascript:')) return;
+        if (href === '/logout' || link.target === '_blank') return;
+        if (e.ctrlKey || e.metaKey || e.shiftKey) return;
+
+        const targetUrl = new URL(link.href, window.location.origin);
+        if (targetUrl.origin !== window.location.origin) return;
+
+        e.preventDefault();
+        if (targetUrl.href === window.location.href) return;
+
+        navigateWithoutReload(targetUrl.href, true);
+      });
+
+      window.addEventListener('popstate', () => {
+        navigateWithoutReload(window.location.href, false);
+      });
+    })();
+
+    lucide.createIcons();
+
+    window.addEventListener('DOMContentLoaded', () => {
+      requestAnimationFrame(() => {
+        document.documentElement.classList.remove('preload');
+      });
+      initPageHelpers();
     });
   </script>
 </body>
