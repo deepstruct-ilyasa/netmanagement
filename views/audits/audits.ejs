@@ -1,4 +1,4 @@
-<%- include('../partials/header') %>
+<%- include('../partials/header', { pageTitle: 'Audit & Stok Opname' }) %>
 
 <main class="p-4 sm:p-6 flex-1 w-full max-w-8xl mx-auto space-y-5">
 
@@ -7,7 +7,7 @@
     <div>
       <h2 class="text-base sm:text-lg font-bold text-white flex items-center gap-2">
         <i data-lucide="clipboard-check" class="w-5 h-5 text-emerald-400"></i>
-        <span>Daftar Sesi Stock Opname</span>
+        <span>Daftar Sesi Stok Opname</span>
       </h2>
       <p class="text-xs text-slate-400 mt-1">
         <%= isAdmin ? 'Kelola jadwal audit fisik aset per cabang dan tugaskan auditor lintas cabang.' : 'Daftar sesi audit fisik aset yang ditugaskan kepada Anda.' %>
