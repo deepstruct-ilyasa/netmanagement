@@ -443,8 +443,8 @@
           </div>
         </div>
 
-        <div class="grid grid-cols-2 gap-2.5 sm:gap-3">
-          <div class="space-y-1.5">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
+          <div class="space-y-1">
             <label class="block text-slate-300 text-xs">Foto Fisik Perangkat</label>
             <% if (typeof auditPrefillItem !== 'undefined' && auditPrefillItem && auditPrefillItem.photo_evidence) { %>
               <div class="flex items-center gap-2 bg-slate-900/80 border border-sky-500/30 rounded-lg p-1.5">
@@ -455,10 +455,12 @@
               </div>
             <% } %>
             <input type="file" name="physical_photo" accept="image/*" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-2 py-1.5 text-slate-300 text-[11px] file:mr-2 file:py-0.5 file:px-2 file:rounded file:border-0 file:text-[11px] file:bg-slate-700 file:text-slate-200">
+            <p class="text-[10px] text-slate-400">Maks. 2 MB (otomatis dikompres jika lebih besar)</p>
           </div>
-          <div>
-            <label class="block text-slate-300 text-xs mb-1">Foto Stiker Serial Number</label>
+          <div class="space-y-1">
+            <label class="block text-slate-300 text-xs">Foto Stiker Serial Number</label>
             <input type="file" name="sn_photo" accept="image/*" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-2 py-1.5 text-slate-300 text-[11px] file:mr-2 file:py-0.5 file:px-2 file:rounded file:border-0 file:text-[11px] file:bg-slate-700 file:text-slate-200">
+            <p class="text-[10px] text-slate-400">Maks. 2 MB (otomatis dikompres jika lebih besar)</p>
           </div>
         </div>
 
@@ -503,6 +505,10 @@
     </div>
 
     <form id="edit-asset-form" method="POST" enctype="multipart/form-data" class="flex flex-col flex-1 min-h-0 text-xs sm:text-sm">
+      <!-- Flag penanda hapus foto sementara sebelum klik Update Aset -->
+      <input type="hidden" name="remove_physical_photo" id="edit_remove_physical_photo" value="0">
+      <input type="hidden" name="remove_sn_photo" id="edit_remove_sn_photo" value="0">
+
       <div class="p-4 sm:p-6 overflow-y-auto space-y-3.5 flex-1">
         <div class="grid grid-cols-2 gap-2.5 sm:gap-3">
           <div>
@@ -592,8 +598,8 @@
           </div>
         </div>
 
-        <div class="grid grid-cols-2 gap-2.5 sm:gap-3">
-          <div class="space-y-1.5">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
+          <div class="space-y-1">
             <label class="block text-slate-300 text-xs">Ganti Foto Fisik</label>
             <div id="edit_physical_photo_preview_wrap" class="hidden items-center justify-between gap-2 bg-slate-900/80 border border-slate-700 rounded-lg p-1.5">
               <div class="flex items-center gap-2 min-w-0">
@@ -605,9 +611,10 @@
               </div>
             </div>
             <input type="file" name="physical_photo" accept="image/*" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-2 py-1.5 text-slate-300 text-[11px] file:mr-2 file:py-0.5 file:px-2 file:rounded file:border-0 file:text-[11px] file:bg-slate-700 file:text-slate-200">
+            <p class="text-[10px] text-slate-400">Maks. 2 MB (otomatis dikompres jika lebih besar)</p>
           </div>
 
-          <div class="space-y-1.5">
+          <div class="space-y-1">
             <label class="block text-slate-300 text-xs">Ganti Foto SN</label>
             <div id="edit_sn_photo_preview_wrap" class="hidden items-center justify-between gap-2 bg-slate-900/80 border border-slate-700 rounded-lg p-1.5">
               <div class="flex items-center gap-2 min-w-0">
@@ -619,6 +626,7 @@
               </div>
             </div>
             <input type="file" name="sn_photo" accept="image/*" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-2 py-1.5 text-slate-300 text-[11px] file:mr-2 file:py-0.5 file:px-2 file:rounded file:border-0 file:text-[11px] file:bg-slate-700 file:text-slate-200">
+            <p class="text-[10px] text-slate-400">Maks. 2 MB (otomatis dikompres jika lebih besar)</p>
           </div>
         </div>
 
@@ -719,7 +727,7 @@
 <% } %>
 
 <!-- =========================================================
-     MODAL ZOOM / PERBESAR FOTO EDIT ASET
+     MODAL ZOOM / PERBESAR FOTO EDIT ASET (STAGED DELETE)
      ========================================================= -->
 <div id="modal-zoom-edit-photo" class="fixed inset-0 z-[60] hidden flex items-center justify-center p-4">
   <div onclick="closeModal('modal-zoom-edit-photo')" class="fixed inset-0 bg-slate-950/85 backdrop-blur-sm"></div>
@@ -737,16 +745,16 @@
     </div>
 
     <div id="zoom-edit-photo-delete-confirm" class="hidden px-5 py-3 bg-rose-950/80 border-t border-rose-500/40 flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs bg-slate-800">
-      <span class="text-rose-200 font-medium">Yakin ingin menghapus foto ini secara permanen?</span>
-      <form id="zoom-edit-photo-delete-form" method="POST" class="flex items-center gap-2 shrink-0">
-        <input type="hidden" name="photo_type" id="zoom-edit-photo-type-input" value="">
+      <span class="text-rose-200 font-medium">Foto akan dihapus permanen setelah Anda klik tombol Update Aset.</span>
+      <div class="flex items-center gap-2 shrink-0">
+        <input type="hidden" id="zoom-edit-photo-type-input" value="">
         <button type="button" onclick="toggleZoomEditPhotoDeleteConfirm(false)" class="px-3 py-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-200 cursor-pointer">
           Batal
         </button>
-        <button type="submit" class="px-3.5 py-1.5 rounded-lg bg-rose-500 hover:bg-rose-600 text-white font-semibold cursor-pointer">
-          Ya, Hapus Foto
+        <button type="button" onclick="stageDeleteEditPhoto()" class="px-3.5 py-1.5 rounded-lg bg-rose-500 hover:bg-rose-600 text-white font-semibold cursor-pointer">
+          Ya, Tandai Hapus
         </button>
-      </form>
+      </div>
     </div>
 
     <div id="zoom-edit-photo-footer" class="px-5 py-3 border-t border-slate-700 flex items-center justify-between gap-2 bg-slate-800">
@@ -843,9 +851,9 @@
     if (typeof window.showAppAlert !== 'function') return;
 
     if (INITIAL_ERROR_MSG) {
-      window.showAppAlert('error', INITIAL_ERROR_MSG, 'Gagal Memproses Aset');
+      window.showAppAlert('error', 'Gagal Memproses Aset', INITIAL_ERROR_MSG);
     } else if (INITIAL_SUCCESS_MSG) {
-      window.showAppAlert('success', INITIAL_SUCCESS_MSG, 'Berhasil');
+      window.showAppAlert('success', 'Berhasil', INITIAL_SUCCESS_MSG);
     }
 
     if ((INITIAL_ERROR_MSG || INITIAL_SUCCESS_MSG) && window.history && window.history.replaceState) {
@@ -904,13 +912,156 @@
     openModal('modal-add-asset');
   }
 
-  document.addEventListener('DOMContentLoaded', () => {
+  // =========================================================
+  // AUTO-COMPRESS FOTO LAMPIRAN ASET JIKA MELEBIHI 2 MB
+  // =========================================================
+  const MAX_ASSET_PHOTO_BYTES = 2 * 1024 * 1024; // 2.00 MB (2.097.152 bytes)
+  const SAFE_TARGET_MAX_BYTES = Math.floor(1.98 * 1024 * 1024); // ~1.98 MB (aman di bawah 2 MB)
+  const PREFERRED_MIN_BYTES = Math.floor(1.6 * 1024 * 1024); // ~1.60 MB (jaga kualitas tetap tinggi)
+
+  async function compressImageToLimit(file, maxBytes = SAFE_TARGET_MAX_BYTES) {
+    if (!file || !file.type.startsWith('image/') || file.size <= MAX_ASSET_PHOTO_BYTES) {
+      return file;
+    }
+
+    const bitmap = await createImageBitmap(file);
+    let { width, height } = bitmap;
+
+    // Pertahankan resolusi asli jika <= 2560px agar detail tetap tajam & ukuran mendekati 2 MB
+    const maxAllowedEdge = 2560;
+    if (width > maxAllowedEdge || height > maxAllowedEdge) {
+      if (width >= height) {
+        height = Math.round((height * maxAllowedEdge) / width);
+        width = maxAllowedEdge;
+      } else {
+        width = Math.round((width * maxAllowedEdge) / height);
+        height = maxAllowedEdge;
+      }
+    }
+
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(bitmap, 0, 0, width, height);
+    bitmap.close();
+
+    const encodeAtQuality = (q) =>
+      new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', q));
+
+    // 1. Coba kualitas tertinggi dulu (0.95) — jika sudah <= 1.98 MB, langsung pakai!
+    let bestBlob = await encodeAtQuality(0.95);
+
+    if (!bestBlob || bestBlob.size > maxBytes) {
+      // 2. Binary search kualitas antara 0.50 s/d 0.94 untuk mencari ukuran paling mendekati 1.98 MB
+      let low = 0.50;
+      let high = 0.94;
+      bestBlob = null;
+
+      for (let i = 0; i < 6; i++) {
+        const mid = (low + high) / 2;
+        const candidate = await encodeAtQuality(mid);
+        if (!candidate) break;
+
+        if (candidate.size <= maxBytes) {
+          bestBlob = candidate;
+          // Jika sudah masuk rentang ideal 1.60 MB - 1.98 MB, hentikan pencarian lebih cepat
+          if (candidate.size >= PREFERRED_MIN_BYTES) break;
+          low = mid; // Naikkan kualitas agar lebih mendekati 1.98 MB
+        } else {
+          high = mid; // Turunkan kualitas karena masih > 1.98 MB
+        }
+      }
+
+      // Fallback terakhir jika kualitas 0.50 masih di atas 2 MB
+      if (!bestBlob) {
+        bestBlob = await encodeAtQuality(0.45);
+      }
+    }
+
+    if (!bestBlob) return file;
+
+    const cleanName = file.name.replace(/\.[^.]+$/, '') + '.jpg';
+    return new File([bestBlob], cleanName, {
+      type: 'image/jpeg',
+      lastModified: Date.now()
+    });
+  }
+
+  function bindAutoCompressToAssetFileInputs() {
+    const fileInputs = document.querySelectorAll(
+      '#modal-add-asset input[type="file"], #modal-edit-asset input[type="file"]'
+    );
+
+    fileInputs.forEach((input) => {
+      if (input.dataset.compressBound === 'true') return;
+      input.dataset.compressBound = 'true';
+
+      input.addEventListener('change', async function () {
+        const rawFile = this.files && this.files[0];
+        if (!rawFile) return;
+
+        // Jika memilih file pengganti di modal edit, batalkan status tanda hapus
+        if (this.closest('#edit-asset-form')) {
+          if (this.name === 'physical_photo') {
+            const rm = document.getElementById('edit_remove_physical_photo');
+            if (rm) rm.value = '0';
+          } else if (this.name === 'sn_photo') {
+            const rm = document.getElementById('edit_remove_sn_photo');
+            if (rm) rm.value = '0';
+          }
+        }
+
+        if (rawFile.size > 20 * 1024 * 1024) {
+          this.value = '';
+          if (typeof window.showAppAlert === 'function') {
+            window.showAppAlert('warning', 'File Terlalu Besar', 'Ukuran file mentah maksimal 20 MB.');
+          }
+          return;
+        }
+
+        if (rawFile.size > MAX_ASSET_PHOTO_BYTES) {
+          const form = this.closest('form');
+          const submitBtn = form ? form.querySelector('button[type="submit"]') : null;
+          const origBtnText = submitBtn ? submitBtn.textContent : '';
+
+          if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Mengompres foto...';
+          }
+
+          try {
+            const compressedFile = await compressImageToLimit(rawFile, SAFE_TARGET_MAX_BYTES);
+            const dt = new DataTransfer();
+            dt.items.add(compressedFile);
+            this.files = dt.files;
+          } catch (err) {
+            console.error('Gagal kompres foto:', err);
+          } finally {
+            if (submitBtn) {
+              submitBtn.disabled = false;
+              submitBtn.textContent = origBtnText;
+            }
+          }
+        }
+      });
+    });
+  }
+
+  function initAssetsPage() {
     onAssetDeviceTypeChange('add_asset');
     loadAssetState();
     renderAssetsTable();
     autoSelectPrefillTaxonomy();
     triggerFlashPopupModal();
-  });
+    bindAutoCompressToAssetFileInputs();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initAssetsPage);
+  } else {
+    initAssetsPage();
+  }
 
   // =========================================================
   // CASCADING KETAT: JENIS PERANGKAT -> BRAND -> MODEL
@@ -1274,7 +1425,16 @@
 
   function openEditAssetModal(asset) {
     currentEditingAssetId = asset.id;
-    document.getElementById('edit-asset-form').action = `/assets/${asset.id}/update`;
+    const editForm = document.getElementById('edit-asset-form');
+    editForm.action = `/assets/${asset.id}/update`;
+
+    // Reset flag hapus foto sementara & bersihkan input file sebelumnya
+    const rmPhys = document.getElementById('edit_remove_physical_photo');
+    const rmSn = document.getElementById('edit_remove_sn_photo');
+    if (rmPhys) rmPhys.value = '0';
+    if (rmSn) rmSn.value = '0';
+    editForm.querySelectorAll('input[type="file"]').forEach(inp => { inp.value = ''; });
+
     document.getElementById('edit_asset_code').value = asset.asset_code || '';
     document.getElementById('edit_asset_type_id').value = asset.device_type_id || '';
 
@@ -1338,17 +1498,35 @@
       dlBtn.setAttribute('download', src.split('/').pop() || 'foto-aset.jpg');
     }
 
-    const delForm = document.getElementById('zoom-edit-photo-delete-form');
     const typeInput = document.getElementById('zoom-edit-photo-type-input');
-    if (delForm && currentEditingAssetId) {
-      delForm.action = `/assets/${currentEditingAssetId}/delete-photo`;
-    }
     if (typeInput) {
       typeInput.value = isPhys ? 'physical' : 'sn';
     }
 
     toggleZoomEditPhotoDeleteConfirm(false);
     openModal('modal-zoom-edit-photo');
+  }
+
+  // Tandai foto untuk dihapus (tidak langsung reload, baru diproses saat klik Update Aset)
+  function stageDeleteEditPhoto() {
+    const type = document.getElementById('zoom-edit-photo-type-input')?.value;
+    if (type !== 'physical' && type !== 'sn') return;
+
+    const isPhys = type === 'physical';
+    const removeInput = document.getElementById(isPhys ? 'edit_remove_physical_photo' : 'edit_remove_sn_photo');
+    const wrap = document.getElementById(isPhys ? 'edit_physical_photo_preview_wrap' : 'edit_sn_photo_preview_wrap');
+    const img = document.getElementById(isPhys ? 'edit_physical_photo_preview' : 'edit_sn_photo_preview');
+    const fileInput = document.querySelector(`#edit-asset-form input[name="${isPhys ? 'physical_photo' : 'sn_photo'}"]`);
+
+    if (removeInput) removeInput.value = '1';
+    if (img) img.src = '';
+    if (wrap) {
+      wrap.classList.add('hidden');
+      wrap.classList.remove('flex');
+    }
+    if (fileInput) fileInput.value = '';
+
+    closeModal('modal-zoom-edit-photo');
   }
 
   function toggleZoomEditPhotoDeleteConfirm(showConfirm) {
@@ -1573,7 +1751,7 @@
     const list = Array.from(selectedAssetsMap.values());
     if (list.length === 0) {
       if (typeof window.showAppAlert === 'function') {
-        window.showAppAlert('warning', 'Pilih minimal 1 perangkat menggunakan checkbox terlebih dahulu sebelum mencetak label.', 'Belum Ada Aset Dipilih');
+        window.showAppAlert('warning', 'Belum Ada Aset Dipilih', 'Pilih minimal 1 perangkat menggunakan checkbox terlebih dahulu sebelum mencetak label.');
       }
       return;
     }

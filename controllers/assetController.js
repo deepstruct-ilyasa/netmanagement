@@ -4,6 +4,17 @@ const path = require('path');
 const { getAssetSettings, generateNextAssetCode } = require('../utils/assetCodeHelper');
 const { logAudit } = require('../utils/auditLogger');
 
+const MAX_PHOTO_BYTES = 2 * 1024 * 1024; // 2 MB
+const SAFE_SERVER_TARGET_BYTES = Math.floor(1.98 * 1024 * 1024); // ~1.98 MB
+const PREFERRED_SERVER_MIN_BYTES = Math.floor(1.6 * 1024 * 1024); // ~1.60 MB
+
+let sharpLib = null;
+try {
+  sharpLib = require('sharp');
+} catch (_) {
+  sharpLib = null;
+}
+
 function deleteFileIfExists(publicRelativePath) {
   if (!publicRelativePath) return;
   const cleanRel = publicRelativePath.startsWith('/') ? publicRelativePath.slice(1) : publicRelativePath;
@@ -13,6 +24,64 @@ function deleteFileIfExists(publicRelativePath) {
       fs.unlinkSync(filePath);
     } catch (e) {}
   }
+}
+
+async function enforcePhotoMaxSize(uploadedFile) {
+  if (!uploadedFile || !uploadedFile.path) return { ok: true };
+  if (uploadedFile.size <= MAX_PHOTO_BYTES) return { ok: true };
+
+  if (sharpLib) {
+    const tempOut = `${uploadedFile.path}_compressed.jpg`;
+    let low = 50;
+    let high = 95;
+    let bestSize = null;
+
+    try {
+      for (let i = 0; i < 6; i++) {
+        const midQuality = Math.round((low + high) / 2);
+        await sharpLib(uploadedFile.path)
+          .rotate()
+          .resize({ width: 2560, height: 2560, fit: 'inside', withoutEnlargement: true })
+          .jpeg({ quality: midQuality, mozjpeg: true })
+          .toFile(tempOut);
+
+        const stat = fs.statSync(tempOut);
+        if (stat.size <= SAFE_SERVER_TARGET_BYTES) {
+          bestSize = stat.size;
+          fs.copyFileSync(tempOut, `${tempOut}.best`);
+          if (stat.size >= PREFERRED_SERVER_MIN_BYTES) break;
+          low = midQuality + 1;
+        } else {
+          high = midQuality - 1;
+        }
+      }
+
+      if (bestSize && fs.existsSync(`${tempOut}.best`)) {
+        fs.unlinkSync(uploadedFile.path);
+        fs.renameSync(`${tempOut}.best`, uploadedFile.path);
+        uploadedFile.size = bestSize;
+        uploadedFile.originalname = `${path.basename(uploadedFile.originalname || 'photo', path.extname(uploadedFile.originalname || '.jpg'))}.jpg`;
+        return { ok: true };
+      }
+    } catch (err) {
+      console.error('Gagal mengompres foto di server:', err);
+    } finally {
+      for (const f of [tempOut, `${tempOut}.best`]) {
+        if (fs.existsSync(f)) {
+          try { fs.unlinkSync(f); } catch (_) {}
+        }
+      }
+    }
+  }
+
+  try {
+    if (fs.existsSync(uploadedFile.path)) fs.unlinkSync(uploadedFile.path);
+  } catch (_) {}
+
+  return {
+    ok: false,
+    message: 'Ukuran foto melebihi batas maksimal 2 MB setelah kompresi.'
+  };
 }
 
 function renamePhotoWithAssetCode(uploadedFile, assetCode, suffixType) {
@@ -239,7 +308,7 @@ exports.detailAsset = (req, res) => {
 };
 
 // 3. POST /assets - Tambah Aset Baru (Termasuk Promosi dari Temuan Audit Unregistered)
-exports.createAsset = (req, res) => {
+exports.createAsset = async (req, res) => {
   try {
     const {
       code_mode,
@@ -274,15 +343,38 @@ exports.createAsset = (req, res) => {
       ? `/assets?register_audit_item=${auditItem.id}&error=`
       : '/assets?error=';
 
+    const cleanupUploadedFiles = () => {
+      for (const field of ['physical_photo', 'sn_photo']) {
+        const f = req.files?.[field]?.[0];
+        if (f && f.path && fs.existsSync(f.path)) {
+          try { fs.unlinkSync(f.path); } catch (_) {}
+        }
+      }
+    };
+
     if (!branch_id || !device_type_id) {
+      cleanupUploadedFiles();
       return res.redirect(`${errorRedirectBase}${encodeURIComponent('Cabang dan Jenis Perangkat wajib diisi')}`);
     }
 
     if (!req.canAccessBranch(branch_id)) {
+      cleanupUploadedFiles();
       return res.status(403).render('forbidden', {
         title: '403 Akses Ditolak',
         message: 'Anda tidak memiliki hak akses untuk menambah aset pada cabang tersebut.'
       });
+    }
+
+    // Validasi & auto-compress foto maksimal 2 MB sebelum diproses
+    for (const field of ['physical_photo', 'sn_photo']) {
+      const f = req.files?.[field]?.[0];
+      if (f) {
+        const check = await enforcePhotoMaxSize(f);
+        if (!check.ok) {
+          cleanupUploadedFiles();
+          return res.redirect(`${errorRedirectBase}${encodeURIComponent(check.message)}`);
+        }
+      }
     }
 
     const finalAssetCode =
@@ -292,6 +384,7 @@ exports.createAsset = (req, res) => {
 
     const existingCode = db.prepare(`SELECT id FROM assets WHERE asset_code = ?`).get(finalAssetCode);
     if (existingCode) {
+      cleanupUploadedFiles();
       return res.redirect(`${errorRedirectBase}${encodeURIComponent(`Kode aset ${finalAssetCode} sudah terdaftar`)}`);
     }
 
@@ -299,6 +392,7 @@ exports.createAsset = (req, res) => {
     if (cleanSN) {
       const existingSN = db.prepare(`SELECT id FROM assets WHERE serial_number = ?`).get(cleanSN);
       if (existingSN) {
+        cleanupUploadedFiles();
         return res.redirect(`${errorRedirectBase}${encodeURIComponent(`Serial Number ${cleanSN} sudah terdaftar pada aset lain`)}`);
       }
     }
@@ -420,19 +514,43 @@ exports.createAsset = (req, res) => {
 };
 
 // 4. POST /assets/:id/update - Edit Data Administrasi & Fisik Aset
-exports.updateAsset = (req, res) => {
+exports.updateAsset = async (req, res) => {
+  const cleanupUploadedFiles = () => {
+    for (const field of ['physical_photo', 'sn_photo']) {
+      const f = req.files?.[field]?.[0];
+      if (f && f.path && fs.existsSync(f.path)) {
+        try { fs.unlinkSync(f.path); } catch (_) {}
+      }
+    }
+  };
+
   try {
     const assetId = req.params.id;
+    const redirectTarget = req.body.redirect_to || '/assets';
     const oldAsset = db.prepare(`SELECT * FROM assets WHERE id = ?`).get(assetId);
     if (!oldAsset) {
+      cleanupUploadedFiles();
       return res.redirect('/assets?error=Aset+tidak+ditemukan');
     }
 
     if (!req.canAccessBranch(oldAsset.branch_id)) {
+      cleanupUploadedFiles();
       return res.status(403).render('forbidden', {
         title: '403 Akses Ditolak',
         message: 'Anda tidak memiliki hak akses untuk mengubah aset pada cabang tersebut.'
       });
+    }
+
+    // Validasi & auto-compress foto maksimal 2 MB sebelum menghapus foto lama
+    for (const field of ['physical_photo', 'sn_photo']) {
+      const f = req.files?.[field]?.[0];
+      if (f) {
+        const check = await enforcePhotoMaxSize(f);
+        if (!check.ok) {
+          cleanupUploadedFiles();
+          return res.redirect(`${redirectTarget}?error=${encodeURIComponent(check.message)}`);
+        }
+      }
     }
 
     const {
@@ -448,20 +566,24 @@ exports.updateAsset = (req, res) => {
       warranty_end,
       vendor_name,
       purchase_price,
-      notes
+      notes,
+      remove_physical_photo,
+      remove_sn_photo
     } = req.body;
 
     const cleanCode = asset_code ? asset_code.trim().toUpperCase() : oldAsset.asset_code;
     const dupCode = db.prepare(`SELECT id FROM assets WHERE asset_code = ? AND id != ?`).get(cleanCode, assetId);
     if (dupCode) {
-      return res.redirect('/assets?error=Kode+aset+sudah+digunakan+oleh+unit+lain');
+      cleanupUploadedFiles();
+      return res.redirect(`${redirectTarget}?error=Kode+aset+sudah+digunakan+oleh+unit+lain`);
     }
 
     const cleanSN = serial_number && serial_number.trim() !== '' ? serial_number.trim() : null;
     if (cleanSN) {
       const dupSN = db.prepare(`SELECT id FROM assets WHERE serial_number = ? AND id != ?`).get(cleanSN, assetId);
       if (dupSN) {
-        return res.redirect('/assets?error=Serial+Number+sudah+digunakan+oleh+unit+lain');
+        cleanupUploadedFiles();
+        return res.redirect(`${redirectTarget}?error=Serial+Number+sudah+digunakan+oleh+unit+lain`);
       }
     }
 
@@ -469,12 +591,18 @@ exports.updateAsset = (req, res) => {
     if (req.files?.['physical_photo']) {
       deleteFileIfExists(oldAsset.physical_photo);
       physicalPhoto = renamePhotoWithAssetCode(req.files['physical_photo'][0], cleanCode, 'FISIK');
+    } else if (remove_physical_photo === '1') {
+      deleteFileIfExists(oldAsset.physical_photo);
+      physicalPhoto = null;
     }
 
     let snPhoto = oldAsset.sn_photo;
     if (req.files?.['sn_photo']) {
       deleteFileIfExists(oldAsset.sn_photo);
       snPhoto = renamePhotoWithAssetCode(req.files['sn_photo'][0], cleanCode, 'SN');
+    } else if (remove_sn_photo === '1') {
+      deleteFileIfExists(oldAsset.sn_photo);
+      snPhoto = null;
     }
 
     const linkedDevice = db.prepare(`SELECT * FROM devices WHERE asset_id = ?`).get(assetId);
@@ -577,10 +705,10 @@ exports.updateAsset = (req, res) => {
       description: `Memperbarui data aset: ${cleanCode}`
     });
 
-    const redirectTarget = req.body.redirect_to || '/assets';
     res.redirect(`${redirectTarget}?success=Data+aset+${encodeURIComponent(cleanCode)}+berhasil+diperbarui`);
   } catch (err) {
     console.error(err);
+    cleanupUploadedFiles();
     res.redirect('/assets?error=Gagal+memperbarui+data+aset');
   }
 };
