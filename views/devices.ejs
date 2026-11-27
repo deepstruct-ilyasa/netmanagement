@@ -1002,7 +1002,7 @@
     if (filtered.length === 0) {
       listEl.innerHTML = `
         <div class="px-3 py-3 text-xs text-slate-400 text-center">
-          Tidak ada aset spare yang cocok dengan "<span class="text-white font-semibold">${keyword.replace(/</g, '&lt;')}</span>".
+          Tidak ada aset spare yang cocok <span class="text-white font-semibold">${keyword.replace(/</g, '&lt;')}</span>.
         </div>
       `;
       return;

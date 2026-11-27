@@ -32,12 +32,12 @@
 
   <!-- Branch Switcher / Filter Cabang Aktif -->
   <div class="px-5 py-3 border-b border-slate-700/80 shrink-0">
-    <form id="sidebar-branch-form" action="/set-branch" method="POST">
+    <form id="sidebar-branch-form" action="/set-branch" method="POST" onsubmit="event.preventDefault(); handleBranchSwitch(document.getElementById('sidebar-branch-select'));">
       <input type="hidden" name="redirect_to" id="sidebar-redirect-to" value="/">
       <div class="relative flex items-center group">
         <select id="sidebar-branch-select" name="branch_id"
           aria-label="Pilih Cabang"
-          onchange="document.getElementById('sidebar-redirect-to').value = window.location.pathname; this.form.submit();"
+          onchange="handleBranchSwitch(this)"
           class="w-full appearance-none bg-transparent border-0 p-0 pr-6 text-xs font-semibold text-slate-200 group-hover:text-emerald-400 focus:outline-none focus:ring-0 transition cursor-pointer truncate">
           <% if (typeof navBranches !== 'undefined' && navBranches.length > 1) { %>
             <option value="all" class="bg-slate-800 text-white" <%= selectedBranchId === 'all' ? 'selected' : '' %>>
@@ -333,6 +333,101 @@
     if (!menu) return;
     menu.classList.toggle('hidden');
     if (icon) icon.classList.toggle('rotate-180');
+  }
+
+  // =========================================================
+  // SWITCH CABANG TANPA FULL PAGE RELOAD (PJAX CONTENT ONLY)
+  // =========================================================
+  async function handleBranchSwitch(selectEl) {
+    if (!selectEl) return;
+    const branchId = selectEl.value;
+    const currentPathWithQuery = window.location.pathname + window.location.search;
+
+    selectEl.disabled = true;
+
+    try {
+      const bodyParams = new URLSearchParams();
+      bodyParams.append('branch_id', branchId);
+      bodyParams.append('redirect_to', currentPathWithQuery);
+
+      const postRes = await fetch('/set-branch', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: bodyParams.toString()
+      });
+
+      // Ambil HTML terbaru dari URL tujuan (mengikuti redirect jika server mengalihkan URL)
+      const targetUrl = postRes.redirected ? postRes.url : currentPathWithQuery;
+
+      // Jika sudah ada helper PJAX global di footer/header, gunakan itu; jika tidak, ganti konten <main> langsung
+      if (typeof window.pjaxNavigate === 'function') {
+        await window.pjaxNavigate(targetUrl, { pushState: targetUrl !== currentPathWithQuery });
+      } else {
+        const pageRes = await fetch(targetUrl, {
+          headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        });
+        const htmlText = await pageRes.text();
+        const doc = new DOMParser().parseFromString(htmlText, 'text/html');
+
+        const newMain = doc.querySelector('main');
+        const currentMain = document.querySelector('main');
+
+        if (newMain && currentMain) {
+          if (targetUrl !== currentPathWithQuery) {
+            window.history.pushState({}, doc.title || document.title, targetUrl);
+          }
+          if (doc.title) document.title = doc.title;
+
+          // Sinkronkan juga judul halaman di header atas jika ada
+          const newHeaderTitle = doc.querySelector('header h1, #header-page-title');
+          const curHeaderTitle = document.querySelector('header h1, #header-page-title');
+          if (newHeaderTitle && curHeaderTitle) {
+            curHeaderTitle.innerHTML = newHeaderTitle.innerHTML;
+          }
+
+          // Sinkronkan dropdown cabang di dalam halaman (misal di topology.ejs) jika ada
+          const newPageBranchSel = doc.querySelector('main select[name="branch_id"], #topology-branch-select');
+          if (newPageBranchSel) {
+            newPageBranchSel.value = branchId;
+          }
+
+          // Hapus modal lama yang berada di luar <main> agar tidak dobel saat script dieksekusi ulang
+          document.querySelectorAll('body > div[id^="modal-"]').forEach(el => el.remove());
+          doc.querySelectorAll('body > div[id^="modal-"]').forEach(modalEl => {
+            document.body.appendChild(modalEl.cloneNode(true));
+          });
+
+          currentMain.replaceWith(newMain);
+
+          // Eksekusi ulang script inline milik konten halaman baru (penting untuk Cytoscape/Vis.js di topology.ejs)
+          const scripts = Array.from(doc.querySelectorAll('script')).filter(s =>
+            !s.src &&
+            !s.textContent.includes('handleBranchSwitch') &&
+            !s.textContent.includes('SERVER_EXPIRES_AT')
+          );
+          scripts.forEach(oldScript => {
+            const newScript = document.createElement('script');
+            newScript.textContent = oldScript.textContent;
+            document.body.appendChild(newScript);
+            newScript.remove();
+          });
+
+          if (typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') {
+            lucide.createIcons();
+          }
+        } else {
+          window.location.href = targetUrl;
+        }
+      }
+    } catch (err) {
+      console.error('Gagal mengganti cabang via AJAX:', err);
+      window.location.reload();
+    } finally {
+      selectEl.disabled = false;
+    }
   }
 
   // =========================================================

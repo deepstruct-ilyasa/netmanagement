@@ -16,9 +16,11 @@
 
     <div class="flex items-center gap-2 text-xs">
       <!-- Filter Cabang -->
-      <form method="GET" action="/topology" class="flex items-center gap-2 flex-1 sm:flex-initial min-w-0">
+      <form id="topology-branch-form" method="GET" action="/topology"
+        onsubmit="event.preventDefault(); handleTopologyBranchChange(document.getElementById('branch_filter'));"
+        class="flex items-center gap-2 flex-1 sm:flex-initial min-w-0">
         <label for="branch_filter" class="text-slate-500 dark:text-slate-400 font-medium shrink-0">Cabang:</label>
-        <select id="branch_filter" name="branch_id" onchange="this.form.submit()"
+        <select id="branch_filter" name="branch_id" onchange="handleTopologyBranchChange(this)"
           class="w-full sm:w-auto max-w-full min-w-0 flex-1 truncate bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-1.5 text-slate-800 dark:text-white focus:outline-none focus:border-emerald-500">
           <% if (branches.length > 1) { %>
             <option value="all" <%= selectedBranchId === 'all' ? 'selected' : '' %>>Semua Cabang</option>
