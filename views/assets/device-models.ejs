@@ -9,9 +9,9 @@
       <p class="text-xs text-slate-400">Kelola seri atau tipe perangkat untuk masing-masing brand.</p>
     </div>
     <% if (can('model.write')) { %>
-      <button onclick="openModal('modal-add-model')" class="inline-flex items-center justify-center gap-2 bg-sky-500 hover:bg-sky-600 text-slate-950 font-semibold text-sm px-4 py-2.5 rounded-lg transition shadow-sm cursor-pointer">
+      <button onclick="openModal('modal-add-model')" class="inline-flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-semibold text-sm px-4 py-2.5 rounded-lg transition shadow-sm cursor-pointer">
         <i data-lucide="plus" class="w-4 h-4"></i>
-        <span>Tambah Model / Type</span>
+        <span>Tambah</span>
       </button>
     <% } %>
   </div>
@@ -23,10 +23,10 @@
         <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"></i>
         <input type="text" id="model-search-input" oninput="onModelSearch(this.value)"
           placeholder="Cari nama model, brand, atau jenis..."
-          class="w-full bg-slate-900 border border-slate-600 rounded-lg pl-9 pr-3 py-2 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-sky-400">
+          class="w-full bg-slate-900 border border-slate-600 rounded-lg pl-9 pr-3 py-2 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-emerald-400">
       </div>
       <div class="flex items-center gap-2 text-xs shrink-0">
-        <select id="model-per-page" onchange="changeModelPerPage(this.value)" class="bg-slate-900 border border-slate-600 rounded-lg px-2 py-1.5 text-white focus:outline-none focus:border-sky-400">
+        <select id="model-per-page" onchange="changeModelPerPage(this.value)" class="bg-slate-900 border border-slate-600 rounded-lg px-2 py-1.5 text-white focus:outline-none focus:border-emerald-400">
           <option value="8">8</option>
           <option value="25">25</option>
           <option value="50">50</option>
@@ -110,7 +110,7 @@
   <div onclick="closeModal('modal-add-model')" class="fixed inset-0 bg-slate-950/75 backdrop-blur-sm"></div>
   <div class="relative bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-md p-6 shadow-2xl z-10 space-y-4">
     <div class="flex items-center justify-between border-b border-slate-700 pb-3">
-      <h3 class="text-base font-semibold text-sky-400">+ Tambah Model / Type</h3>
+      <h3 class="text-base font-semibold text-emerald-500">+ Tambah Model / Type</h3>
       <button type="button" onclick="closeModal('modal-add-model')" class="text-slate-400 hover:text-white cursor-pointer">
         <i data-lucide="x" class="w-5 h-5"></i>
       </button>
@@ -118,7 +118,7 @@
     <form action="/device-models" method="POST" class="space-y-4 text-sm">
       <div>
         <label class="block text-slate-300 mb-1">Brand / Merk *</label>
-        <select name="brand_id" required class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-sky-400">
+        <select name="brand_id" required class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-400">
           <option value="">-- Pilih Brand --</option>
           <% brands.forEach(b => { %>
             <option value="<%= b.id %>"><%= b.brand_name %></option>
@@ -127,7 +127,7 @@
       </div>
       <div>
         <label class="block text-slate-300 mb-1">Jenis Perangkat (Opsional)</label>
-        <select name="device_type_id" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-sky-400">
+        <select name="device_type_id" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-400">
           <option value="">-- Berlaku untuk Semua Jenis --</option>
           <% deviceTypes.forEach(dt => { %>
             <option value="<%= dt.id %>"><%= dt.type_name %></option>
@@ -136,11 +136,11 @@
       </div>
       <div>
         <label class="block text-slate-300 mb-1">Nama Model / Type *</label>
-        <input type="text" name="model_name" required placeholder="Contoh: CCR2004-16G-2S+, RG-ES226GC-P" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-sky-400">
+        <input type="text" name="model_name" required placeholder="Contoh: CCR2004-16G-2S+, RG-ES226GC-P" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-400">
       </div>
       <div class="pt-2 flex justify-end gap-2">
         <button type="button" onclick="closeModal('modal-add-model')" class="px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-200 cursor-pointer">Batal</button>
-        <button type="submit" class="px-4 py-2 rounded-lg bg-sky-500 hover:bg-sky-600 text-slate-950 font-semibold cursor-pointer">Simpan</button>
+        <button type="submit" class="px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-semibold cursor-pointer">Simpan</button>
       </div>
     </form>
   </div>
@@ -151,7 +151,7 @@
   <div onclick="closeModal('modal-edit-model')" class="fixed inset-0 bg-slate-950/75 backdrop-blur-sm"></div>
   <div class="relative bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-md p-6 shadow-2xl z-10 space-y-4">
     <div class="flex items-center justify-between border-b border-slate-700 pb-3">
-      <h3 class="text-base font-semibold text-sky-400">Edit Model / Type</h3>
+      <h3 class="text-base font-semibold text-emerald-500">Edit Model / Type</h3>
       <button type="button" onclick="closeModal('modal-edit-model')" class="text-slate-400 hover:text-white cursor-pointer">
         <i data-lucide="x" class="w-5 h-5"></i>
       </button>
@@ -159,7 +159,7 @@
     <form id="edit-model-form" method="POST" class="space-y-4 text-sm">
       <div>
         <label class="block text-slate-300 mb-1">Brand / Merk *</label>
-        <select name="brand_id" id="edit_model_brand_id" required class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-sky-400">
+        <select name="brand_id" id="edit_model_brand_id" required class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-400">
           <% brands.forEach(b => { %>
             <option value="<%= b.id %>"><%= b.brand_name %></option>
           <% }) %>
@@ -167,7 +167,7 @@
       </div>
       <div>
         <label class="block text-slate-300 mb-1">Jenis Perangkat (Opsional)</label>
-        <select name="device_type_id" id="edit_model_type_id" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-sky-400">
+        <select name="device_type_id" id="edit_model_type_id" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-400">
           <option value="">-- Berlaku untuk Semua Jenis --</option>
           <% deviceTypes.forEach(dt => { %>
             <option value="<%= dt.id %>"><%= dt.type_name %></option>
@@ -176,11 +176,11 @@
       </div>
       <div>
         <label class="block text-slate-300 mb-1">Nama Model / Type *</label>
-        <input type="text" name="model_name" id="edit_model_name" required class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-sky-400">
+        <input type="text" name="model_name" id="edit_model_name" required class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-400">
       </div>
       <div class="pt-2 flex justify-end gap-2">
         <button type="button" onclick="closeModal('modal-edit-model')" class="px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-200 cursor-pointer">Batal</button>
-        <button type="submit" class="px-4 py-2 rounded-lg bg-sky-500 hover:bg-sky-600 text-slate-950 font-semibold cursor-pointer">Update</button>
+        <button type="submit" class="px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-semibold cursor-pointer">Update</button>
       </div>
     </form>
   </div>
@@ -309,7 +309,7 @@
       btn.textContent = label;
       btn.disabled = disabled;
       btn.className = active
-        ? 'px-2.5 py-1 rounded-md bg-sky-500 text-slate-950 font-bold cursor-pointer'
+        ? 'px-2.5 py-1 rounded-md bg-emerald-500 text-slate-950 font-bold cursor-pointer'
         : disabled
           ? 'px-2.5 py-1 rounded-md bg-slate-800/50 text-slate-600 border border-slate-700/50 cursor-not-allowed'
           : 'px-2.5 py-1 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition cursor-pointer';

@@ -184,7 +184,7 @@
                 </div>
               </td>
               <td class="py-3.5 px-4">
-                <span class="px-2 py-0.5 rounded bg-slate-900 border border-slate-700 text-xs font-semibold text-sky-400">
+                <span class="px-2 py-0.5 rounded bg-slate-900 border border-slate-700 text-xs font-semibold text-emerald-400">
                   <%= a.branch_code %>
                 </span>
               </td>
@@ -326,7 +326,7 @@
           </div>
           <input type="text" name="manual_asset_code" id="manual_asset_code_input" disabled
             placeholder="Contoh: <%= sampleAssetCode %>"
-            class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white text-xs font-mono disabled:opacity-50 focus:outline-none focus:border-emerald-400">
+            class="w-full dark:bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs font-mono disabled:opacity-50 focus:outline-none focus:border-emerald-400">
         </div>
 
         <div class="grid grid-cols-2 gap-2.5 sm:gap-3">
@@ -478,7 +478,7 @@
         </div>
       </div>
 
-      <div class="px-4 sm:px-6 py-3 border-t border-slate-700 bg-slate-800/95 flex justify-end gap-2 shrink-0">
+      <div class="px-4 sm:px-6 py-3 border-t border-slate-700 dark:bg-slate-800 flex justify-end gap-2 shrink-0">
         <button type="button" onclick="closeModal('modal-add-asset')" class="px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs sm:text-sm cursor-pointer">Batal</button>
         <button type="submit" class="px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-semibold text-xs sm:text-sm cursor-pointer">Simpan Aset</button>
       </div>
@@ -493,7 +493,7 @@
   <div onclick="closeModal('modal-edit-asset')" class="fixed inset-0 bg-slate-950/75 backdrop-blur-sm"></div>
   <div class="relative bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl z-10 overflow-hidden">
     <div class="px-4 sm:px-6 py-3.5 border-b border-slate-700 flex items-center justify-between shrink-0">
-      <h3 class="text-sm sm:text-base font-semibold text-sky-400">Edit Data Aset</h3>
+      <h3 class="text-sm sm:text-base font-semibold text-emerald-400">Edit Data Aset</h3>
       <button type="button" onclick="closeModal('modal-edit-asset')" class="text-slate-400 hover:text-white p-1 cursor-pointer">
         <i data-lucide="x" class="w-5 h-5"></i>
       </button>
@@ -504,12 +504,12 @@
         <div class="grid grid-cols-2 gap-2.5 sm:gap-3">
           <div>
             <label class="block text-slate-300 text-xs mb-1">Kode Aset *</label>
-            <input type="text" name="asset_code" id="edit_asset_code" required class="w-full bg-slate-900 border border-slate-600 rounded-lg px-2.5 sm:px-3 py-2 text-white text-xs font-mono focus:outline-none focus:border-sky-400">
+            <input type="text" name="asset_code" id="edit_asset_code" disabled required class="w-full bg-slate-900 border disabled:cursor-not-allowed border-slate-600 rounded-lg px-2.5 sm:px-3 py-2 text-white text-xs font-mono focus:outline-none focus:border-emerald-400">
           </div>
           <div>
             <label class="block text-slate-300 text-xs mb-1">Jenis Perangkat *</label>
             <select name="device_type_id" id="edit_asset_type_id" required onchange="onAssetDeviceTypeChange('edit_asset')"
-              class="w-full bg-slate-900 border border-slate-600 rounded-lg px-2.5 sm:px-3 py-2 text-white text-xs focus:outline-none focus:border-sky-400">
+              class="w-full bg-slate-900 border border-slate-600 rounded-lg px-2.5 sm:px-3 py-2 text-white text-xs focus:outline-none focus:border-emerald-400">
               <option value="">-- Pilih Jenis --</option>
               <% deviceTypes.forEach(dt => { %>
                 <option value="<%= dt.id %>"><%= dt.type_name %></option>
@@ -522,14 +522,14 @@
           <div>
             <label class="block text-slate-300 text-xs mb-1">Brand / Merk</label>
             <select name="brand_id" id="edit_asset_brand_id" disabled onchange="onAssetBrandChange('edit_asset')"
-              class="w-full bg-slate-900 border border-slate-600 rounded-lg px-2.5 sm:px-3 py-2 text-white text-xs disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:border-sky-400">
+              class="w-full bg-slate-900 border border-slate-600 rounded-lg px-2.5 sm:px-3 py-2 text-white text-xs disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:border-emerald-400">
               <option value="">-- Pilih Jenis Dulu --</option>
             </select>
           </div>
           <div>
             <label class="block text-slate-300 text-xs mb-1">Model / Type</label>
             <select name="model_id" id="edit_asset_model_id" disabled
-              class="w-full bg-slate-900 border border-slate-600 rounded-lg px-2.5 sm:px-3 py-2 text-white text-xs disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:border-sky-400">
+              class="w-full bg-slate-900 border border-slate-600 rounded-lg px-2.5 sm:px-3 py-2 text-white text-xs disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:border-emerald-400">
               <option value="">-- Pilih Brand Dulu --</option>
             </select>
           </div>
@@ -538,18 +538,18 @@
         <div class="grid grid-cols-2 gap-2.5 sm:gap-3">
           <div>
             <label class="block text-slate-300 text-xs mb-1">Serial Number (SN)</label>
-            <input type="text" name="serial_number" id="edit_asset_sn" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-2.5 sm:px-3 py-2 text-white text-xs font-mono focus:outline-none focus:border-sky-400">
+            <input type="text" name="serial_number" id="edit_asset_sn" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-2.5 sm:px-3 py-2 text-white text-xs font-mono focus:outline-none focus:border-emerald-400">
           </div>
           <div>
             <label class="block text-slate-300 text-xs mb-1">MAC Address Utama</label>
-            <input type="text" name="mac_address" id="edit_asset_mac" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-2.5 sm:px-3 py-2 text-white text-xs font-mono focus:outline-none focus:border-sky-400">
+            <input type="text" name="mac_address" id="edit_asset_mac" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-2.5 sm:px-3 py-2 text-white text-xs font-mono focus:outline-none focus:border-emerald-400">
           </div>
         </div>
 
         <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-3">
           <div>
             <label class="block text-slate-300 text-xs mb-1">Status Aset</label>
-            <select name="status" id="edit_asset_status" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-2.5 sm:px-3 py-2 text-white text-xs focus:outline-none focus:border-sky-400">
+            <select name="status" id="edit_asset_status" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-2.5 sm:px-3 py-2 text-white text-xs focus:outline-none focus:border-emerald-400">
               <option value="active">Active (Terpasang)</option>
               <option value="spare">Spare (Gudang IT)</option>
               <option value="maintenance">Service / RMA</option>
@@ -559,7 +559,7 @@
           </div>
           <div>
             <label class="block text-slate-300 text-xs mb-1">Kondisi Fisik</label>
-            <select name="condition" id="edit_asset_condition" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-2.5 sm:px-3 py-2 text-white text-xs focus:outline-none focus:border-sky-400">
+            <select name="condition" id="edit_asset_condition" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-2.5 sm:px-3 py-2 text-white text-xs focus:outline-none focus:border-emerald-400">
               <option value="good">Baik (Good)</option>
               <option value="fair">Kurang Baik (Fair)</option>
               <option value="damaged">Rusak (Damaged)</option>
@@ -567,22 +567,22 @@
           </div>
           <div class="col-span-2 sm:col-span-1">
             <label class="block text-slate-300 text-xs mb-1">Harga Perolehan (Rp)</label>
-            <input type="number" name="purchase_price" id="edit_asset_price" min="0" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-2.5 sm:px-3 py-2 text-white text-xs focus:outline-none focus:border-sky-400">
+            <input type="number" name="purchase_price" id="edit_asset_price" min="0" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-2.5 sm:px-3 py-2 text-white text-xs focus:outline-none focus:border-emerald-400">
           </div>
         </div>
 
         <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-3">
           <div>
             <label class="block text-slate-300 text-xs mb-1">Tanggal Beli</label>
-            <input type="date" name="purchase_date" id="edit_asset_purchase_date" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-2.5 sm:px-3 py-2 text-white text-xs focus:outline-none focus:border-sky-400">
+            <input type="date" name="purchase_date" id="edit_asset_purchase_date" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-2.5 sm:px-3 py-2 text-white text-xs focus:outline-none focus:border-emerald-400">
           </div>
           <div>
             <label class="block text-slate-300 text-xs mb-1">Akhir Garansi</label>
-            <input type="date" name="warranty_end" id="edit_asset_warranty_end" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-2.5 sm:px-3 py-2 text-white text-xs focus:outline-none focus:border-sky-400">
+            <input type="date" name="warranty_end" id="edit_asset_warranty_end" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-2.5 sm:px-3 py-2 text-white text-xs focus:outline-none focus:border-emerald-400">
           </div>
           <div class="col-span-2 sm:col-span-1">
             <label class="block text-slate-300 text-xs mb-1">Vendor / Supplier</label>
-            <input type="text" name="vendor_name" id="edit_asset_vendor" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-2.5 sm:px-3 py-2 text-white text-xs focus:outline-none focus:border-sky-400">
+            <input type="text" name="vendor_name" id="edit_asset_vendor" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-2.5 sm:px-3 py-2 text-white text-xs focus:outline-none focus:border-emerald-400">
           </div>
         </div>
 
@@ -592,7 +592,7 @@
             <div id="edit_physical_photo_preview_wrap" class="hidden items-center justify-between gap-2 bg-slate-900/80 border border-slate-700 rounded-lg p-1.5">
               <div class="flex items-center gap-2 min-w-0">
                 <button type="button" onclick="zoomEditPhoto('physical')" title="Klik untuk memperbesar"
-                  class="relative group shrink-0 rounded overflow-hidden border border-slate-600 hover:border-sky-400 cursor-pointer">
+                  class="relative group shrink-0 rounded overflow-hidden border border-slate-600 hover:border-emerald-400 cursor-pointer">
                   <img id="edit_physical_photo_preview" src="" alt="Foto Fisik Saat Ini" class="w-12 h-9 object-cover group-hover:scale-105 transition">
                 </button>
                 <span class="text-[10px] text-slate-400 truncate">Foto fisik tersimpan</span>
@@ -606,7 +606,7 @@
             <div id="edit_sn_photo_preview_wrap" class="hidden items-center justify-between gap-2 bg-slate-900/80 border border-slate-700 rounded-lg p-1.5">
               <div class="flex items-center gap-2 min-w-0">
                 <button type="button" onclick="zoomEditPhoto('sn')" title="Klik untuk memperbesar"
-                  class="relative group shrink-0 rounded overflow-hidden border border-slate-600 hover:border-sky-400 cursor-pointer">
+                  class="relative group shrink-0 rounded overflow-hidden border border-slate-600 hover:border-emerald-400 cursor-pointer">
                   <img id="edit_sn_photo_preview" src="" alt="Foto SN Saat Ini" class="w-12 h-9 object-cover group-hover:scale-105 transition">
                 </button>
                 <span class="text-[10px] text-slate-400 truncate">Foto SN tersimpan</span>
@@ -618,13 +618,13 @@
 
         <div>
           <label class="block text-slate-300 text-xs mb-1">Catatan Kelengkapan</label>
-          <textarea name="notes" id="edit_asset_notes" rows="2" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-sky-400"></textarea>
+          <textarea name="notes" id="edit_asset_notes" rows="2" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-emerald-400"></textarea>
         </div>
       </div>
 
-      <div class="px-4 sm:px-6 py-3 border-t border-slate-700 bg-slate-800/95 flex justify-end gap-2 shrink-0">
+      <div class="px-4 sm:px-6 py-3 border-t border-slate-700 dark:bg-slate-800/95 flex justify-end gap-2 shrink-0">
         <button type="button" onclick="closeModal('modal-edit-asset')" class="px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs sm:text-sm cursor-pointer">Batal</button>
-        <button type="submit" class="px-4 py-2 rounded-lg bg-sky-500 hover:bg-sky-600 text-slate-950 font-semibold text-xs sm:text-sm cursor-pointer">Update Aset</button>
+        <button type="submit" class="px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-semibold text-xs sm:text-sm cursor-pointer">Update Aset</button>
       </div>
     </form>
   </div>
@@ -635,7 +635,7 @@
   <div onclick="closeModal('modal-asset-settings')" class="fixed inset-0 bg-slate-950/75 backdrop-blur-sm"></div>
   <div class="relative bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-md p-6 shadow-2xl z-10 space-y-4">
     <div class="flex items-center justify-between border-b border-slate-700 pb-3">
-      <h3 class="text-base font-semibold text-sky-400">Pengaturan Format Kode Aset</h3>
+      <h3 class="text-base font-semibold text-emerald-400">Pengaturan Format Kode Aset</h3>
       <button type="button" onclick="closeModal('modal-asset-settings')" class="text-slate-400 hover:text-white cursor-pointer">
         <i data-lucide="x" class="w-5 h-5"></i>
       </button>
@@ -647,7 +647,7 @@
       <div>
         <label class="block text-slate-300 mb-1">Nama Instansi (Untuk Label QR)</label>
         <input type="text" name="organization_name" value="<%= settings.organization_name %>" required
-          class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-sky-400">
+          class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-400">
       </div>
 
       <div>
@@ -669,8 +669,8 @@
         <input type="text" name="asset_code_format" value="<%= settings.asset_code_format %>" required
           <%= isFormatLocked ? 'readonly' : '' %>
           class="w-full rounded-lg px-3 py-2 font-mono focus:outline-none <%= isFormatLocked
-            ? 'bg-slate-950/80 border border-slate-700 text-slate-400 cursor-not-allowed select-all'
-            : 'bg-slate-900 border border-slate-600 text-emerald-400 focus:border-sky-400' %>">
+            ? 'bg-slate-900 border border-slate-700 text-slate-400 cursor-not-allowed select-all'
+            : 'bg-slate-900 border border-slate-600 text-emerald-400 focus:border-emerald-400' %>">
 
         <% if (isFormatLocked) { %>
           <div class="mt-2 p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/25 text-[11px] text-amber-300/90 leading-relaxed flex items-start gap-2">
@@ -681,15 +681,15 @@
           </div>
         <% } else { %>
           <p class="text-[11px] text-slate-400 mt-1.5 leading-relaxed">
-            Variabel tersedia: <code class="text-sky-400">{BRANCH}</code>, <code class="text-sky-400">{YYMMDD}</code>, <code class="text-sky-400">{YYYY}</code>, <code class="text-sky-400">{YY}</code>, <code class="text-sky-400">{MM}</code>, <code class="text-sky-400">{DD}</code>, <code class="text-sky-400">{SEQ:6}</code>.
+            Variabel tersedia: <code class="text-emerald-400">{BRANCH}</code>, <code class="text-emerald-400">{YYMMDD}</code>, <code class="text-emerald-400">{YYYY}</code>, <code class="text-emerald-400">{YY}</code>, <code class="text-emerald-400">{MM}</code>, <code class="text-emerald-400">{DD}</code>, <code class="text-emerald-400">{SEQ:6}</code>.
           </p>
         <% } %>
       </div>
 
       <div class="pt-2 flex justify-end gap-2">
         <button type="button" onclick="closeModal('modal-asset-settings')" class="px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-200 cursor-pointer">Batal</button>
-        <button type="submit" class="px-4 py-2 rounded-lg bg-sky-500 hover:bg-sky-600 text-slate-950 font-semibold cursor-pointer">
-          <%= isFormatLocked ? 'Simpan Nama Instansi' : 'Simpan Pola' %>
+        <button type="submit" class="px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-semibold cursor-pointer">
+          <%= isFormatLocked ? 'Simpan' : 'Simpan Pola' %>
         </button>
       </div>
     </form>

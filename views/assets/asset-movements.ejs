@@ -160,7 +160,7 @@
               </td>
               <td class="py-3.5 px-4 text-xs">
                 <% if (m.to_branch_code) { %>
-                  <span class="px-1.5 py-0.5 rounded bg-slate-900 border border-slate-700 text-sky-400 font-semibold"><%= m.to_branch_code %></span>
+                  <span class="px-1.5 py-0.5 rounded bg-slate-900 border border-slate-700 text-emerald-400 font-semibold"><%= m.to_branch_code %></span>
                   <div class="text-[11px] text-slate-300 mt-0.5"><%= m.to_location || '-' %></div>
                 <% } else { %>
                   <span class="text-slate-500">-</span>
@@ -248,7 +248,7 @@
         </div>
       </div>
 
-      <div class="px-4 sm:px-6 py-3 border-t border-slate-700 bg-slate-800/95 flex justify-end gap-2 shrink-0">
+      <div class="px-4 sm:px-6 py-3 border-t border-slate-700 dark:bg-slate-800/95 flex justify-end gap-2 shrink-0">
         <button type="button" onclick="closeModal('modal-new-movement')" class="px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs sm:text-sm cursor-pointer">Batal</button>
         <button type="submit" class="px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-semibold text-xs sm:text-sm cursor-pointer">Simpan Mutasi</button>
       </div>

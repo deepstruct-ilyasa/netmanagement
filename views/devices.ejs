@@ -81,7 +81,7 @@
                     </a>
                   </div>
                   <% if (dev.asset_code) { %>
-                    <a href="/assets/<%= dev.asset_id %>" class="inline-block mt-0.5 text-[10px] font-mono text-sky-400 hover:underline">
+                    <a href="/assets/<%= dev.asset_id %>" class="inline-block mt-0.5 text-[10px] font-mono text-sky-500 hover:underline">
                       <%= dev.asset_code %>
                     </a>
                   <% } %>
@@ -423,7 +423,7 @@
 
   <div class="relative bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl z-10">
     <div class="px-6 py-4 border-b border-slate-700 flex items-center justify-between">
-      <h3 class="text-base font-semibold text-sky-400">Edit Konfigurasi Perangkat</h3>
+      <h3 class="text-base font-semibold text-emerald-400">Edit Konfigurasi Perangkat</h3>
       <button type="button" onclick="closeModal('modal-edit-device')" class="text-slate-400 hover:text-white p-1 cursor-pointer">
         <i data-lucide="x" class="w-5 h-5"></i>
       </button>
@@ -431,13 +431,13 @@
 
     <form id="edit-device-form" method="POST" class="p-6 overflow-y-auto space-y-4 text-sm">
       <!-- Kartu Spesifikasi Aset Terhubung -->
-      <div class="bg-sky-500/10 border border-sky-500/30 rounded-xl p-3.5 space-y-2.5 text-xs">
+      <div class="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-3.5 space-y-2.5 text-xs">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
             <span class="text-slate-400">Unit Master Assets:</span>
             <span id="edit_asset_code_label" class="font-mono font-bold text-sky-400 ml-1">-</span>
           </div>
-          <a id="edit_asset_detail_link" href="#" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-700 text-sky-300 border border-sky-500/30 font-semibold shrink-0 transition">
+          <a id="edit_asset_detail_link" href="#" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-700 text-emerald-300 border border-emerald-500/30 font-semibold shrink-0 transition">
             <span>Detail, Foto & Mutasi Aset</span>
             <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
           </a>
@@ -487,15 +487,15 @@
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div>
           <label class="block text-slate-300 text-xs mb-1">Nama / Hostname *</label>
-          <input type="text" name="hostname" id="edit_hostname" required class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-sky-400">
+          <input type="text" name="hostname" id="edit_hostname" required class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-emerald-400">
         </div>
         <div>
           <label class="block text-slate-300 text-xs mb-1">Lokasi Ruangan</label>
-          <input type="text" name="room_location" id="edit_room_location" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-sky-400">
+          <input type="text" name="room_location" id="edit_room_location" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-emerald-400">
         </div>
         <div>
           <label class="block text-slate-300 text-xs mb-1">IP Address</label>
-          <input type="text" name="ip_address" id="edit_ip_address" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-sky-400">
+          <input type="text" name="ip_address" id="edit_ip_address" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-emerald-400">
         </div>
       </div>
 
@@ -506,7 +506,7 @@
           <div class="flex flex-wrap items-center justify-center gap-2">
             <select name="faceplate_template" id="edit_faceplate_template" onchange="onFaceplateTemplateChange('edit')"
               title="Template Visual Sasis Perangkat"
-              class="bg-slate-800 border border-sky-500/40 rounded px-2.5 py-1 text-xs text-sky-300 font-medium focus:outline-none focus:border-sky-400">
+              class="bg-slate-800 border border-emerald-500/40 rounded px-2.5 py-1 text-xs text-emerald-300 font-medium focus:outline-none focus:border-emerald-400">
               <option value="rackmount">Rackmount</option>
               <option value="non_rackmount">Non-Rackmount</option>
               <option value="modem_ont">Modem / ONT</option>
@@ -605,7 +605,7 @@
         <button type="button" onclick="closeModal('modal-edit-device')" class="px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-200 font-medium transition cursor-pointer">
           Batal
         </button>
-        <button type="submit" class="px-5 py-2 rounded-lg bg-sky-500 hover:bg-sky-600 text-slate-950 font-semibold transition cursor-pointer">
+        <button type="submit" class="px-5 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-semibold transition cursor-pointer">
           Update Perangkat
         </button>
       </div>
